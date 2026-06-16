@@ -224,6 +224,14 @@ python scripts/validate_pilot_input_plan_templates.py --workspace D:\content\dri
 
 如果要把它作为真实运行前的硬门禁, 应加入 `--require-pass`。当报告为 `fail` 时, 下一步不是运行 SD, 而是替换所有占位字段并重新预检。
 
+为避免人工从 preflight JSON 中逐项查找字段, 当前还应生成替换清单:
+
+```text
+python scripts/build_pilot_input_replacement_checklist.py --preflight-report D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_plan_preflight_report.json --out-json D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_plan_replacement_checklist.json --out-md D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_plan_replacement_checklist.md
+```
+
+该清单把每个 `_placeholder` 字段映射为应写入的正式字段名和内容要求, 例如 `prompt_text_placeholder -> prompt_text`、`model_id_placeholder -> model_id`、`watermark_method_placeholder -> watermark_method`。
+
 ```text
 pilot_input_plan_preflight_report.json
 pilot_input_gap_report.json

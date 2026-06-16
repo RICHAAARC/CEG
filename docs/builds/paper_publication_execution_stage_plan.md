@@ -161,7 +161,7 @@ real_pilot_input_preparation
 python scripts/validate_pilot_input_plan_templates.py --workspace D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --out D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_plan_preflight_report.json
 ```
 
-若报告仍为 fail, 应先替换所有 `_placeholder` 字段。只有 preflight 通过后, 才能启动真实 SD / watermark / attack / detection pilot。该门禁已由 `experiments/pilot_input_plan_preflight.py` 和 `scripts/validate_pilot_input_plan_templates.py` 承载; 使用 `--require-pass` 时, fail 报告会返回非 0 退出码, 适合作为真实运行前的硬门禁。
+若报告仍为 fail, 应先替换所有 `_placeholder` 字段。只有 preflight 通过后, 才能启动真实 SD / watermark / attack / detection pilot。该门禁已由 `experiments/pilot_input_plan_preflight.py` 和 `scripts/validate_pilot_input_plan_templates.py` 承载; 使用 `--require-pass` 时, fail 报告会返回非 0 退出码, 适合作为真实运行前的硬门禁。 fail 报告应继续通过 `scripts/build_pilot_input_replacement_checklist.py` 转换为 JSON / Markdown 替换清单, 以便逐项填充真实 prompt、split、seed、model 和 watermark 参数。
 
 ---
 
