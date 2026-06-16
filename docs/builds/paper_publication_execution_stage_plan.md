@@ -28,14 +28,15 @@ pilot_input_and_external_evidence_gate_completion
 ```text
 1. rehearsal package 输入覆盖补齐
 2. pilot_input_gap_report 复核
-3. 小规模真实 pilot 输入准备
-4. 真实 CEG detector pilot
-5. 至少一个 external baseline pilot
-6. 真实或离线正式 advanced quality metric 导入
-7. fixed-FPR / TPR@FPR 小样本统计复核
-8. paper_results_package pilot 归档
-9. 正式实验配置冻结
-10. 正式论文实验运行
+3. pilot_readiness_checklist 生成
+4. 小规模真实 pilot 输入准备
+5. 真实 CEG detector pilot
+6. 至少一个 external baseline pilot
+7. 真实或离线正式 advanced quality metric 导入
+8. fixed-FPR / TPR@FPR 小样本统计复核
+9. paper_results_package pilot 归档
+10. 正式实验配置冻结
+11. 正式论文实验运行
 ```
 
 其中第1步和第2步仍属于工程门禁补齐, 不产生正式论文结论。第3步到第8步属于小规模 pilot, 只能用于验证流程和暴露缺口。第9步和第10步才进入可支撑论文主结果的正式实验路径。
@@ -49,13 +50,14 @@ D0: 补齐 rehearsal package 中的 detection_execution_manifest 和 experiment_
 D1: 重新生成 rehearsal package 与 pilot_input_gap_report。
 D2: 确认 missing_core_fields 不再包含 detection_execution_manifest / experiment_matrix。
 D3: 明确剩余 gap 是否只来自 dry-run marker、formal claim gap 或真实 backend 未运行。
-D4: 准备小规模真实 prompt / split / seed / attack / detector 配置。
-D5: 运行真实或半真实 pilot, 生成 clean / watermarked / attacked 图像和 detection events。
-D6: 接入至少一个 external baseline observation 或 backend 输出。
-D7: 接入 LPIPS / FID / CLIP score 中至少一种正式 metric rows。
-D8: 用 pilot_input_manifest 构建 paper_results_package。
-D9: 将结果包、归档包、审计报告保存到 MyDrive 分类目录。
-D10: 根据 pilot 报告冻结正式实验配置。
+D4: 运行 scripts/build_pilot_readiness_checklist.py, 生成真实 pilot 启动清单。
+D5: 准备小规模真实 prompt / split / seed / attack / detector 配置。
+D6: 运行真实或半真实 pilot, 生成 clean / watermarked / attacked 图像和 detection events。
+D7: 接入至少一个 external baseline observation 或 backend 输出。
+D8: 接入 LPIPS / FID / CLIP score 中至少一种正式 metric rows。
+D9: 用 pilot_input_manifest 构建 paper_results_package。
+D10: 将结果包、归档包、审计报告保存到 MyDrive 分类目录。
+D11: 根据 pilot 报告冻结正式实验配置。
 ```
 
 ### 0.1.4 MyDrive 落盘规则
@@ -96,6 +98,9 @@ formal_runs/             保存正式论文实验输出
 ```text
 pilot_input_gap_report.json:
   判断 pilot 输入是否仍缺少核心字段, 以及是否仍包含 dry-run marker。
+
+pilot_readiness_checklist.json:
+  把 gap 报告转换为真实 pilot 启动前的补齐任务清单。
 
 external_result_evidence_report.json:
   判断 external baseline 或 advanced metric 是否有足够证据支撑正式声明。
@@ -669,13 +674,14 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 1. 选定一组真实或半真实 pilot 输入文件。
 2. 生成 pilot_input_manifest.json；若当前还没有真实输入, 可先运行 scripts/build_pilot_rehearsal_package.py 生成 dry-run rehearsal package 验证整条构建链路。
 3. 运行 pilot input preflight, 并使用 scripts/analyze_pilot_input_gap.py 生成 pilot_input_gap_report.json, 明确当前输入是 rehearsal、partial pilot 还是 ready_for_formal_pilot。
-4. 如果包含外部 baseline 或高级 metric 正式声明，运行 external result evidence preflight；rehearsal 阶段只允许声明 dry_run_contract_rehearsal_not_formal_paper_result。
-5. 将 external_result_evidence_report.json 纳入 paper_outputs 和 paper_results_package 归档, 并在 package manifest 中保留 copied_files 证据。
-6. 用 raw builder 或 provided-results builder 构建 paper_results_package, pilot 阶段可启用 --write-paper-result-evidence-report 生成证据完整性报告。
-7. 归档到 MyDrive 分类目录。
-8. 检查 readiness、claim audit、package manifest、paper_result_evidence_report 和 Colab acceptance。
-9. 根据 pilot_input_gap_report.json 的 missing_core_fields 和 dry_run_marker_fields, 再启动真实 SD / watermark / attack / CEG detector / external baseline pilot。
-10. pilot 通过后冻结正式实验配置。
+4. 运行 scripts/build_pilot_readiness_checklist.py, 将 gap 报告转换为下一批真实 pilot 输入补齐清单。
+5. 如果包含外部 baseline 或高级 metric 正式声明，运行 external result evidence preflight；rehearsal 阶段只允许声明 dry_run_contract_rehearsal_not_formal_paper_result。
+6. 将 external_result_evidence_report.json 纳入 paper_outputs 和 paper_results_package 归档, 并在 package manifest 中保留 copied_files 证据。
+7. 用 raw builder 或 provided-results builder 构建 paper_results_package, pilot 阶段可启用 --write-paper-result-evidence-report 生成证据完整性报告。
+8. 归档到 MyDrive 分类目录。
+9. 检查 readiness、claim audit、package manifest、paper_result_evidence_report 和 Colab acceptance。
+10. 根据 pilot_input_gap_report.json 和 pilot_readiness_checklist.json, 再启动真实 SD / watermark / attack / CEG detector / external baseline pilot。
+11. pilot 通过后冻结正式实验配置。
 ```
 
 ---
@@ -687,7 +693,9 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 2. 不应先手工挑选论文示例图并绕过 image_example_manifest.json。
 3. 不应在没有 calibration / test split 的情况下统计 TPR@FPR。
 4. 不应把 dry-run 图像或 mock 分数写成论文实验结论。
-5. 不应在没有 external_result_evidence_report 的情况下声明外部 baseline 或高级 metric 的正式结果。\n6. 不应把 scripts/build_pilot_rehearsal_package.py 生成的 rehearsal package 宣称为正式论文结果包。\n7. 不应在 pilot_input_gap_report.json 仍为 rehearsal_or_partial_pilot_only 时宣称 ready_for_formal_pilot。
+5. 不应在没有 external_result_evidence_report 的情况下声明外部 baseline 或高级 metric 的正式结果。
+6. 不应把 scripts/build_pilot_rehearsal_package.py 生成的 rehearsal package 宣称为正式论文结果包。
+7. 不应在 pilot_input_gap_report.json 仍为 rehearsal_or_partial_pilot_only 时宣称 ready_for_formal_pilot。
 ```
 
 ---

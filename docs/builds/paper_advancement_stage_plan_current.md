@@ -21,12 +21,13 @@ pilot_input_and_external_evidence_gate_completion
 2. 重新生成 rehearsal package。
 3. 重新运行 pilot_input_gap_report。
 4. 确认 missing_core_fields 不再包含 detection_execution_manifest / experiment_matrix。
-5. 准备小规模真实 pilot 输入。
-6. 运行真实 CEG detector pilot。
-7. 接入至少一个 external baseline。
-8. 接入至少一种 advanced quality metric。
-9. 统计 fixed-FPR / TPR@FPR。
-10. 构建并归档 paper_results_package。
+5. 运行 scripts/build_pilot_readiness_checklist.py, 将 gap 报告转换为真实 pilot 启动清单。
+6. 准备小规模真实 pilot 输入。
+7. 运行真实 CEG detector pilot。
+8. 接入至少一个 external baseline。
+9. 接入至少一种 advanced quality metric。
+10. 统计 fixed-FPR / TPR@FPR。
+11. 构建并归档 paper_results_package。
 ```
 
 ## 4. 结果落盘目录
@@ -62,6 +63,7 @@ formal_runs/
 
 ```text
 pilot_input_gap_report.json
+pilot_readiness_checklist.json
 external_result_evidence_report.json
 paper_result_evidence_report.json
 paper_readiness_report.json
