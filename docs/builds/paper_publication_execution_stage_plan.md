@@ -432,7 +432,35 @@ external_result_evidence_report.json = pass
 paper_claim_audit.json = pass
 ```
 
-## 20. 阶段 K: 正式论文实验
+## 20. 阶段 J2: paper_results_package 输出接收门禁
+
+### 命令
+
+```text
+python scripts/validate_pilot_paper_results_package.py --package-root {workspace}/paper_results_package --out {workspace}/pilot_paper_results_package_acceptance_report.json --require-pass
+```
+
+正式论文结果包应使用:
+
+```text
+python scripts/validate_pilot_paper_results_package.py --package-root {workspace}/paper_results_package --out {workspace}/pilot_paper_results_package_acceptance_report.json --require-evidence --require-image-examples --require-pass
+```
+
+### 通过条件
+
+```text
+paper_results_package_manifest.json 存在且 package_status = complete
+paper_results_package_validation.json 存在且 pass
+paper_readiness_report.json 与 paper_claim_audit.json 均为 pass
+fixed-FPR / TPR@FPR / attack TPR / baseline comparison 表格进入 artifacts
+LaTeX、rendered figures 和 PDF figure manifest 均存在
+正式论文包必须包含 paper_result_evidence_report.json 和 external_result_evidence_report.json
+正式论文包必须包含 image_example_manifest.json 及示例图文件
+```
+
+当前该命令已经实现。若 `paper_results_package` 尚未导出或缺少核心论文产物, 门禁会失败并建议先重新运行结果包导出。
+
+## 21. 阶段 K: 正式论文实验
 
 ### 目标
 
@@ -455,7 +483,7 @@ paper_claim_audit.json = pass
 完整 Colab 或 GPU 运行 bundle
 ```
 
-## 21. 当前立即执行建议
+## 22. 当前立即执行建议
 
 当前立即执行优先级如下:
 
@@ -467,4 +495,4 @@ paper_claim_audit.json = pass
 6. 再进入 fixed-FPR / TPR@FPR 统计。
 7. 最后构建 paper_results_package 并归档到 MyDrive。
 
-其中, 工程侧已补齐 `quality metric 输出接收门禁` 和 `fixed-FPR 统计输出接收门禁`。后续真实执行侧必须先补齐真实 pilot 输入, 再依次产出 image, attack, detection, baseline 和 metric 结果；只有这些接收门禁和 fixed-FPR 统计接收门禁通过后, 才应进入 paper_results_package 构建。
+其中, 工程侧已补齐 `quality metric 输出接收门禁`、`fixed-FPR 统计输出接收门禁` 和 `paper_results_package 输出接收门禁`。后续真实执行侧必须先补齐真实 pilot 输入, 再依次产出 image、attack、detection、baseline、metric 和 fixed-FPR 结果；只有这些接收门禁与结果包接收门禁通过后, 才应进入 MyDrive 归档。
