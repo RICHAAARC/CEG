@@ -890,3 +890,15 @@ FID: 取决于样本量, GPU 更快, CPU 可小规模验证。
 7. 示例图必须有 manifest 和 provenance。
 8. 结果包必须可以通过 scripts/archive_paper_results_to_drive.py 落盘到 D:\content\drive\MyDrive\CEG 或 /content/drive/MyDrive/CEG 下, 并按 package_snapshots、package_archives、package_manifests 分类归档。
 ```
+
+---
+
+## 9. 当前执行稿索引
+
+当前最直接的阶段执行顺序和门禁索引已经整理到:
+
+```text
+docs/builds/paper_publication_execution_stage_plan.md
+```
+
+后续推进时, 若需要回答“下一步具体做什么”, 优先读取该执行稿；若需要理解阶段背景、论文产物边界和完整方法机制, 再结合本文档以及 `paper_publication_result_package_plan.md`。

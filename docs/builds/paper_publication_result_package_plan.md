@@ -645,3 +645,15 @@ docs/builds/paper_publication_phase_plan.md
 ```
 
 后续工程实施应优先以该阶段计划为主线推进, 本文档继续作为结果包契约与论文产物边界说明。
+
+---
+
+## 7. 当前阶段执行稿索引
+
+当前阶段计划的可执行版本已经整理到:
+
+```text
+docs/builds/paper_publication_execution_stage_plan.md
+```
+
+该执行稿用于指导从 pilot 输入门禁、外部结果证据门禁、真实图像生成 pilot、attack pilot、detection pilot、external baseline pilot、quality metric pilot 到正式论文实验的推进顺序。
