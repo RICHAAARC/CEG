@@ -6,6 +6,7 @@ import json
 import shutil
 import subprocess
 import sys
+import zipfile
 
 import pytest
 
@@ -274,6 +275,8 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     bundled_runbook_body = (bundle_root / "colab_formal_runbook.md").read_text(encoding="utf-8")
     assert "CEG Colab 正式运行说明书" in runbook_body
     assert "正式输入准备" in bundled_runbook_body
+    assert "offline_acceptance" in bundled_runbook_body
+    assert "path/to/ceg_colab_run_bundle.zip" in bundled_runbook_body
     assert summary["colab_formal_runbook_path"].endswith("colab_formal_runbook.md")
     assert {item["result_type"] for item in layout_manifest["result_type_directories"]} >= {"paper_outputs", "paper_results_package", "colab_run_bundle", "archives"}
     result_index = json.loads((tmp_path / "colab_workspace" / "colab_paper_result_index.json").read_text(encoding="utf-8"))
@@ -305,6 +308,10 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert "--allow-dry-run" in offline_command_text
     assert "--allow-missing-experiment-coverage" in offline_command_text
     assert (tmp_path / "colab_workspace" / "archives" / "ceg_colab_run_bundle.zip").exists()
+    with zipfile.ZipFile(tmp_path / "colab_workspace" / "archives" / "ceg_colab_run_bundle.zip") as archive:
+        zipped_runbook_body = archive.read("colab_formal_runbook.md").decode("utf-8")
+    assert "offline_acceptance" in zipped_runbook_body
+    assert "path/to/ceg_colab_run_bundle.zip" in zipped_runbook_body
     assert (tmp_path / "colab_workspace" / "archives" / "colab_bundle_archive_manifest.json").exists()
     assert archive_manifest["archive_manifest_path"].endswith("archives" + __import__("os").sep + "colab_bundle_archive_manifest.json")
     assert archive_manifest["archives_root"].endswith("archives")

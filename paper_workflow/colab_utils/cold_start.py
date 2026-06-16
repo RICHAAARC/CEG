@@ -1466,29 +1466,26 @@ def create_colab_bundle_archive(
     workspace = Path(workspace_root).resolve()
     output_layout = build_colab_output_layout(workspace)
     target_bundle = Path(bundle_root).resolve() if bundle_root else Path(output_layout["colab_run_bundle_root"])
-    bundle_manifest = export_colab_run_bundle(workspace, target_bundle)
     archives_root = Path(output_layout["archives_root"])
     archives_root.mkdir(parents=True, exist_ok=True)
     requested_archive = Path(archive_path).resolve() if archive_path else archives_root / "ceg_colab_run_bundle.zip"
     requested_archive.parent.mkdir(parents=True, exist_ok=True)
     archive_base = requested_archive.with_suffix("") if requested_archive.suffix.lower() == ".zip" else requested_archive
-    final_archive_path = archive_base.with_suffix(".zip")
-    if final_archive_path.exists():
-        final_archive_path.unlink()
-    created_archive = Path(shutil.make_archive(str(archive_base), "zip", root_dir=target_bundle)).resolve()
-    archive_bytes = created_archive.read_bytes()
+    final_archive_path = archive_base.with_suffix(".zip").resolve()
+    archive_manifest_path = final_archive_path.parent / "colab_bundle_archive_manifest.json"
+
     colab_acceptance_command = [
         sys.executable,
         "scripts/run_colab_acceptance_checks.py",
         "--bundle",
-        str(created_archive),
+        str(final_archive_path),
         "--require-pass",
     ]
     offline_acceptance_command = [
         sys.executable,
         "scripts/run_colab_acceptance_checks.py",
         "--bundle",
-        f"path/to/{created_archive.name}",
+        f"path/to/{final_archive_path.name}",
         "--require-pass",
     ]
     for command in (colab_acceptance_command, offline_acceptance_command):
@@ -1498,14 +1495,14 @@ def create_colab_bundle_archive(
             command.insert(-1, "--allow-missing-experiment-coverage")
         if require_external_command_results:
             command.insert(-1, "--require-external-command-results")
-    archive_manifest_path = created_archive.parent / "colab_bundle_archive_manifest.json"
-    archive_manifest = {
+
+    archive_manifest_base = {
         "artifact_name": "colab_bundle_archive_manifest.json",
         "workspace_root": str(workspace),
         "drive_output_root": output_layout["drive_output_root"],
-        "archives_root": str(created_archive.parent),
+        "archives_root": str(final_archive_path.parent),
         "bundle_root": str(target_bundle),
-        "archive_path": str(created_archive),
+        "archive_path": str(final_archive_path),
         "archive_manifest_path": str(archive_manifest_path),
         "output_layout_manifest_path": str(workspace / "colab_output_layout_manifest.json"),
         "formal_input_contract_path": str(workspace / "colab_formal_input_contract.json"),
@@ -1513,17 +1510,33 @@ def create_colab_bundle_archive(
         "formal_runbook_path": str(workspace / "colab_formal_runbook.md"),
         "paper_result_index_path": str(workspace / "colab_paper_result_index.json"),
         "formal_result_gap_report_path": str(workspace / "colab_formal_result_gap_report.json"),
+        "archive_name": final_archive_path.name,
+        "allow_dry_run": allow_dry_run,
+        "require_experiment_coverage": require_experiment_coverage,
+        "require_external_command_results": require_external_command_results,
+        "colab_acceptance_command": colab_acceptance_command,
+        "offline_acceptance_command": offline_acceptance_command,
+    }
+    archive_manifest_path.write_text(
+        json.dumps(archive_manifest_base, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    bundle_manifest = export_colab_run_bundle(workspace, target_bundle)
+    if final_archive_path.exists():
+        final_archive_path.unlink()
+    created_archive = Path(shutil.make_archive(str(archive_base), "zip", root_dir=target_bundle)).resolve()
+    archive_bytes = created_archive.read_bytes()
+    archive_manifest = {
+        **archive_manifest_base,
+        "archive_path": str(created_archive),
+        "archive_manifest_path": str(archive_manifest_path),
         "archive_name": created_archive.name,
         "archive_size_bytes": created_archive.stat().st_size,
         "archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
         "bundle_file_count": bundle_manifest["file_count"],
         "bundle_digest": bundle_manifest["bundle_digest"],
         "bundle_validation_decision": bundle_manifest.get("validation_decision"),
-        "allow_dry_run": allow_dry_run,
-        "require_experiment_coverage": require_experiment_coverage,
-        "require_external_command_results": require_external_command_results,
-        "colab_acceptance_command": colab_acceptance_command,
-        "offline_acceptance_command": offline_acceptance_command,
     }
     archive_manifest_path.write_text(
         json.dumps(archive_manifest, ensure_ascii=False, indent=2) + "\n",
@@ -1536,7 +1549,6 @@ def create_colab_bundle_archive(
     write_colab_formal_result_gap_report(workspace)
     write_colab_formal_runbook(workspace)
     return archive_manifest
-
 
 def build_colab_environment_summary(repo_root: str | Path) -> dict[str, Any]:
     """返回 Notebook 可展示的运行环境摘要。"""
