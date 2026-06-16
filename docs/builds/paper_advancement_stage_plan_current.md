@@ -49,6 +49,7 @@ D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_0345
 | 7 | attack 输出接收 | `pilot_attack_output_acceptance_report.json` | fail | attacked 图像和 attack manifest 尚未满足接收契约。 |
 | 8 | detection 输出接收 | `pilot_detection_output_acceptance_report.json` | fail | detection events / thresholds 尚未满足 fixed-FPR 统计契约。 |
 | 9 | baseline 输出接收 | `pilot_baseline_output_acceptance_report.json` | fail | external baseline observations 尚未满足论文对比契约。 |
+| 10 | quality metric 输出接收 | `pilot_metric_output_acceptance_report.json` | fail | metric rows 与 execution manifest 尚未满足论文质量指标契约。 |
 
 ## 6. 不能声明的内容
 
@@ -291,7 +292,7 @@ python scripts/validate_pilot_metric_outputs.py --output-root D:/content/drive/M
 python scripts/validate_pilot_metric_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_metrics --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_metric_output_acceptance_report.json --require-formal-evidence --require-pass
 ```
 
-该门禁是当前仍需实现或补齐的下一段关键链路。
+该门禁当前已经具备实现、CLI 和测试。当前 MyDrive 工作区报告为 `fail`, 原因是 `external_metrics/metric_rows.json` 与 `external_metrics/metric_execution_manifest.json` 尚未由真实 metric backend 或离线导入器写出。
 
 ### P7: 统计 TPR@FPR 与论文表格
 
@@ -373,4 +374,4 @@ S19. 统计通过后, 构建 paper_results_package 并归档到 MyDrive。
 
 ## 10. 当前下一步建议
 
-当前最应继续补齐的是 `quality metric 输出接收门禁`, 因为 image generation, attack, detection 和 baseline 的输出接收门禁已经建立, 但 metric 链路尚缺统一接收口径。补齐该门禁后, 项目从 image 到 attack, detection, baseline, metric 的所有论文前置输入均有最小可审计接收点, 再推进 fixed-FPR / TPR@FPR 统计会更稳健。
+当前已补齐 `quality metric 输出接收门禁` 的工程接收口径。下一步应填充真实 pilot 输入并依次产出真实 image, attack, detection, baseline 和 metric 结果；其中 metric 阶段需要写出 `external_metrics/metric_rows.json` 与 `external_metrics/metric_execution_manifest.json`, 再运行 `validate_pilot_metric_outputs.py --require-pass`。

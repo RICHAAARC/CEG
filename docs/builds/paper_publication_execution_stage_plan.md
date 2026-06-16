@@ -438,4 +438,4 @@ paper_claim_audit.json = pass
 6. 再进入 fixed-FPR / TPR@FPR 统计。
 7. 最后构建 paper_results_package 并归档到 MyDrive。
 
-其中, 工程侧下一步最值得补齐的是 `quality metric 输出接收门禁`, 因为它能让论文结果包在进入统计阶段前同时具备 detection, baseline 和 metric 三类结果的统一接收口径。
+其中, 工程侧已补齐 `quality metric 输出接收门禁`。后续真实执行侧必须先补齐真实 pilot 输入, 再依次产出 image, attack, detection, baseline 和 metric 结果；只有这些接收门禁通过后, 才应进入 fixed-FPR / TPR@FPR 统计和 paper_results_package 构建。
