@@ -255,6 +255,15 @@ python scripts/build_pilot_execution_readiness_report.py --workspace D:\content\
 
 该报告要求 `pilot_input_plan_preflight_report.json` 和 `pilot_input_value_pack_application_report.json` 同时为 `pass`。如果任一报告为 `fail`, 当前仍不能启动真实 SD / watermark。
 
+当聚合就绪报告为 `pass` 后, 应先生成外部图像生成 backend 的启动变量和启动计划, 而不是直接手工运行命令:
+
+```text
+python scripts/scaffold_pilot_image_generation_launch_variables.py --workspace D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --out D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_image_generation_launch_variables.draft.json
+python scripts/build_pilot_image_generation_launch_plan.py --workspace D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --launch-variables D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_image_generation_launch_variables.draft.json --require-pass
+```
+
+该启动计划只物化 `scripts/run_image_generation_plan.py` 可消费的外部命令计划, 不直接执行 SD 或 watermark backend。
+
 ```text
 pilot_input_plan_preflight_report.json
 pilot_input_gap_report.json
