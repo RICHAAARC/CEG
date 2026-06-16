@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from experiments.metric_plan import build_metric_plan_manifest, load_metric_command_plan, run_metric_command_plan
+from main.core.digest import build_stable_digest
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -43,10 +44,43 @@ def main() -> None:
         json.dumps(result["metric_rows"], ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    metric_fields = sorted(
+        {
+            key
+            for row in result["metric_rows"]
+            for key in row
+            if key not in {"event_id", "method_name", "baseline_id"}
+        }
+    )
+    execution_manifest = {
+        "artifact_name": "metric_execution_manifest.json",
+        "producer_id": "external_metric_command_plan_runner",
+        "producer_role": "external_metric_command_execution",
+        "formal_result_claim": False,
+        "execution_boundary": "external_metric_results_require_separate_formal_evidence",
+        "metric_command_count": len(specs),
+        "metric_row_count": len(result["metric_rows"]),
+        "metric_names": sorted({spec.metric_name for spec in specs}),
+        "metric_fields": metric_fields,
+        "metric_rows_path": str(output_root / "metric_rows.json"),
+        "command_results_path": str(output_root / "metric_command_results.json"),
+        "execution_digest": build_stable_digest(
+            {
+                "specs": [spec.to_dict() for spec in specs],
+                "results": result["results"],
+                "rows": result["metric_rows"],
+            }
+        ),
+    }
+    (output_root / "metric_execution_manifest.json").write_text(
+        json.dumps(execution_manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     summary = {
         "metric_command_count": len(specs),
         "metric_row_count": len(result["metric_rows"]),
         "metric_rows_path": "metric_rows.json",
+        "metric_execution_manifest_path": "metric_execution_manifest.json",
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 

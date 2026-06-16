@@ -1024,6 +1024,13 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
     },
     {
         "result_group": "external_evidence",
+        "result_id": "external_metric_execution_manifest",
+        "relative_path": "external_metrics/metric_execution_manifest.json",
+        "required_for_paper_outputs": False,
+        "purpose": "外部高级指标或轻量质量指标 runner 的执行摘要 manifest。",
+    },
+    {
+        "result_group": "external_evidence",
         "result_id": "provided_result_files_manifest",
         "relative_path": "provided_results/provided_result_files_manifest.json",
         "required_for_paper_outputs": False,
@@ -1242,6 +1249,11 @@ COLAB_RESULT_ID_PRODUCTION_TRACE_OVERRIDES: dict[str, dict[str, tuple[str, ...]]
         "producer_steps": ("scripts/run_metric_plan.py", "scripts/compute_image_quality_metrics.py"),
         "required_inputs": ("metric command plan", "image_pairs.json 或 sample_manifest"),
         "validation_gates": ("paper_result_evidence_report.json advanced_metrics_source_ready",),
+    },
+    "external_metric_execution_manifest": {
+        "producer_steps": ("scripts/run_metric_plan.py", "scripts/compute_image_quality_metrics.py"),
+        "required_inputs": ("metric command plan 或 image_pairs.json", "metric_rows.json"),
+        "validation_gates": ("colab_run_bundle_validation.json",),
     },
     "provided_result_files_manifest": {
         "producer_steps": ("copy_provided_result_files",),
@@ -2507,6 +2519,7 @@ def export_colab_run_bundle(workspace_root: str | Path, bundle_root: str | Path 
         "ceg_detection/ceg_detection_producer_manifest.json",
         "threshold_calibration/thresholds.json",
         "threshold_calibration/threshold_calibration_report.json",
+        "basic_image_metrics/metric_execution_manifest.json",
         "basic_image_metrics/metric_rows.json",
         "provided_results/provided_result_files_manifest.json",
         "provided_results/baseline_observations.json",
@@ -2522,6 +2535,7 @@ def export_colab_run_bundle(workspace_root: str | Path, bundle_root: str | Path 
         "external_baselines/baseline_observations.json",
         "external_metrics/metric_command_plan_manifest.json",
         "external_metrics/metric_command_results.json",
+        "external_metrics/metric_execution_manifest.json",
         "external_metrics/metric_rows.json",
     ):
         item = _copy_file_with_parents(workspace, target, relative)
@@ -2839,6 +2853,7 @@ def _build_external_plan_steps(
         "baseline_observations_path": str(baseline_output_root / "baseline_observations.json") if run_external_plans else None,
         "baseline_execution_manifest_path": str(baseline_output_root / "baseline_execution_manifest.json") if run_external_plans else None,
         "metric_rows_path": str(metric_output_root / "metric_rows.json") if run_external_plans else None,
+        "metric_execution_manifest_path": str(metric_output_root / "metric_execution_manifest.json") if run_external_plans else None,
     }
 
 
@@ -2884,6 +2899,7 @@ def build_colab_command_plan(
     attack_root = Path(output_layout["image_attacks_root"])
     generated_image_pairs_path = inputs_root / "image_pairs.json"
     basic_metric_rows_path = basic_metric_root / "metric_rows.json"
+    basic_metric_execution_manifest_path = basic_metric_root / "metric_execution_manifest.json"
     calibrated_thresholds_path = threshold_root / "thresholds.json"
     attacked_image_manifest_path = attack_root / "image_manifests" / "attacked_image_manifest.json"
     attack_shard_manifest_path = attack_root / "image_manifests" / "attack_shard_manifest.json"
@@ -2975,6 +2991,8 @@ def build_colab_command_plan(
                 str(effective_image_pairs_path),
                 "--out",
                 str(basic_metric_rows_path),
+                "--manifest",
+                str(basic_metric_execution_manifest_path),
             ]
             effective_metric_rows_path = basic_metric_rows_path
 
@@ -3038,6 +3056,10 @@ def build_colab_command_plan(
         build_command.extend(["--baseline-execution-manifest", str(external_steps["baseline_execution_manifest_path"])])
     if effective_metric_rows_path is not None:
         build_command.extend(["--metric-rows", str(effective_metric_rows_path)])
+    if run_external_plans and external_steps.get("metric_execution_manifest_path"):
+        build_command.extend(["--metric-execution-manifest", str(external_steps["metric_execution_manifest_path"])])
+    elif basic_metric_command:
+        build_command.extend(["--metric-execution-manifest", str(basic_metric_execution_manifest_path)])
     if effective_image_pairs_path is not None:
         build_command.extend(["--image-pairs", str(effective_image_pairs_path)])
     build_command.extend(["--attacked-image-manifest", str(attacked_image_manifest_path)])
@@ -3082,6 +3104,7 @@ def build_colab_command_plan(
         "provided_result_copy_plan": provided_result_copy_plan,
         "generated_image_pairs_path": str(effective_image_pairs_path),
         "basic_metric_rows_path": str(basic_metric_rows_path),
+        "basic_metric_execution_manifest_path": str(basic_metric_execution_manifest_path),
         "matrix_command": matrix_command,
         "threshold_calibration_command": threshold_calibration_command,
         "prepare_command": prepare_command,
@@ -3096,7 +3119,7 @@ def build_colab_command_plan(
 def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
     """根据命令计划生成输入路径和输出契约清单。"""
     build_command = list(command_plan.get("build_command", []))
-    path_flags = {"--events", "--thresholds", "--baseline-observations", "--baseline-execution-manifest", "--metric-rows", "--image-pairs", "--experiment-matrix", "--attacked-image-manifest", "--attack-shard-manifest"}
+    path_flags = {"--events", "--thresholds", "--baseline-observations", "--baseline-execution-manifest", "--metric-rows", "--metric-execution-manifest", "--image-pairs", "--experiment-matrix", "--attacked-image-manifest", "--attack-shard-manifest"}
     input_paths = []
     for index, part in enumerate(build_command[:-1]):
         if part in path_flags:
@@ -3153,6 +3176,7 @@ def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
             preflight_outputs.append(str(Path(str(command_plan["inputs_root"])) / "sample_event_build_manifest.json"))
     if command_plan.get("basic_metric_command"):
         preflight_outputs.append(str(command_plan["basic_metric_rows_path"]))
+        preflight_outputs.append(str(command_plan["basic_metric_execution_manifest_path"]))
     if command_plan.get("attack_command"):
         preflight_outputs.append(str(command_plan["attacked_image_manifest_path"]))
         preflight_outputs.append(str(command_plan["attack_shard_manifest_path"]))
@@ -3192,11 +3216,12 @@ def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
         )
     if command_plan.get("run_external_plans"):
         external_steps = command_plan.get("external_plan_steps", {})
-        for key in ("baseline_observations_path", "baseline_execution_manifest_path", "metric_rows_path"):
+        for key in ("baseline_observations_path", "baseline_execution_manifest_path", "metric_rows_path", "metric_execution_manifest_path"):
             if external_steps.get(key):
                 generated_paths.add(str(Path(str(external_steps[key]))))
     if command_plan.get("basic_metric_command"):
         generated_paths.add(str(Path(str(command_plan["basic_metric_rows_path"]))))
+        generated_paths.add(str(Path(str(command_plan["basic_metric_execution_manifest_path"]))))
     if command_plan.get("attack_command"):
         generated_paths.add(str(Path(str(command_plan["attacked_image_manifest_path"]))))
         generated_paths.add(str(Path(str(command_plan["attack_shard_manifest_path"]))))

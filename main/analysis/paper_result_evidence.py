@@ -438,6 +438,16 @@ def _check_external_result_payloads(bundle_root: Path) -> tuple[dict[str, Any], 
     failures: list[dict[str, Any]] = []
 
     baseline_path = bundle_root / "external_baselines" / "baseline_observations.json"
+    baseline_manifest_path = bundle_root / "external_baselines" / "baseline_execution_manifest.json"
+    if not baseline_manifest_path.is_file():
+        failures.append({"kind": "baseline", "reason": "missing_execution_manifest", "path": str(baseline_manifest_path)})
+    else:
+        baseline_manifest = _read_json(baseline_manifest_path)
+        evidence["baseline_execution_manifest_artifact"] = (
+            baseline_manifest.get("artifact_name") if isinstance(baseline_manifest, dict) else None
+        )
+        if not isinstance(baseline_manifest, dict) or baseline_manifest.get("artifact_name") != "baseline_execution_manifest.json":
+            failures.append({"kind": "baseline", "reason": "invalid_execution_manifest", "path": str(baseline_manifest_path)})
     if not baseline_path.is_file():
         failures.append({"kind": "baseline", "reason": "missing_observations", "path": str(baseline_path)})
     else:
@@ -452,6 +462,16 @@ def _check_external_result_payloads(bundle_root: Path) -> tuple[dict[str, Any], 
                 failures.append({"kind": "baseline", "row_index": index, "reason": "observation_missing_columns", "missing_columns": missing})
 
     metric_path = bundle_root / "external_metrics" / "metric_rows.json"
+    metric_manifest_path = bundle_root / "external_metrics" / "metric_execution_manifest.json"
+    if not metric_manifest_path.is_file():
+        failures.append({"kind": "metric", "reason": "missing_execution_manifest", "path": str(metric_manifest_path)})
+    else:
+        metric_manifest = _read_json(metric_manifest_path)
+        evidence["metric_execution_manifest_artifact"] = (
+            metric_manifest.get("artifact_name") if isinstance(metric_manifest, dict) else None
+        )
+        if not isinstance(metric_manifest, dict) or metric_manifest.get("artifact_name") != "metric_execution_manifest.json":
+            failures.append({"kind": "metric", "reason": "invalid_execution_manifest", "path": str(metric_manifest_path)})
     if not metric_path.is_file():
         failures.append({"kind": "metric", "reason": "missing_metric_rows", "path": str(metric_path)})
     else:

@@ -287,7 +287,7 @@ attack_tpr_at_fixed_fpr_table.csv
 阶段 4: CEG detection 与内部 ablation 统一记录, dry-run 契约链路已打通。
 阶段 5: 外部 baseline 接入, dry-run / pilot producer 已打通, 后续推进真实 baseline。
 阶段 6: fixed-FPR / TPR@FPR 正式统计, 已有雏形, 等待真实 detection 与 baseline records。
-阶段 7: 图像质量指标与论文示例图, 示例图 package 已有雏形, quality runner 待补齐。
+阶段 7: 图像质量指标与论文示例图, 轻量 quality runner provenance 已打通, 高级指标真实 backend 待补齐。
 阶段 8: Colab 端到端入口, dry-run 能力持续扩展, pilot 仍待真实 backend。
 阶段 9: pilot 实验, 待外部 baseline 和 quality metrics 接入后启动。
 阶段 10: 正式论文实验, 待 pilot 通过后启动。
@@ -316,7 +316,7 @@ attack_tpr_at_fixed_fpr_table.csv
 ```text
 基本完成, 后续随新增产物持续维护。
 fixed-FPR 表、image examples、attack manifests、image generation manifests、CEG detection manifests 已进入推进范围。
-仍需补齐 external baseline execution manifest 与 quality metric runner 的 package validation 覆盖。
+external baseline execution manifest 与 quality metric runner provenance 已进入 package validation 覆盖, 后续仍需真实高级指标 backend。
 ```
 
 ### 完成标准
@@ -605,6 +605,15 @@ bit accuracy
 payload recovery rate
 ```
 
+### 当前状态
+
+```text
+轻量 quality runner 已具备 image_pairs.json -> metric_rows.json / metric_execution_manifest.json 的 CPU dry-run 链路。
+该 runner 可计算 MSE、MAE、PSNR 和全局 SSIM, 并将 metric rows 与执行 manifest 纳入 paper_results_package。
+LPIPS、FID 和 CLIP score 仍应通过 external metric command plan 或用户提供的正式 metric rows 接入。
+当前状态不代表正式高级指标已经完成, 只代表质量指标 provenance 和结果包接入已打通。
+```
+
 ### 示例图目录
 
 ```text
@@ -739,20 +748,20 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 ### 6.1 当前最优先事项
 
 ```text
-1. 实现 quality metric runner 与高级指标来源证据闭环。
-2. 接入至少一个真实 external baseline backend 或离线正式 observation 文件。
-3. 将真实 baseline_execution_manifest.json、baseline_observations.json 与 result package provenance 对齐。
-4. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR 和 image examples。
+1. 接入至少一个真实 external baseline backend 或离线正式 observation 文件。
+2. 接入真实 LPIPS / FID / CLIP score backend 或离线正式 metric rows。
+3. 将真实 baseline 与高级 metric execution manifest 和 result package provenance 对齐。
+4. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR、quality metrics 和 image examples。
 5. 继续保持所有论文表格由 records 和 manifests 重建。
 ```
 
 ### 6.2 随后推进事项
 
 ```text
-1. quality metric runner。
-2. 真实 CEG detector backend pilot。
-3. 真实 SD / watermark backend pilot。
-4. 至少一个外部 baseline 的真实小样本运行。
+1. 真实 CEG detector backend pilot。
+2. 真实 SD / watermark backend pilot。
+3. 至少一个外部 baseline 的真实小样本运行。
+4. 真实 LPIPS / FID / CLIP score 小样本运行。
 5. Colab pilot 小样本正式运行。
 6. 正式实验配置冻结和资源排期。
 ```

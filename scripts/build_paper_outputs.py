@@ -71,6 +71,17 @@ def _copy_optional_baseline_result(source: str | None, output_root: Path, file_n
     return f"baseline_results/{file_name}"
 
 
+def _copy_optional_metric_result(source: str | None, output_root: Path, file_name: str) -> str | None:
+    """把可选 metric 结果文件复制到 metric_results 目录。"""
+    if source is None:
+        return None
+    source_path = Path(source)
+    target = output_root / "metric_results" / file_name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source_path, target)
+    return f"metric_results/{file_name}"
+
+
 def build_parser() -> argparse.ArgumentParser:
     """构造命令行参数解析器。"""
     parser = argparse.ArgumentParser(description="构建 CEG 论文完整输出目录。")
@@ -79,6 +90,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--baseline-observations", default=None, help="可选 baseline observation 文件。")
     parser.add_argument("--baseline-execution-manifest", default=None, help="可选 baseline_execution_manifest.json 路径。")
     parser.add_argument("--metric-rows", default=None, help="可选高级指标文件, 支持 JSON / JSONL / CSV。")
+    parser.add_argument("--metric-execution-manifest", default=None, help="可选 metric_execution_manifest.json 路径。")
     parser.add_argument("--attacked-image-manifest", default=None, help="可选 attacked_image_manifest.json 路径。")
     parser.add_argument("--attack-shard-manifest", default=None, help="可选 attack_shard_manifest.json 路径。")
     parser.add_argument("--image-pairs", default=None, help="可选 image_pairs 文件, 用于导出 image_manifests 和 image_examples。")
@@ -130,6 +142,12 @@ def main() -> None:
         output_root,
         "baseline_execution_manifest.json",
     )
+    metric_rows_path = _copy_optional_metric_result(args.metric_rows, output_root, "metric_rows.json")
+    metric_execution_manifest_path = _copy_optional_metric_result(
+        args.metric_execution_manifest,
+        output_root,
+        "metric_execution_manifest.json",
+    )
     attacked_image_manifest_path = _copy_optional_manifest(args.attacked_image_manifest, output_root, "attacked_image_manifest.json")
     attack_shard_manifest_path = _copy_optional_manifest(args.attack_shard_manifest, output_root, "attack_shard_manifest.json")
     (output_root / "event_records.json").write_text(
@@ -165,6 +183,8 @@ def main() -> None:
         "image_example_count": image_example_manifest["example_count"] if image_example_manifest else None,
         "baseline_observations_path": baseline_observations_path,
         "baseline_execution_manifest_path": baseline_execution_manifest_path,
+        "metric_rows_path": metric_rows_path,
+        "metric_execution_manifest_path": metric_execution_manifest_path,
         "attacked_image_manifest_path": attacked_image_manifest_path,
         "attack_shard_manifest_path": attack_shard_manifest_path,
     }

@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from main.analysis.image_metrics import build_quality_metric_rows
+from main.core.digest import build_stable_digest
 
 
 def _load_pairs(path: Path) -> list[dict[str, str]]:
@@ -54,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="计算图像水印论文质量指标。")
     parser.add_argument("--pairs", required=True, help="图像配对清单, 支持 JSON / JSONL / CSV。")
     parser.add_argument("--out", required=True, help="质量指标输出路径, 支持 JSON / JSONL / CSV。")
+    parser.add_argument("--manifest", default=None, help="可选 metric_execution_manifest.json 输出路径。")
     return parser
 
 
@@ -61,9 +63,35 @@ def main() -> None:
     """CLI 入口。"""
     parser = build_parser()
     args = parser.parse_args()
-    rows = build_quality_metric_rows(_load_pairs(Path(args.pairs)))
-    _write_rows(Path(args.out), rows)
-    print(json.dumps({"row_count": len(rows), "output_path": args.out}, ensure_ascii=False, indent=2))
+    pairs_path = Path(args.pairs)
+    output_path = Path(args.out)
+    pair_rows = _load_pairs(pairs_path)
+    rows = build_quality_metric_rows(pair_rows)
+    _write_rows(output_path, rows)
+    manifest_path = Path(args.manifest) if args.manifest else output_path.parent / "metric_execution_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "artifact_name": "metric_execution_manifest.json",
+        "producer_id": "lightweight_image_quality_metric_runner",
+        "producer_role": "basic_quality_metric_dry_run_or_cpu_runner",
+        "formal_result_claim": False,
+        "metric_rows_path": str(output_path),
+        "input_pairs_path": str(pairs_path),
+        "pair_count": len(pair_rows),
+        "metric_row_count": len(rows),
+        "metric_names": ["mse", "mae", "psnr", "ssim"],
+        "advanced_metric_names": [],
+        "execution_boundary": "basic_metrics_only_lpips_fid_clip_require_external_metric_plan",
+        "producer_digest": build_stable_digest({"pairs": pair_rows, "rows": rows}),
+    }
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(
+        json.dumps(
+            {"row_count": len(rows), "output_path": args.out, "manifest_path": str(manifest_path)},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ import pytest
 from experiments.baseline_plan import build_baseline_plan_manifest, load_baseline_command_plan
 from experiments.metric_file_adapter import load_metric_rows, merge_metric_rows_into_records
 from main.analysis.latex_tables import build_latex_tables_from_artifacts, write_latex_tables
+from main.analysis.result_package import export_paper_results_package
 
 
 @pytest.mark.quick
@@ -103,6 +104,44 @@ def test_run_baseline_plan_cli_collects_observations(tmp_path) -> None:
     rows = json.loads((output_root / "baseline_observations.json").read_text(encoding="utf-8"))
     assert rows[0]["baseline_id"] == "tree_ring"
     assert (output_root / "baseline_command_results.json").exists()
+    assert (output_root / "baseline_execution_manifest.json").exists()
+
+
+@pytest.mark.quick
+def test_run_metric_plan_cli_collects_rows_and_execution_manifest(tmp_path) -> None:
+    """metric plan CLI 应写出 metric rows、命令结果和执行 manifest。"""
+    metric_path = tmp_path / "lpips_rows.json"
+    code = (
+        "import json, pathlib; "
+        f"pathlib.Path(r'{metric_path}').write_text(json.dumps([{{'event_id':'e1','method_name':'ceg','lpips':0.04}}]), encoding='utf-8')"
+    )
+    plan_path = tmp_path / "metric_plan.json"
+    plan_path.write_text(
+        json.dumps(
+            [
+                {
+                    "metric_name": "lpips",
+                    "command": [sys.executable, "-c", code],
+                    "output_path": str(metric_path),
+                    "timeout_seconds": 30,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    output_root = tmp_path / "metric_outputs"
+
+    subprocess.run(
+        [sys.executable, "scripts/run_metric_plan.py", "--plan", str(plan_path), "--out", str(output_root)],
+        cwd=".",
+        check=True,
+    )
+
+    rows = json.loads((output_root / "metric_rows.json").read_text(encoding="utf-8"))
+    manifest = json.loads((output_root / "metric_execution_manifest.json").read_text(encoding="utf-8"))
+    assert rows[0]["lpips"] == pytest.approx(0.04)
+    assert manifest["artifact_name"] == "metric_execution_manifest.json"
+    assert manifest["metric_names"] == ["lpips"]
 
 
 @pytest.mark.quick
@@ -164,6 +203,20 @@ def test_build_paper_outputs_cli_merges_metric_rows_and_exports_latex(tmp_path) 
         encoding="utf-8",
     )
 
+    metric_manifest_path = tmp_path / "metric_execution_manifest.json"
+    metric_manifest_path.write_text(
+        json.dumps(
+            {
+                "artifact_name": "metric_execution_manifest.json",
+                "producer_id": "test_metric_source",
+                "formal_result_claim": False,
+                "metric_rows_path": str(metrics_path),
+                "metric_row_count": 1,
+            }
+        ),
+        encoding="utf-8",
+    )
+
     subprocess.run(
         [
             sys.executable,
@@ -174,6 +227,8 @@ def test_build_paper_outputs_cli_merges_metric_rows_and_exports_latex(tmp_path) 
             str(thresholds_path),
             "--metric-rows",
             str(metrics_path),
+            "--metric-execution-manifest",
+            str(metric_manifest_path),
             "--out",
             str(output_root),
         ],
@@ -187,3 +242,8 @@ def test_build_paper_outputs_cli_merges_metric_rows_and_exports_latex(tmp_path) 
     assert (output_root / "latex_tables" / "formal_main_table.tex").exists()
     summary = json.loads((output_root / "paper_outputs_summary.json").read_text(encoding="utf-8"))
     assert summary["latex_table_count"] >= 1
+    assert summary["metric_execution_manifest_path"] == "metric_results/metric_execution_manifest.json"
+    package_root = tmp_path / "paper_results_package"
+    package_manifest = export_paper_results_package(output_root, package_root, require_readiness=False)
+    assert "metric_results/metric_rows.json" in package_manifest["copied_files"]
+    assert "metric_results/metric_execution_manifest.json" in package_manifest["copied_files"]

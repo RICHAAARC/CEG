@@ -210,6 +210,21 @@ def _write_external_command_evidence(bundle_root, *, advanced_metrics: bool) -> 
         json.dumps([{"event_id": "formal_e1", "baseline_id": "tree_ring", "score": 0.8, "threshold": 0.5}], ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    (baseline_root / "baseline_execution_manifest.json").write_text(
+        json.dumps(
+            {
+                "artifact_name": "baseline_execution_manifest.json",
+                "producer_id": "test_external_baseline",
+                "formal_result_claim": False,
+                "baseline_observations_path": str(baseline_root / "baseline_observations.json"),
+                "observation_count": 1,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (metric_root / "metric_command_results.json").write_text(
         json.dumps([{"return_code": 0, "command": ["metric"], "stdout": "", "stderr": ""}], ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -219,6 +234,21 @@ def _write_external_command_evidence(bundle_root, *, advanced_metrics: bool) -> 
         metric_row.update({"lpips": 0.04, "fid": 8.0, "clip_score": 0.31})
     (metric_root / "metric_rows.json").write_text(
         json.dumps([metric_row], ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (metric_root / "metric_execution_manifest.json").write_text(
+        json.dumps(
+            {
+                "artifact_name": "metric_execution_manifest.json",
+                "producer_id": "test_external_metric",
+                "formal_result_claim": False,
+                "metric_rows_path": str(metric_root / "metric_rows.json"),
+                "metric_row_count": 1,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
 

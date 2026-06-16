@@ -137,6 +137,10 @@ def test_quality_metric_cli_and_render_cli(tmp_path) -> None:
         check=True,
     )
     assert json.loads(metrics_path.read_text(encoding="utf-8"))[0]["event_id"] == "event_cli"
+    metric_manifest = json.loads((tmp_path / "metric_execution_manifest.json").read_text(encoding="utf-8"))
+    assert metric_manifest["artifact_name"] == "metric_execution_manifest.json"
+    assert metric_manifest["formal_result_claim"] is False
+    assert metric_manifest["metric_names"] == ["mse", "mae", "psnr", "ssim"]
 
     specs_path = tmp_path / "paper_figure_specs.json"
     specs_path.write_text(
