@@ -274,3 +274,113 @@ def test_build_pilot_package_from_raw_inputs_cli_materializes_builds_and_archive
     assert build_manifest["overall_decision"] == "pass"
     assert (materialized_root / "pilot_input_manifest.json").is_file()
     assert (drive_root / "package_archives" / "paper_results_package_raw_inputs_cli.zip").is_file()
+
+
+@pytest.mark.quick
+def test_raw_input_builder_can_require_external_result_evidence(tmp_path) -> None:
+    """raw input 一键入口应能在正式外部证据通过后继续构建结果包."""
+    source_root = tmp_path / "source_inputs"
+    input_manifest = write_paper_dry_run_inputs(source_root)
+    import_root = tmp_path / "imports"
+    evidence_root = tmp_path / "evidence"
+    evidence_root.mkdir()
+    baseline_evidence = evidence_root / "baseline_run_log.txt"
+    metric_evidence = evidence_root / "metric_run_log.txt"
+    baseline_evidence.write_text("baseline formal pilot evidence\n", encoding="utf-8")
+    metric_evidence.write_text("metric formal pilot evidence\n", encoding="utf-8")
+    attack_root = tmp_path / "attack_outputs"
+    materialized_root = tmp_path / "materialized_pilot_inputs"
+    output_root = tmp_path / "pilot_package"
+    drive_root = tmp_path / "drive" / "CEG"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/import_baseline_observations.py",
+            "--observations",
+            str(source_root / input_manifest["baseline_observations_path"]),
+            "--out",
+            str(import_root / "baseline"),
+            "--formal-result-claim",
+            "--evidence-path",
+            str(baseline_evidence),
+        ],
+        cwd=".",
+        check=True,
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/import_metric_rows.py",
+            "--metric-rows",
+            str(source_root / input_manifest["metric_rows_path"]),
+            "--out",
+            str(import_root / "metric"),
+            "--formal-result-claim",
+            "--evidence-path",
+            str(metric_evidence),
+        ],
+        cwd=".",
+        check=True,
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_image_attack_workflow.py",
+            "--image-pairs",
+            str(source_root / input_manifest["image_pairs_path"]),
+            "--out",
+            str(attack_root),
+            "--attack-families",
+            "brightness_contrast",
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/build_pilot_package_from_raw_inputs.py",
+            "--materialized-input-root",
+            str(materialized_root),
+            "--out",
+            str(output_root),
+            "--run-id",
+            "raw_inputs_formal_evidence_cli",
+            "--events",
+            str(source_root / input_manifest["events_path"]),
+            "--thresholds",
+            str(source_root / input_manifest["thresholds_path"]),
+            "--baseline-observations",
+            str(import_root / "baseline" / "baseline_observations.json"),
+            "--baseline-execution-manifest",
+            str(import_root / "baseline" / "baseline_execution_manifest.json"),
+            "--metric-rows",
+            str(import_root / "metric" / "metric_rows.json"),
+            "--metric-execution-manifest",
+            str(import_root / "metric" / "metric_execution_manifest.json"),
+            "--image-pairs",
+            str(source_root / input_manifest["image_pairs_path"]),
+            "--attacked-image-manifest",
+            str(attack_root / "image_manifests" / "attacked_image_manifest.json"),
+            "--attack-shard-manifest",
+            str(attack_root / "image_manifests" / "attack_shard_manifest.json"),
+            "--readiness-requirements",
+            "configs/paper_output_requirements.json",
+            "--require-paper-readiness",
+            "--drive-root",
+            str(drive_root),
+            "--require-formal-external-result-claim",
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    raw_manifest = json.loads((output_root / "pilot_raw_input_package_build_manifest.json").read_text(encoding="utf-8"))
+    evidence_report = json.loads((output_root / "external_result_evidence_report.json").read_text(encoding="utf-8"))
+    assert raw_manifest["overall_decision"] == "pass"
+    assert raw_manifest["external_result_evidence_report"]["overall_decision"] == "pass"
+    assert evidence_report["overall_decision"] == "pass"
+    assert evidence_report["require_formal_claim"] is True
+    assert (drive_root / "package_archives" / "paper_results_package_raw_inputs_formal_evidence_cli.zip").is_file()

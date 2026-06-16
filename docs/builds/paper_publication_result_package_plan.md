@@ -597,7 +597,8 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 3. 运行 pilot input preflight, 确认所有输入文件存在、路径可解析、schema 可解析。
 4. 使用已支持 --pilot-input-manifest 的 scripts/build_pilot_package_from_provided_results.py, 避免手工传入一长串路径。
 5. 若输入仍分散在多个外部目录, 使用 scripts/build_pilot_package_from_raw_inputs.py 单命令完成物化、preflight、结果包构建和 MyDrive 分类归档。
-6. 在 preflight 通过后, 再使用一键构建脚本导出 paper_results_package 并归档到 MyDrive 分类目录。
+6. 当外部 baseline / 高级 metric 要支撑正式论文声明时, 在 raw builder 中启用 --require-formal-external-result-claim, 让 external_result_evidence_report.json 通过后再继续构建结果包。
+7. 在 preflight 通过后, 再使用一键构建脚本导出 paper_results_package 并归档到 MyDrive 分类目录。
 ```
 
 随后再进入:

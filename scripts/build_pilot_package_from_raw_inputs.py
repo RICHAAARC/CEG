@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from main.core.digest import build_stable_digest
 from experiments.pilot_input_materializer import materialize_pilot_input_bundle
+from experiments.external_result_evidence import validate_external_result_evidence
 
 
 def _optional_path(value: str | None) -> str | None:
@@ -64,6 +65,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-incomplete-package", action="store_true")
     parser.add_argument("--drive-root", default=None, help="可选 Drive 归档根目录.")
     parser.add_argument("--allow-invalid-archive-package", action="store_true")
+    parser.add_argument(
+        "--check-external-result-evidence",
+        action="store_true",
+        help="在构建结果包前校验外部 baseline 与高级 metric 的 execution manifest 证据.",
+    )
+    parser.add_argument(
+        "--require-formal-external-result-claim",
+        action="store_true",
+        help="要求外部 baseline 与高级 metric manifest 声明 formal_result_claim 并提供 evidence_paths.",
+    )
     return parser
 
 
@@ -105,6 +116,34 @@ def main() -> None:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         raise SystemExit(1)
 
+    external_result_evidence_report = None
+    should_check_external_evidence = args.check_external_result_evidence or args.require_formal_external_result_claim
+    if should_check_external_evidence:
+        materialized_root = Path(args.materialized_input_root)
+        external_result_evidence_report = validate_external_result_evidence(
+            baseline_execution_manifest=materialized_root / "external_baselines" / "baseline_execution_manifest.json",
+            metric_execution_manifest=materialized_root / "external_metrics" / "metric_execution_manifest.json",
+            require_formal_claim=args.require_formal_external_result_claim,
+        )
+        (output_root / "external_result_evidence_report.json").write_text(
+            json.dumps(external_result_evidence_report, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        if external_result_evidence_report["overall_decision"] != "pass":
+            summary = {
+                "artifact_name": "pilot_raw_input_package_build_manifest.json",
+                "overall_decision": "fail",
+                "failed_step": "external_result_evidence_preflight",
+                "materialization": materialization,
+                "external_result_evidence_report": external_result_evidence_report,
+            }
+            (output_root / "pilot_raw_input_package_build_manifest.json").write_text(
+                json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            print(json.dumps(summary, ensure_ascii=False, indent=2))
+            raise SystemExit(1)
+
     build_command = [
         sys.executable,
         str(ROOT / "scripts" / "build_pilot_package_from_provided_results.py"),
@@ -131,6 +170,7 @@ def main() -> None:
             "overall_decision": "fail",
             "failed_step": "build_pilot_package_from_materialized_input",
             "materialization": materialization,
+            "external_result_evidence_report": external_result_evidence_report,
             "build_result": build_result,
         }
         (output_root / "pilot_raw_input_package_build_manifest.json").write_text(
@@ -149,10 +189,12 @@ def main() -> None:
         "run_id": _optional_path(args.run_id),
         "drive_root": _optional_path(args.drive_root),
         "materialization": materialization,
+        "external_result_evidence_report": external_result_evidence_report,
         "build_result": build_result,
         "execution_digest": build_stable_digest(
             {
                 "materialization_digest": materialization.get("materialization_digest"),
+                "external_result_evidence_digest": (external_result_evidence_report or {}).get("evidence_digest"),
                 "build_command": build_command,
                 "run_id": args.run_id,
             }

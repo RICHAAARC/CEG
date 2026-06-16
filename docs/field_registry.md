@@ -516,3 +516,7 @@ Notebook 与 repository module 的跨边界数据
 | evidence_paths | artifact | none | false | false | false | 外部运行日志、配置、摘要或其他 provenance 文件路径集合. |
 | evidence_path_count | metric | none | false | true | false | 外部结果 manifest 中登记的证据文件数量. |
 | evidence_digest | artifact | none | false | true | false | 外部结果证据预检报告对检查结果生成的稳定摘要. |
+
+| check_external_result_evidence | protocol | none | false | true | false | raw pilot 输入一键构建入口是否在构建结果包前执行外部 baseline 与高级 metric 证据预检. |
+| require_formal_external_result_claim | protocol | none | false | true | false | raw pilot 输入一键构建入口是否要求外部 baseline 与高级 metric manifest 均声明 formal_result_claim 并提供 evidence_paths. |
+| external_result_evidence_digest | artifact | none | false | true | false | raw pilot 输入一键构建总控 manifest 中记录的外部结果证据预检报告稳定摘要. |

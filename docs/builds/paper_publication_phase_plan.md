@@ -805,13 +805,14 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 1. 先冻结 pilot 输入交付契约, 使用 pilot_input_manifest.json 统一声明真实或半真实 pilot 所需的 events、thresholds、baseline observations、metric rows、image pairs、attack manifests、experiment matrix 和 readiness requirements。
 2. 对分散的已提供产物运行 scripts/materialize_pilot_input_manifest.py, 形成 canonical pilot 输入目录和 pilot_input_materialization_manifest.json。
 3. 若需要单命令交付 pilot 结果包, 使用 scripts/build_pilot_package_from_raw_inputs.py 串联输入物化、preflight、结果包构建和 MyDrive 归档。
-4. 对 pilot_input_manifest.json 执行 preflight 校验, 在构建 paper_results_package 前确认所有输入文件存在、schema 可解析、路径可追溯。
-5. 使用 scripts/import_baseline_observations.py 接入至少一个真实 external baseline backend 输出或离线正式 observation 文件。
-6. 使用 scripts/import_metric_rows.py 接入真实 LPIPS / FID / CLIP score backend 输出或离线正式 metric rows。
-7. 对 baseline_execution_manifest.json 与 metric_execution_manifest.json 运行 scripts/validate_external_result_evidence.py, 在正式声明时要求 formal_result_claim 和 evidence_paths 同时通过。
-8. 将真实 baseline 与高级 metric execution manifest 和 result package provenance 对齐。
-9. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR、quality metrics 和 image examples。
-10. 继续保持所有论文表格由 records 和 manifests 重建。
+4. 当 raw input 中包含 baseline_execution_manifest.json 与 metric_execution_manifest.json 时, 可在该一键入口启用 --check-external-result-evidence 或 --require-formal-external-result-claim, 使外部证据预检成为结果包构建前的阻断门禁。
+5. 对 pilot_input_manifest.json 执行 preflight 校验, 在构建 paper_results_package 前确认所有输入文件存在、schema 可解析、路径可追溯。
+6. 使用 scripts/import_baseline_observations.py 接入至少一个真实 external baseline backend 输出或离线正式 observation 文件。
+7. 使用 scripts/import_metric_rows.py 接入真实 LPIPS / FID / CLIP score backend 输出或离线正式 metric rows。
+8. 对 baseline_execution_manifest.json 与 metric_execution_manifest.json 运行 scripts/validate_external_result_evidence.py, 在正式声明时要求 formal_result_claim 和 evidence_paths 同时通过。
+9. 将真实 baseline 与高级 metric execution manifest 和 result package provenance 对齐。
+10. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR、quality metrics 和 image examples。
+11. 继续保持所有论文表格由 records 和 manifests 重建。
 ```
 
 ### 6.2 随后推进事项
