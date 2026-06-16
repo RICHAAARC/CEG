@@ -421,6 +421,7 @@ Notebook 与 repository module 的跨边界数据
 | colab_acceptance_command | protocol | none | false | false | false | archive manifest 中记录的 Colab 会话内绝对路径验收命令。|
 | archive_manifest_path | artifact | none | false | false | false | archive manifest 中记录的 sidecar manifest 自身路径。 |
 | archive_manifest_stage | artifact | none | false | true | false | archive manifest 的阶段标识, pre_archive_sidecar 表示嵌入 zip 的预归档说明, post_archive_sidecar 表示 Drive 外层带 archive_sha256 的最终 sidecar。 |
+| embedded_colab_archive_sidecar_parseable | artifact | none | false | true | false | Colab bundle 校验中检查内嵌 archive sidecar 可解析、阶段为 pre_archive_sidecar 且离线验收命令指向 path/to/ceg_colab_run_bundle.zip 的门禁项。 |
 | output_layout_manifest_path | artifact | none | false | false | false | archive manifest 中记录的 Colab 输出布局 manifest 路径。 |
 | paper_result_index_path | artifact | none | false | false | false | archive manifest 中记录的 Colab 论文结果索引路径。 |
 | archive_size_bytes | metric | none | false | false | false | Colab 可下载 zip 的字节大小。|

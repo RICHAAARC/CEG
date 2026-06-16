@@ -1711,6 +1711,7 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
         "colab_formal_runbook.md",
         "colab_paper_result_index.json",
         "colab_formal_result_gap_report.json",
+        "archives/colab_bundle_archive_manifest.json",
         "experiment_matrix/experiment_matrix.json",
         "experiment_matrix/experiment_matrix_manifest.json",
         "paper_results_package/paper_results_package_manifest.json",
@@ -1736,6 +1737,37 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
         )
     else:
         checks.append(_fail_check("colab_formal_runbook_contains_acceptance_guidance", "missing"))
+    archive_sidecar_path = root / "archives" / "colab_bundle_archive_manifest.json"
+    if archive_sidecar_path.is_file():
+        try:
+            archive_sidecar_payload = json.loads(archive_sidecar_path.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as exc:
+            checks.append(_fail_check("embedded_colab_archive_sidecar_parseable", str(exc)))
+        else:
+            offline_command = archive_sidecar_payload.get("offline_acceptance_command") if isinstance(archive_sidecar_payload, dict) else None
+            sidecar_summary = {
+                "artifact_name": archive_sidecar_payload.get("artifact_name") if isinstance(archive_sidecar_payload, dict) else None,
+                "archive_manifest_stage": archive_sidecar_payload.get("archive_manifest_stage") if isinstance(archive_sidecar_payload, dict) else None,
+                "archive_name": archive_sidecar_payload.get("archive_name") if isinstance(archive_sidecar_payload, dict) else None,
+                "offline_acceptance_command": offline_command,
+            }
+            offline_command_text = " ".join(str(part) for part in offline_command) if isinstance(offline_command, list) else ""
+            sidecar_valid = (
+                isinstance(archive_sidecar_payload, dict)
+                and archive_sidecar_payload.get("artifact_name") == "colab_bundle_archive_manifest.json"
+                and archive_sidecar_payload.get("archive_manifest_stage") == "pre_archive_sidecar"
+                and archive_sidecar_payload.get("archive_name") == "ceg_colab_run_bundle.zip"
+                and isinstance(offline_command, list)
+                and "scripts/run_colab_acceptance_checks.py" in offline_command_text
+                and "path/to/ceg_colab_run_bundle.zip" in offline_command
+            )
+            checks.append(
+                _pass_check("embedded_colab_archive_sidecar_parseable", sidecar_summary)
+                if sidecar_valid
+                else _fail_check("embedded_colab_archive_sidecar_parseable", sidecar_summary)
+            )
+    else:
+        checks.append(_fail_check("embedded_colab_archive_sidecar_parseable", "missing"))
     result_index_path = root / "colab_paper_result_index.json"
     if result_index_path.is_file():
         try:
@@ -2000,6 +2032,63 @@ def export_colab_run_bundle(workspace_root: str | Path, bundle_root: str | Path 
     manifest_payload["validation_decision"] = validation["overall_decision"]
     return manifest_payload
 
+def _build_colab_archive_manifest_base(
+    workspace: Path,
+    target_bundle: Path,
+    final_archive_path: Path,
+    *,
+    allow_dry_run: bool,
+    require_experiment_coverage: bool,
+    require_external_command_results: bool,
+) -> dict[str, Any]:
+    """构造归档 sidecar 的基础 manifest, 供 zip 内外使用同一份验收命令语义。"""
+    output_layout = build_colab_output_layout(workspace)
+    colab_acceptance_command = [
+        sys.executable,
+        "scripts/run_colab_acceptance_checks.py",
+        "--bundle",
+        str(final_archive_path),
+        "--require-pass",
+    ]
+    offline_acceptance_command = [
+        sys.executable,
+        "scripts/run_colab_acceptance_checks.py",
+        "--bundle",
+        f"path/to/{final_archive_path.name}",
+        "--require-pass",
+    ]
+    for command in (colab_acceptance_command, offline_acceptance_command):
+        if allow_dry_run:
+            command.insert(-1, "--allow-dry-run")
+        if not require_experiment_coverage:
+            command.insert(-1, "--allow-missing-experiment-coverage")
+        if require_external_command_results:
+            command.insert(-1, "--require-external-command-results")
+
+    return {
+        "artifact_name": "colab_bundle_archive_manifest.json",
+        "archive_manifest_stage": "pre_archive_sidecar",
+        "workspace_root": str(workspace),
+        "drive_output_root": output_layout["drive_output_root"],
+        "archives_root": str(final_archive_path.parent),
+        "bundle_root": str(target_bundle),
+        "archive_path": str(final_archive_path),
+        "archive_manifest_path": str(final_archive_path.parent / "colab_bundle_archive_manifest.json"),
+        "output_layout_manifest_path": str(workspace / "colab_output_layout_manifest.json"),
+        "formal_input_contract_path": str(workspace / "colab_formal_input_contract.json"),
+        "formal_input_templates_manifest_path": str(workspace / "inputs" / "formal_input_templates_manifest.json"),
+        "formal_runbook_path": str(workspace / "colab_formal_runbook.md"),
+        "paper_result_index_path": str(workspace / "colab_paper_result_index.json"),
+        "formal_result_gap_report_path": str(workspace / "colab_formal_result_gap_report.json"),
+        "archive_name": final_archive_path.name,
+        "allow_dry_run": allow_dry_run,
+        "require_experiment_coverage": require_experiment_coverage,
+        "require_external_command_results": require_external_command_results,
+        "colab_acceptance_command": colab_acceptance_command,
+        "offline_acceptance_command": offline_acceptance_command,
+    }
+
+
 def create_colab_bundle_archive(
     workspace_root: str | Path,
     *,
@@ -2025,50 +2114,14 @@ def create_colab_bundle_archive(
     final_archive_path = archive_base.with_suffix(".zip").resolve()
     archive_manifest_path = final_archive_path.parent / "colab_bundle_archive_manifest.json"
 
-    colab_acceptance_command = [
-        sys.executable,
-        "scripts/run_colab_acceptance_checks.py",
-        "--bundle",
-        str(final_archive_path),
-        "--require-pass",
-    ]
-    offline_acceptance_command = [
-        sys.executable,
-        "scripts/run_colab_acceptance_checks.py",
-        "--bundle",
-        f"path/to/{final_archive_path.name}",
-        "--require-pass",
-    ]
-    for command in (colab_acceptance_command, offline_acceptance_command):
-        if allow_dry_run:
-            command.insert(-1, "--allow-dry-run")
-        if not require_experiment_coverage:
-            command.insert(-1, "--allow-missing-experiment-coverage")
-        if require_external_command_results:
-            command.insert(-1, "--require-external-command-results")
-
-    archive_manifest_base = {
-        "artifact_name": "colab_bundle_archive_manifest.json",
-        "archive_manifest_stage": "pre_archive_sidecar",
-        "workspace_root": str(workspace),
-        "drive_output_root": output_layout["drive_output_root"],
-        "archives_root": str(final_archive_path.parent),
-        "bundle_root": str(target_bundle),
-        "archive_path": str(final_archive_path),
-        "archive_manifest_path": str(archive_manifest_path),
-        "output_layout_manifest_path": str(workspace / "colab_output_layout_manifest.json"),
-        "formal_input_contract_path": str(workspace / "colab_formal_input_contract.json"),
-        "formal_input_templates_manifest_path": str(workspace / "inputs" / "formal_input_templates_manifest.json"),
-        "formal_runbook_path": str(workspace / "colab_formal_runbook.md"),
-        "paper_result_index_path": str(workspace / "colab_paper_result_index.json"),
-        "formal_result_gap_report_path": str(workspace / "colab_formal_result_gap_report.json"),
-        "archive_name": final_archive_path.name,
-        "allow_dry_run": allow_dry_run,
-        "require_experiment_coverage": require_experiment_coverage,
-        "require_external_command_results": require_external_command_results,
-        "colab_acceptance_command": colab_acceptance_command,
-        "offline_acceptance_command": offline_acceptance_command,
-    }
+    archive_manifest_base = _build_colab_archive_manifest_base(
+        workspace,
+        target_bundle,
+        final_archive_path,
+        allow_dry_run=allow_dry_run,
+        require_experiment_coverage=require_experiment_coverage,
+        require_external_command_results=require_external_command_results,
+    )
     archive_manifest_path.write_text(
         json.dumps(archive_manifest_base, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -2102,6 +2155,7 @@ def create_colab_bundle_archive(
     write_colab_formal_result_gap_report(workspace)
     write_colab_formal_runbook(workspace)
     return archive_manifest
+
 
 def build_colab_environment_summary(repo_root: str | Path) -> dict[str, Any]:
     """返回 Notebook 可展示的运行环境摘要。"""
@@ -3604,6 +3658,27 @@ def run_colab_cold_start_pipeline(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    archive_preview_path = Path(build_colab_output_layout(workspace)["archives_root"]) / "ceg_colab_run_bundle.zip"
+    archive_preview_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_preview_manifest = _build_colab_archive_manifest_base(
+        workspace,
+        workspace / "colab_run_bundle",
+        archive_preview_path,
+        allow_dry_run=use_dry_run_inputs,
+        require_experiment_coverage=require_experiment_coverage,
+        require_external_command_results=run_external_plans,
+    )
+    (archive_preview_path.parent / "colab_bundle_archive_manifest.json").write_text(
+        json.dumps(archive_preview_manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    summary["colab_bundle_archive_path"] = str(archive_preview_path)
+    summary["colab_bundle_archive_manifest_path"] = str(archive_preview_path.parent / "colab_bundle_archive_manifest.json")
+    summary["colab_bundle_archive_name"] = archive_preview_path.name
+    (workspace / "colab_cold_start_summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     export_colab_run_bundle(workspace)
     acceptance_report = run_colab_acceptance_checks(
         repo_root,
@@ -3630,11 +3705,30 @@ def run_colab_cold_start_pipeline(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    final_bundle_manifest = export_colab_run_bundle(workspace)
     archive_preview_path = Path(build_colab_output_layout(workspace)["archives_root"]) / "ceg_colab_run_bundle.zip"
+    archive_preview_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_preview_manifest = _build_colab_archive_manifest_base(
+        workspace,
+        workspace / "colab_run_bundle",
+        archive_preview_path,
+        allow_dry_run=use_dry_run_inputs,
+        require_experiment_coverage=require_experiment_coverage,
+        require_external_command_results=run_external_plans,
+    )
+    (archive_preview_path.parent / "colab_bundle_archive_manifest.json").write_text(
+        json.dumps(archive_preview_manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     summary["colab_bundle_archive_path"] = str(archive_preview_path)
     summary["colab_bundle_archive_manifest_path"] = str(archive_preview_path.parent / "colab_bundle_archive_manifest.json")
     summary["colab_bundle_archive_name"] = archive_preview_path.name
+    (workspace / "colab_cold_start_summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    final_bundle_manifest = export_colab_run_bundle(workspace)
+    summary["colab_run_bundle_file_count"] = final_bundle_manifest["file_count"]
+    summary["colab_run_bundle_validation_decision"] = final_bundle_manifest.get("validation_decision")
     (workspace / "colab_cold_start_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

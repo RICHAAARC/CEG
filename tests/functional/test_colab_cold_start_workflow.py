@@ -806,6 +806,28 @@ def test_validate_colab_run_bundle_requires_passing_bundle_scoped_evidence(tmp_p
 
 
 @pytest.mark.quick
+def test_validate_colab_run_bundle_rejects_malformed_archive_sidecar(tmp_path) -> None:
+    """Colab bundle 校验应拒绝无法说明离线验收入口的内嵌 archive sidecar。"""
+    run_colab_cold_start_pipeline(".", tmp_path / "colab_workspace", repetitions=1)
+    bundle_root = tmp_path / "colab_workspace" / "colab_run_bundle"
+
+    malformed_root = tmp_path / "malformed_archive_sidecar_bundle"
+    shutil.copytree(bundle_root, malformed_root)
+    sidecar_path = malformed_root / "archives" / "colab_bundle_archive_manifest.json"
+    sidecar_payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    sidecar_payload["archive_manifest_stage"] = "post_archive_sidecar"
+    sidecar_payload["offline_acceptance_command"] = [sys.executable, "scripts/run_colab_acceptance_checks.py", "--bundle", "wrong.zip"]
+    sidecar_path.write_text(json.dumps(sidecar_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    report = validate_colab_run_bundle(malformed_root)
+
+    assert report["overall_decision"] == "fail"
+    failed_requirements = {check["requirement"] for check in report["checks"] if check["status"] == "fail"}
+    assert "embedded_colab_archive_sidecar_parseable" in failed_requirements
+
+
+
+@pytest.mark.quick
 def test_validate_colab_run_bundle_rejects_malformed_acceptance_report(tmp_path) -> None:
     """如果 bundle 已包含最终 acceptance report, 该报告必须结构正确且可复核。"""
     run_colab_cold_start_pipeline(".", tmp_path / "colab_workspace", repetitions=1)
