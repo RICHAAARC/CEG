@@ -1337,6 +1337,33 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
             if evidence_payload.get("target_kind") == "colab_run_bundle"
             else _fail_check("embedded_paper_result_evidence_targets_colab_bundle", evidence_summary)
         )
+    acceptance_report_path = root / "colab_acceptance_report.json"
+    if acceptance_report_path.is_file():
+        try:
+            acceptance_payload = json.loads(acceptance_report_path.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as exc:
+            checks.append(_fail_check("embedded_colab_acceptance_report_parseable", str(exc)))
+        else:
+            acceptance_summary = {
+                "artifact_name": acceptance_payload.get("artifact_name") if isinstance(acceptance_payload, dict) else None,
+                "overall_decision": acceptance_payload.get("overall_decision") if isinstance(acceptance_payload, dict) else None,
+                "report_decisions": acceptance_payload.get("report_decisions") if isinstance(acceptance_payload, dict) else None,
+            }
+            acceptance_valid = (
+                isinstance(acceptance_payload, dict)
+                and acceptance_payload.get("artifact_name") == "colab_acceptance_report.json"
+                and acceptance_payload.get("overall_decision") in {"pass", "fail"}
+                and isinstance(acceptance_payload.get("report_decisions"), dict)
+                and "colab_run_bundle_validation" in acceptance_payload.get("report_decisions", {})
+                and "paper_result_evidence" in acceptance_payload.get("report_decisions", {})
+            )
+            checks.append(
+                _pass_check("embedded_colab_acceptance_report_parseable", acceptance_summary)
+                if acceptance_valid
+                else _fail_check("embedded_colab_acceptance_report_parseable", acceptance_summary)
+            )
+    else:
+        checks.append(_pass_check("embedded_colab_acceptance_report_optional_before_final_acceptance", "missing"))
     mismatches: list[dict[str, str]] = []
     file_entries = manifest.get("files", []) if isinstance(manifest, dict) else []
     for entry in file_entries:

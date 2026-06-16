@@ -505,6 +505,26 @@ def test_validate_colab_run_bundle_requires_passing_bundle_scoped_evidence(tmp_p
 
 
 @pytest.mark.quick
+def test_validate_colab_run_bundle_rejects_malformed_acceptance_report(tmp_path) -> None:
+    """如果 bundle 已包含最终 acceptance report, 该报告必须结构正确且可复核。"""
+    run_colab_cold_start_pipeline(".", tmp_path / "colab_workspace", repetitions=1)
+    bundle_root = tmp_path / "colab_workspace" / "colab_run_bundle"
+
+    malformed_root = tmp_path / "malformed_acceptance_bundle"
+    shutil.copytree(bundle_root, malformed_root)
+    acceptance_path = malformed_root / "colab_acceptance_report.json"
+    acceptance_payload = json.loads(acceptance_path.read_text(encoding="utf-8"))
+    acceptance_payload.pop("report_decisions")
+    acceptance_path.write_text(json.dumps(acceptance_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    report = validate_colab_run_bundle(malformed_root)
+
+    assert report["overall_decision"] == "fail"
+    failed_requirements = {check["requirement"] for check in report["checks"] if check["status"] == "fail"}
+    assert "embedded_colab_acceptance_report_parseable" in failed_requirements
+
+
+@pytest.mark.quick
 def test_paper_artifact_rebuild_package_includes_colab_workflow(tmp_path) -> None:
     """论文产物重建发布包应包含 Colab Notebook 和 helper。"""
     package_root = tmp_path / "artifact_package"
