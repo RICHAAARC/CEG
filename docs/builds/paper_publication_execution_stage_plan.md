@@ -44,7 +44,8 @@ real_pilot_input_preparation
 7. 只有 launch plan 通过后，才执行真实图像生成 backend。
 8. 图像生成完成后先运行 `validate_pilot_image_generation_outputs.py --require-pass`。
 9. 图像生成输出接收门禁通过后，进入 attack pilot。
-10. attack 输出接收门禁通过后，再进入 detection、external baseline、quality metric、fixed-FPR 统计和论文结果包构建。
+10. attack 输出接收门禁通过后，进入 detection。
+11. detection 输出接收门禁通过后，再进入 external baseline、quality metric、fixed-FPR 统计和论文结果包构建。
 ```
 
 ### 0.3.4 论文结果包推进顺序
@@ -57,6 +58,7 @@ P2.5: 校验图像生成输出接收门禁。
 P3: 执行 attack pilot。
 P3.5: 校验 attack 输出接收门禁。
 P4: 运行 CEG detector 与内部消融。
+P4.5: 校验 detection 输出接收门禁。
 P5: 接入 external baseline。
 P6: 接入质量指标。
 P7: 统计 fixed-FPR / TPR@FPR。
@@ -655,6 +657,49 @@ dry-run producer 与 external detector command plan 已具备，真实 detector 
 2. attacked 样本包含 attack_family 和 attack_condition。
 3. thresholds 与 calibration / test split 关系清晰。
 ```
+
+---
+
+
+## 阶段 F2: detection 输出接收门禁
+
+### 目标
+
+在 CEG detector 或外部 detector backend 完成后，检查 detection events、thresholds 和执行 manifest 是否满足 fixed-FPR / TPR@FPR 统计与论文结果包构建的最小契约。
+
+### 输入
+
+```text
+ceg_detection/
+  detection_events.json
+  detection_thresholds.json
+  ceg_detection_execution_manifest.json 或 ceg_detection_producer_manifest.json
+```
+
+### 输出
+
+```text
+pilot_detection_output_acceptance_report.json
+```
+
+### 推荐命令
+
+```text
+python scripts/validate_pilot_detection_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/ceg_detection --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_detection_output_acceptance_report.json --require-pass
+```
+
+### 完成门禁
+
+```text
+1. detection_events.json 和 detection_thresholds.json 全部存在且可读。
+2. 至少存在一个 detection run manifest: ceg_detection_execution_manifest.json 或 ceg_detection_producer_manifest.json。
+3. 每条 detection event 包含 event_id、method_name、split、sample_role、attack_family、attack_condition 和 is_watermarked。
+4. 每条 detection event 能解析出可比较分数。
+5. fixed-FPR 所需的 calibration clean negative、test clean negative 和 test positive 均存在。
+6. detection_thresholds.json 至少覆盖 detection events 中出现的 method_name。
+```
+
+该阶段属于统计前接收门禁，不属于 detector 运行阶段。它不改变分数，只决定是否可以进入 fixed-FPR / TPR@FPR 统计。
 
 ---
 

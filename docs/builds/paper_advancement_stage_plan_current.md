@@ -233,6 +233,26 @@ ablation_observations.json
 
 完成门禁：所有分数记录必须包含 split、sample_id、label、score、method、source_image、run_id 和 provenance。
 
+
+### 阶段 P4.5：detection 输出接收门禁
+
+目标：在 CEG detector 或外部 detector backend 写出结果后，确认 detection events、thresholds 和执行 manifest 是否满足 fixed-FPR / TPR@FPR 统计的最小契约。
+
+推荐命令：
+
+```text
+python scripts/validate_pilot_detection_outputs.py --output-root {workspace}\ceg_detection --out {workspace}\pilot_detection_output_acceptance_report.json --require-pass
+```
+
+该门禁只检查 detection 输出契约和 fixed-FPR 统计可用性，不运行 detector，不重新计算分数，也不把 dry-run producer 输出声明为正式论文结果。
+
+完成门禁：
+
+```text
+pilot_detection_output_acceptance_report.json: overall_decision = pass
+pilot_detection_output_acceptance_report.json: recommended_next_stage = fixed_fpr_statistics_pilot
+```
+
 ### 阶段 P5：接入 external baseline
 
 目标：加入至少一个外部 baseline，形成论文对比。
@@ -330,7 +350,9 @@ S8. 只有在 S7 通过后，才执行真实图像生成 backend。
 S9. 真实图像生成 backend 完成后，运行 `validate_pilot_image_generation_outputs.py --require-pass` 接收门禁。
 S10. 图像生成输出接收门禁通过后，再进入 attack pilot。
 S11. attack workflow 完成后，运行 `validate_pilot_attack_outputs.py --require-pass` 接收门禁。
-S12. attack 输出接收门禁通过后，再运行 detection、baseline、quality metric 和 fixed-FPR 统计。
+S12. attack 输出接收门禁通过后，运行 detection。
+S13. detection 完成后运行 `validate_pilot_detection_outputs.py --require-pass` 接收门禁。
+S14. detection 输出接收门禁通过后，再运行 baseline、quality metric 和 fixed-FPR 统计。
 ```
 
 ## 7. MyDrive 落盘规则
