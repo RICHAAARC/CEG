@@ -217,6 +217,7 @@ def test_colab_formal_result_gap_report_explains_missing_formal_evidence(tmp_pat
         "non_dry_run_inputs_used",
         "formal_run_checklist_passed",
         "paper_result_index_complete",
+        "paper_result_index_production_trace_complete",
         "experiment_matrix_coverage_enforced",
         "external_baseline_source_ready",
         "advanced_metric_source_ready",
@@ -256,6 +257,57 @@ def test_colab_formal_run_checklist_preflights_formal_input_sources(tmp_path) ->
 
 
 @pytest.mark.quick
+def test_colab_formal_result_gap_report_rejects_missing_result_index_production_trace(tmp_path) -> None:
+    """正式缺口报告应把缺少生产追踪的论文结果索引列为阻断项。"""
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    (workspace / "colab_formal_run_checklist.json").write_text(
+        json.dumps(
+            {
+                "artifact_name": "colab_formal_run_checklist.json",
+                "overall_decision": "pass",
+                "blocking_issue_count": 0,
+                "use_dry_run_inputs": False,
+                "run_external_plans": False,
+                "require_experiment_coverage": True,
+                "baseline_source_mode": "provided_file",
+                "metric_source_mode": "provided_file",
+                "gpu_readiness": {"checked_for_formal_external_plans": False, "gpu_available": False},
+                "issues": [],
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (workspace / "colab_paper_result_index.json").write_text(
+        json.dumps(
+            {
+                "artifact_name": "colab_paper_result_index.json",
+                "overall_decision": "pass",
+                "required_missing": [],
+                "required_present": 3,
+                "required_total": 3,
+                "required_result_group_failures": [],
+                "semantic_check_summary": {"fail_count": 0},
+                "semantic_check_failures": [],
+                "production_trace_summary": {"missing_trace_count": 1, "missing_trace_result_ids": ["standard_watermark_metrics"]},
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_colab_formal_result_gap_report(workspace)
+
+    assert report["overall_decision"] == "not_ready_for_formal_claims"
+    assert "paper_result_index_production_trace_complete" in report["blocking_gap_requirements"]
+    checks = {item["requirement"]: item for item in report["checks"]}
+    assert checks["paper_result_index_production_trace_complete"]["evidence"]["missing_trace_result_ids"] == ["standard_watermark_metrics"]
+
+
+@pytest.mark.quick
 def test_colab_formal_result_gap_report_accepts_provided_file_strict_path(tmp_path) -> None:
     """直接提供 baseline / metric 结果文件时, 严格缺口报告应依赖 provided_results manifest, 而不是强制外部命令结果。"""
     workspace = tmp_path / "workspace"
@@ -285,7 +337,21 @@ def test_colab_formal_result_gap_report_accepts_provided_file_strict_path(tmp_pa
         encoding="utf-8",
     )
     (workspace / "colab_paper_result_index.json").write_text(
-        json.dumps({"artifact_name": "colab_paper_result_index.json", "overall_decision": "pass", "required_missing": [], "required_present": 3, "required_total": 3}, ensure_ascii=False) + "\n",
+        json.dumps(
+            {
+                "artifact_name": "colab_paper_result_index.json",
+                "overall_decision": "pass",
+                "required_missing": [],
+                "required_present": 3,
+                "required_total": 3,
+                "required_result_group_failures": [],
+                "semantic_check_summary": {"fail_count": 0},
+                "semantic_check_failures": [],
+                "production_trace_summary": {"missing_trace_count": 0, "missing_trace_result_ids": []},
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
         encoding="utf-8",
     )
     (artifacts_root / "paper_experiment_coverage_report.json").write_text(
@@ -333,6 +399,7 @@ def test_colab_formal_result_gap_report_accepts_provided_file_strict_path(tmp_pa
     checks = {item["requirement"]: item for item in report["checks"]}
     assert checks["external_command_result_files_present"]["status"] == "pass"
     assert checks["provided_result_files_manifest_ready"]["status"] == "pass"
+    assert checks["paper_result_index_production_trace_complete"]["status"] == "pass"
     assert checks["strict_paper_result_evidence_passed"]["status"] == "pass"
     assert checks["strict_colab_acceptance_passed"]["status"] == "pass"
 

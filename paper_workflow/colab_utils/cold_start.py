@@ -1357,22 +1357,52 @@ def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str
             },
         )
     )
-    index_complete = result_index.get("overall_decision") == "pass" and not result_index.get("required_missing")
+    result_group_failures = result_index.get("required_result_group_failures")
+    semantic_check_summary = result_index.get("semantic_check_summary") if isinstance(result_index.get("semantic_check_summary"), dict) else {}
+    semantic_check_failures = result_index.get("semantic_check_failures")
+    production_trace_summary = result_index.get("production_trace_summary") if isinstance(result_index.get("production_trace_summary"), dict) else {}
+    production_trace_missing_ids = production_trace_summary.get("missing_trace_result_ids")
+    index_complete = (
+        result_index.get("overall_decision") == "pass"
+        and not result_index.get("required_missing")
+        and isinstance(result_group_failures, list)
+        and not result_group_failures
+        and isinstance(semantic_check_failures, list)
+        and not semantic_check_failures
+        and int(semantic_check_summary.get("fail_count", -1)) == 0
+    )
     checks.append(
         _formal_gap_check(
             "paper_result_index_complete",
             "pass" if index_complete else "fail",
             "blocking",
-            "论文结果索引中的必需表格、图表、指标和报告必须全部存在。",
+            "论文结果索引中的必需表格、图表、指标和报告必须全部存在, 且关键结果内容结构必须通过。",
             {
                 "overall_decision": result_index.get("overall_decision"),
                 "required_missing": result_index.get("required_missing"),
                 "required_present": result_index.get("required_present"),
                 "required_total": result_index.get("required_total"),
-                "required_result_group_failures": result_index.get("required_result_group_failures"),
+                "required_result_group_failures": result_group_failures,
                 "required_result_group_summary": result_index.get("required_result_group_summary"),
-                "semantic_check_summary": result_index.get("semantic_check_summary"),
-                "semantic_check_failures": result_index.get("semantic_check_failures"),
+                "semantic_check_summary": semantic_check_summary,
+                "semantic_check_failures": semantic_check_failures,
+            },
+        )
+    )
+    production_trace_complete = (
+        isinstance(production_trace_missing_ids, list)
+        and not production_trace_missing_ids
+        and int(production_trace_summary.get("missing_trace_count", -1)) == 0
+    )
+    checks.append(
+        _formal_gap_check(
+            "paper_result_index_production_trace_complete",
+            "pass" if production_trace_complete else "fail",
+            "blocking",
+            "论文结果索引中的每个 result_id 必须说明生成步骤、上游输入和验收门禁。",
+            {
+                "production_trace_summary": production_trace_summary,
+                "missing_trace_result_ids": production_trace_missing_ids,
             },
         )
     )
