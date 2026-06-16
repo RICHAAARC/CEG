@@ -1,13 +1,78 @@
-﻿# CEG 论文发表推进阶段计划执行稿
+# CEG 论文发表推进阶段计划执行稿
 
 ## 0. 文档定位
 
-本文档落盘于 `D:\Code\CEG\docs\builds`，用于把当前阶段计划整理为后续工程执行、实验排期和论文结果包验收的统一依据。整理日期为 2026-06-17。
+本文档落盘于 `D:/Code/CEG/docs/builds`，用于把当前阶段计划整理为后续工程执行、实验排期和论文结果包验收的统一依据。整理日期为 2026-06-17。
 
 本文档只定义推进顺序、门禁和产物契约，不声明当前项目已经完成正式论文实验。当前 `CEG` 已具备较多 dry-run、manifest、结果包和审计能力，但仍需要真实 SD / watermark / attack / detection / external baseline / advanced quality metric 结果，才能形成论文可用结果包。
 
 
 ---
+
+
+## 0.3 2026-06-17 阶段计划整理更新
+
+### 0.3.1 当前阶段判定
+
+当前阶段统一定义为：
+
+```text
+real_pilot_input_preparation
+```
+
+该阶段表示真实 pilot 工作区已经创建，但真实输入值包尚未填写完毕，不能启动真实 SD / watermark 图像生成，也不能进入 attack、detection、baseline 或论文表格统计。
+
+### 0.3.2 当前阻断门禁
+
+| 门禁产物 | 当前结论 | 处理动作 |
+|---|---:|---|
+| `pilot_input_plan_preflight_report.json` | `fail` | 替换所有 prompt / split / seed / model / watermark 占位字段后重跑。 |
+| `pilot_input_plan_replacement_checklist.json` | `fail` | 按 19 个替换任务填写真实值。 |
+| `pilot_input_value_pack_application_report.json` | `fail` | 在值包中补齐真实 `value` 后重新应用。 |
+| `pilot_execution_readiness_report.json` | `fail` | 等 preflight 与值包应用同时通过后重跑。 |
+| `pilot_image_generation_launch_plan_report.json` | `fail` | 等 execution readiness 通过并补齐 launch variables 后重建。 |
+
+### 0.3.3 下一步最短路径
+
+```text
+1. 填写 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500\pilot_input_value_pack.draft.json。
+2. 运行 apply_pilot_input_value_pack.py --require-pass。
+3. 运行 validate_pilot_input_plan_templates.py --require-pass。
+4. 运行 build_pilot_execution_readiness_report.py --require-pass。
+5. 填写 pilot_image_generation_launch_variables.draft.json。
+6. 运行 build_pilot_image_generation_launch_plan.py --require-pass。
+7. 只有 launch plan 通过后，才执行真实图像生成 backend。
+8. 图像生成通过接收门禁后，依次进入 attack、detection、external baseline、quality metric、fixed-FPR 统计和论文结果包构建。
+```
+
+### 0.3.4 论文结果包推进顺序
+
+```text
+P0: 补齐真实 pilot 输入。
+P1: 生成真实图像生成启动计划。
+P2: 运行真实图像生成与水印生成。
+P3: 执行 attack pilot。
+P4: 运行 CEG detector 与内部消融。
+P5: 接入 external baseline。
+P6: 接入质量指标。
+P7: 统计 fixed-FPR / TPR@FPR。
+P8: 构建 paper_results_package 并归档到 MyDrive。
+```
+
+### 0.3.5 关键边界
+
+`attack` 是论文流程必须项，但不属于图像生成阶段。图像生成只负责 clean / watermarked 图像；attack 负责从 watermarked 图像派生 attacked 图像；detection 同时消费 clean、watermarked 和 attacked 图像；statistics 基于 detection events 计算 fixed-FPR 和 TPR@FPR。
+
+### 0.3.6 MyDrive 落盘要求
+
+所有运行结果继续按类型保存到：
+
+```text
+D:/content/drive/MyDrive/CEG
+/content/drive/MyDrive/CEG
+```
+
+其中 `pilot_runs/` 保存真实 pilot 工作区，`audit_reports/` 保存审计报告，`change_reports/` 保存工程变更说明，`package_snapshots/`、`package_archives/` 和 `package_manifests/` 保存最终论文结果包。
 
 ## 0.1 2026-06-17 当前向论文推进计划快照
 
@@ -65,7 +130,7 @@ D11: 根据 pilot 报告冻结正式实验配置。
 所有可供复核的运行结果应同步保存到:
 
 ```text
-D:\content\drive\MyDrive\CEG
+D:/content/drive/MyDrive/CEG
 ```
 
 在 Colab 环境中对应路径为:
@@ -158,7 +223,7 @@ real_pilot_input_preparation
 在当前真实 pilot 输入工作区上, 后续应增加并运行输入计划 preflight。建议命令形态如下:
 
 ```text
-python scripts/validate_pilot_input_plan_templates.py --workspace D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --out D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_plan_preflight_report.json
+python scripts/validate_pilot_input_plan_templates.py --workspace D:/content/drive/MyDrive/CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --out D:/content/drive/MyDrive/CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_plan_preflight_report.json
 ```
 
 若报告仍为 fail, 应先替换所有 `_placeholder` 字段。只有 preflight 通过后, 才能启动真实 SD / watermark / attack / detection pilot。该门禁已由 `experiments/pilot_input_plan_preflight.py` 和 `scripts/validate_pilot_input_plan_templates.py` 承载; 使用 `--require-pass` 时, fail 报告会返回非 0 退出码, 适合作为真实运行前的硬门禁。 fail 报告应继续通过 `scripts/build_pilot_input_replacement_checklist.py` 转换为 JSON / Markdown 替换清单, 以便逐项填充真实 prompt、split、seed、model 和 watermark 参数。替换清单生成后, 可继续使用 `scripts/scaffold_pilot_input_value_pack.py` 生成集中填写的值包草稿, 并用 `scripts/apply_pilot_input_value_pack.py --require-pass` 将已填写值包应用回工作区计划文件。应用完成后, 应使用 `scripts/build_pilot_execution_readiness_report.py --require-pass` 聚合检查 preflight 与 value pack application, 只有聚合报告为 pass 才能进入真实图像生成 pilot。进入真实图像生成前, 应再用 `scripts/scaffold_pilot_image_generation_launch_variables.py` 和 `scripts/build_pilot_image_generation_launch_plan.py --require-pass` 物化受治理的外部命令计划, 然后才交给 `scripts/run_image_generation_plan.py` 执行。
@@ -242,7 +307,7 @@ pilot_input_and_external_evidence_gate_completion
 7. external baseline 和高级 metric 若要支撑正式论文声明，必须通过 external_result_evidence_report 证据门禁。
 8. Notebook 只能调度流程，不能手写正式 records、tables、figures 或 reports。
 9. 本地 dry-run 只能证明工程链路，不证明论文性能。
-10. 结果包必须落盘归档到 `D:\content\drive\MyDrive\CEG` 或 `/content/drive/MyDrive/CEG` 的分类目录。
+10. 结果包必须落盘归档到 `D:/content/drive/MyDrive/CEG` 或 `/content/drive/MyDrive/CEG` 的分类目录。
 ```
 
 ---
@@ -670,7 +735,7 @@ MyDrive package_manifests/
 1. pilot 结果包能从 pilot_input_manifest.json 一键构建。
 2. paper_readiness_report.json 为 pass 或明确列出非正式缺口。
 3. colab_acceptance_report.json 为 pass。
-4. 归档目录位于 `D:\content\drive\MyDrive\CEG` 或 `/content/drive/MyDrive/CEG`。
+4. 归档目录位于 `D:/content/drive/MyDrive/CEG` 或 `/content/drive/MyDrive/CEG`。
 ```
 
 ---
@@ -745,7 +810,7 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 
 ---
 
-## 7. 与 D:\Code\CEG-WM 的方法机制对齐要求
+## 7. 与 D:/Code/CEG-WM 的方法机制对齐要求
 
 后续 `CEG` 应继续与 `CEG-WM` 保持以下核心机制一致:
 
