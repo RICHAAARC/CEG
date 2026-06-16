@@ -526,3 +526,7 @@ Notebook 与 repository module 的跨边界数据
 | require_paper_result_evidence_pass | protocol | none | false | true | false | pilot package 构建入口是否要求 paper_result_evidence_report.json 整体通过, 用于正式声明前阻断不完整结果包. |
 | pilot_rehearsal_manifest | artifact | none | false | true | false | 本地 dry-run pilot rehearsal 一键构建入口写出的总控 manifest, 记录输入生成、导入、attack、raw builder、证据报告和归档步骤. |
 | rehearsal_scope | protocol | none | false | false | false | pilot rehearsal manifest 中明确本次运行只验证工程契约和归档链路, 不代表正式论文实验结果的范围说明. |
+| pilot_input_gap_report | artifact | none | false | true | false | pilot_input_manifest.json 距离真实或正式 pilot 所需输入的缺口审计报告, 用于区分 rehearsal、partial pilot 和 ready_for_formal_pilot. |
+| pilot_readiness_decision | artifact | none | false | true | false | pilot 输入缺口审计给出的准备状态结论, 例如 rehearsal_or_partial_pilot_only 或 ready_for_formal_pilot. |
+| missing_core_fields | artifact | none | false | true | false | pilot 输入缺口审计中缺失的核心输入字段集合, 用于安排真实 SD、水印、attack、detection、baseline 或 metric 产物补齐. |
+| dry_run_marker_fields | artifact | none | false | false | false | pilot 输入缺口审计中检测到 dry-run 或 mock 标记的字段集合, 用于防止 rehearsal 产物误作正式结果. |

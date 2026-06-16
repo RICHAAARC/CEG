@@ -9,6 +9,7 @@ import sys
 import pytest
 
 from experiments.paper_fixture_factory import write_paper_dry_run_inputs
+from experiments.pilot_input_gap import analyze_pilot_input_gap
 from experiments.pilot_input_manifest import validate_pilot_input_manifest
 from experiments.pilot_input_materializer import materialize_pilot_input_bundle
 
@@ -67,6 +68,49 @@ def test_validate_pilot_input_manifest_cli_writes_report(tmp_path) -> None:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["overall_decision"] == "pass"
     assert report["artifact_name"] == "pilot_input_manifest_validation.json"
+
+
+@pytest.mark.quick
+def test_analyze_pilot_input_gap_reports_rehearsal_limitations(tmp_path) -> None:
+    """pilot gap 审计应明确 dry-run manifest 只能作为 rehearsal 或 partial pilot。"""
+    manifest_path, _ = _write_pilot_input_manifest(tmp_path / "inputs")
+
+    report = analyze_pilot_input_gap(manifest_path, require_formal_claims=True)
+
+    assert report["artifact_name"] == "pilot_input_gap_report.json"
+    assert report["overall_decision"] == "gap"
+    assert report["pilot_readiness_decision"] == "rehearsal_or_partial_pilot_only"
+    assert "attacked_image_manifest" in report["missing_core_fields"]
+    assert report["summary"]["formal_claim_gap_count"] >= 1
+
+
+@pytest.mark.quick
+def test_analyze_pilot_input_gap_cli_writes_report_and_blocks_when_required(tmp_path) -> None:
+    """pilot gap CLI 应能写出报告, 并在 require-ready 下阻断不完整输入。"""
+    manifest_path, _ = _write_pilot_input_manifest(tmp_path / "inputs")
+    report_path = tmp_path / "reports" / "pilot_input_gap_report.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/analyze_pilot_input_gap.py",
+            "--manifest",
+            str(manifest_path),
+            "--out",
+            str(report_path),
+            "--require-formal-claims",
+            "--require-ready",
+        ],
+        cwd=".",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert completed.returncode == 1
+    assert report["overall_decision"] == "gap"
+    assert report["artifact_name"] == "pilot_input_gap_report.json"
 
 
 @pytest.mark.quick

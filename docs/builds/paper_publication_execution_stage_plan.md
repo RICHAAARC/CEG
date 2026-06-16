@@ -561,13 +561,13 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 ```text
 1. 选定一组真实或半真实 pilot 输入文件。
 2. 生成 pilot_input_manifest.json；若当前还没有真实输入, 可先运行 scripts/build_pilot_rehearsal_package.py 生成 dry-run rehearsal package 验证整条构建链路。
-3. 运行 pilot input preflight。
+3. 运行 pilot input preflight, 并使用 scripts/analyze_pilot_input_gap.py 生成 pilot_input_gap_report.json, 明确当前输入是 rehearsal、partial pilot 还是 ready_for_formal_pilot。
 4. 如果包含外部 baseline 或高级 metric 正式声明，运行 external result evidence preflight；rehearsal 阶段只允许声明 dry_run_contract_rehearsal_not_formal_paper_result。
 5. 将 external_result_evidence_report.json 纳入 paper_outputs 和 paper_results_package 归档, 并在 package manifest 中保留 copied_files 证据。
 6. 用 raw builder 或 provided-results builder 构建 paper_results_package, pilot 阶段可启用 --write-paper-result-evidence-report 生成证据完整性报告。
 7. 归档到 MyDrive 分类目录。
 8. 检查 readiness、claim audit、package manifest、paper_result_evidence_report 和 Colab acceptance。
-9. 再启动真实 SD / watermark / attack / CEG detector / external baseline pilot。
+9. 根据 pilot_input_gap_report.json 的 missing_core_fields 和 dry_run_marker_fields, 再启动真实 SD / watermark / attack / CEG detector / external baseline pilot。
 10. pilot 通过后冻结正式实验配置。
 ```
 
@@ -580,7 +580,7 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 2. 不应先手工挑选论文示例图并绕过 image_example_manifest.json。
 3. 不应在没有 calibration / test split 的情况下统计 TPR@FPR。
 4. 不应把 dry-run 图像或 mock 分数写成论文实验结论。
-5. 不应在没有 external_result_evidence_report 的情况下声明外部 baseline 或高级 metric 的正式结果。\n6. 不应把 scripts/build_pilot_rehearsal_package.py 生成的 rehearsal package 宣称为正式论文结果包。
+5. 不应在没有 external_result_evidence_report 的情况下声明外部 baseline 或高级 metric 的正式结果。\n6. 不应把 scripts/build_pilot_rehearsal_package.py 生成的 rehearsal package 宣称为正式论文结果包。\n7. 不应在 pilot_input_gap_report.json 仍为 rehearsal_or_partial_pilot_only 时宣称 ready_for_formal_pilot。
 ```
 
 ---
