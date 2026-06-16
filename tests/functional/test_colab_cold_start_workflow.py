@@ -117,7 +117,9 @@ def test_colab_formal_input_contract_documents_formal_sources(tmp_path) -> None:
     assert "one of: lpips, fid, clip_score" in metric_entry["required_fields"]
     interfaces = {item["interface_id"] for item in contract["third_party_command_interfaces"]}
     assert {"external_baseline_run_ceg_eval", "external_advanced_metric_scripts"}.issubset(interfaces)
-    assert "strict run_colab_acceptance_checks passes with --require-external-command-results" in contract["formal_acceptance_requirements"]
+    requirements = set(contract["formal_acceptance_requirements"])
+    assert "provided_file source mode requires provided_result_files_manifest_valid" in requirements
+    assert "external_plan source mode requires strict run_colab_acceptance_checks with --require-external-command-results" in requirements
     templates_manifest = build_colab_formal_input_templates_manifest(tmp_path / "workspace")
     assert templates_manifest["artifact_name"] == "formal_input_templates_manifest.json"
     assert templates_manifest["template_count"] >= 6

@@ -79,7 +79,7 @@ Colab Notebook 支持两种真实实验输入方式:
 1. 已经有 `baseline_observations.json` 和 `metric_rows.json` 时, 直接填写 `BASELINE_OBSERVATIONS_PATH` 和 `METRIC_ROWS_PATH`。
 2. 需要在 Colab GPU 环境运行第三方 baseline 或 LPIPS/FID/CLIP score 时, 设置 `RUN_EXTERNAL_PLANS = True`, 并填写 `BASELINE_ROOT`、`METRIC_ROOT` 以及图像配对或图像目录路径。Notebook 会通过仓库脚本物化命令计划, 再调用 `run_baseline_plan.py` 和 `run_metric_plan.py` 汇总输出。
 
-正式输入契约会写入 `colab_formal_input_contract.json`: 其中 `input_files` 列出 `events`、`thresholds`、`sample_manifest`、`baseline_observations`、`metric_rows` 和 `image_pairs` 的推荐路径、格式与最小字段; `third_party_command_interfaces` 列出第三方 baseline 和高级指标脚本需要输出的统一字段; `formal_acceptance_requirements` 列出正式验收必须满足的非 dry-run、实验矩阵覆盖、外部结果和严格 acceptance 条件。
+正式输入契约会写入 `colab_formal_input_contract.json`: 其中 `input_files` 列出 `events`、`thresholds`、`sample_manifest`、`baseline_observations`、`metric_rows` 和 `image_pairs` 的推荐路径、格式与最小字段; `third_party_command_interfaces` 列出第三方 baseline 和高级指标脚本需要输出的统一字段; `formal_acceptance_requirements` 列出正式验收必须满足的非 dry-run、实验矩阵覆盖、来源模式证据和严格 acceptance 条件。这里的来源模式证据分为两类: `provided_file` 依赖 `provided_result_files_manifest.json` 校验直接提供结果副本, `external_plan` 才依赖 `--require-external-command-results` 校验外部命令结果。
 
 运行前建议先查看 `colab_environment_summary.json` 中的 `nvidia_smi` 和 `torch_cuda` 字段, 确认 Colab 已分配 GPU。正式运行清单也会写出 `gpu_readiness`: 当 `RUN_EXTERNAL_PLANS = True` 且 `USE_DRY_RUN_INPUTS = False` 时, 默认要求检测到 GPU, 否则会产生 `gpu_runtime_unavailable_for_external_plans` 阻断项。若第三方 baseline / metric 任务已确认只需要 CPU, 可将 `REQUIRE_GPU_FOR_EXTERNAL_PLANS = False` 作为显式放宽。
 
@@ -109,7 +109,7 @@ Colab Notebook 支持两种真实实验输入方式:
 
 ## 运行级 bundle
 
-Notebook 最终下载的是 `archives/ceg_colab_run_bundle.zip`, 同时该文件会保留在 `/content/drive/MyDrive/CEG/archives/`。`colab_output_layout_manifest.json` 会记录各类结果目录、用途、存在状态和文件数量, 用于确认 Drive 根目录下的类型化落盘契约。`colab_formal_input_contract.json` 会声明正式输入文件、字段和第三方脚本接口, 便于下载后确认 Colab 正式运行是否具备可复现实验输入。`colab_paper_result_index.json` 会进一步把论文主表、标准水印指标、baseline / 消融对比表、图表规格、LaTeX / PDF / Markdown 报告和 Colab 交付件映射到具体路径, 便于下载后逐项复核“论文所需结果是否已经产出”。`colab_formal_result_gap_report.json` 会把当前运行距离正式论文结果声明仍缺少的证据显式列出, 例如 dry-run 输入、实验矩阵覆盖率未强制通过、外部 baseline / 高级指标缺失、GPU runtime 未就绪或严格 evidence / acceptance 未通过。该压缩包包含 `paper_results_package/` 以及 Colab 运行 provenance, 包括环境摘要、命令计划、输入清单、实验矩阵、阈值校准报告、样本转换 manifest、外部 baseline / metric 命令结果摘要等。`colab_run_bundle_validation.json` 会校验 bundle manifest 中的文件摘要以及内嵌论文结果包校验是否通过。cold-start pipeline 会在末端调用 `create_colab_bundle_archive(...)` 创建下载包, 并在 `archives/` 中写出 `colab_bundle_archive_manifest.json`; `colab_cold_start_summary.json` 也会记录 zip 路径、大小、SHA-256 和离线验收命令, 使自动化调用和 Notebook 展示使用同一份交付信息。该 manifest 会区分 `colab_acceptance_command` 和 `offline_acceptance_command`: 前者使用 Colab 会话内的绝对 zip 路径, 后者使用 `path/to/ceg_colab_run_bundle.zip` 占位路径, 便于下载 zip 和 sidecar manifest 后在同一目录复跑。离线验收命令会按当前运行模式补充 `--allow-dry-run`、`--allow-missing-experiment-coverage` 或 `--require-external-command-results`, 避免下载后复核命令和实际运行来源不一致。
+Notebook 最终下载的是 `archives/ceg_colab_run_bundle.zip`, 同时该文件会保留在 `/content/drive/MyDrive/CEG/archives/`。`colab_output_layout_manifest.json` 会记录各类结果目录、用途、存在状态和文件数量, 用于确认 Drive 根目录下的类型化落盘契约。`colab_formal_input_contract.json` 会声明正式输入文件、字段和第三方脚本接口, 便于下载后确认 Colab 正式运行是否具备可复现实验输入。`colab_paper_result_index.json` 会进一步把论文主表、标准水印指标、baseline / 消融对比表、图表规格、LaTeX / PDF / Markdown 报告和 Colab 交付件映射到具体路径, 便于下载后逐项复核“论文所需结果是否已经产出”。`colab_formal_result_gap_report.json` 会把当前运行距离正式论文结果声明仍缺少的证据显式列出, 例如 dry-run 输入、实验矩阵覆盖率未强制通过、直接提供结果 manifest 缺失、外部 baseline / 高级指标命令结果缺失、GPU runtime 未就绪或严格 evidence / acceptance 未通过。该压缩包包含 `paper_results_package/` 以及 Colab 运行 provenance, 包括环境摘要、命令计划、输入清单、实验矩阵、阈值校准报告、样本转换 manifest、直接提供结果副本摘要、外部 baseline / metric 命令结果摘要等。`colab_run_bundle_validation.json` 会校验 bundle manifest 中的文件摘要以及内嵌论文结果包校验是否通过。cold-start pipeline 会在末端调用 `create_colab_bundle_archive(...)` 创建下载包, 并在 `archives/` 中写出 `colab_bundle_archive_manifest.json`; `colab_cold_start_summary.json` 也会记录 zip 路径、大小、SHA-256 和离线验收命令, 使自动化调用和 Notebook 展示使用同一份交付信息。该 manifest 会区分 `colab_acceptance_command` 和 `offline_acceptance_command`: 前者使用 Colab 会话内的绝对 zip 路径, 后者使用 `path/to/ceg_colab_run_bundle.zip` 占位路径, 便于下载 zip 和 sidecar manifest 后在同一目录复跑。离线验收命令会按当前运行模式补充 `--allow-dry-run`、`--allow-missing-experiment-coverage` 或 `--require-external-command-results`; 其中 `--require-external-command-results` 仅在 `RUN_EXTERNAL_PLANS=True` 的外部命令来源模式下出现, 避免下载后复核命令和实际运行来源不一致。
 
 ### 独立校验运行级 bundle
 
@@ -131,16 +131,24 @@ python scripts/validate_colab_run_bundle.py --bundle path\to\colab_run_bundle --
 
 `validate_paper_result_evidence.py` 在目标是 `colab_run_bundle/` 时, 还会读取 `colab_formal_run_checklist.json`。正式论文证据默认要求该清单 `overall_decision = pass` 且 `blocking_issue_count = 0`。如果只是验证 dry-run 调试链路, 可以显式使用 `--allow-dry-run`; 此时清单失败会被记录为 dry-run 放宽证据, 但不能支持正式论文结果声明。
 
-`--require-external-command-results` 启用后, 该门禁还会读取 `external_baselines/baseline_observations.json` 与 `external_metrics/metric_rows.json`。外部命令返回码为 0 只是必要条件; baseline observation 必须包含 `event_id`、`baseline_id`、`score`、`threshold`, 高级指标行必须包含 `event_id` 且至少包含 `lpips`、`fid` 或 `clip_score` 之一。这样可以防止第三方脚本空跑或只生成基础 PSNR / SSIM 文件时被误判为正式高级指标结果。
+`--require-external-command-results` 只用于 `external_plan` 来源模式。启用后, 该门禁还会读取 `external_baselines/baseline_observations.json` 与 `external_metrics/metric_rows.json`。外部命令返回码为 0 只是必要条件; baseline observation 必须包含 `event_id`、`baseline_id`、`score`、`threshold`, 高级指标行必须包含 `event_id` 且至少包含 `lpips`、`fid` 或 `clip_score` 之一。这样可以防止第三方脚本空跑或只生成基础 PSNR / SSIM 文件时被误判为正式高级指标结果。若来源模式是 `provided_file`, 严格验收不应强制该参数, 而是校验 `provided_results/provided_result_files_manifest.json` 及其副本摘要。
 
 
-`paper_readiness_report.json` 只能证明结果产物链路完整, 不能单独证明这些结果来自正式 GPU 实验。正式论文结果验收建议在 Colab bundle 下载后继续运行:
+`paper_readiness_report.json` 只能证明结果产物链路完整, 不能单独证明这些结果来自正式 GPU 实验。正式论文结果验收建议在 Colab bundle 下载后按来源模式继续运行。
+
+外部命令来源模式的正式验收命令为:
 
 ```powershell
 python scripts/validate_paper_result_evidence.py --target path\to\colab_run_bundle --require-external-command-results --require-pass
 ```
 
-该校验默认会拒绝 dry-run 标记, 并要求实验矩阵覆盖率通过。若只是在本地验证链路, 可以显式放宽:
+直接提供结果文件模式的正式验收命令为:
+
+```powershell
+python scripts/validate_paper_result_evidence.py --target path\to\colab_run_bundle --require-pass
+```
+
+上述两类校验默认都会拒绝 dry-run 标记, 并要求实验矩阵覆盖率通过。若只是在本地验证链路, 可以显式放宽:
 
 ```powershell
 python scripts/validate_paper_result_evidence.py --target path\to\paper_outputs --allow-dry-run --allow-missing-experiment-coverage
@@ -172,7 +180,7 @@ python scripts/validate_paper_result_evidence.py --target path\to\paper_outputs 
 
 当预检通过后, cold-start helper 会把直接提供的 `baseline_observations.json` 和 `metric_rows.json` 复制到 `provided_results/`, 并写出 `provided_result_files_manifest.json`。后续 `build_paper_outputs.py` 消费的是该受治理副本, Colab bundle 也会携带副本和 SHA-256 摘要, 因此离线复核者不需要依赖原始 Colab 路径。
 
-`validate_paper_result_evidence.py` 在目标是 Colab bundle 时会继续校验该 manifest: 若正式运行清单声明 baseline 或高级指标来源为 `provided_file`, 但 bundle 中缺少 `provided_result_files_manifest.json`, 或副本文件大小 / SHA-256 与 manifest 不一致, evidence 门禁会失败。
+`validate_paper_result_evidence.py` 在目标是 Colab bundle 时会继续校验该 manifest: 若正式运行清单声明 baseline 或高级指标来源为 `provided_file`, 但 bundle 中缺少 `provided_result_files_manifest.json`, 或副本文件大小 / SHA-256 与 manifest 不一致, evidence 门禁会失败。该路径不要求 `--require-external-command-results`, 因为它不重新运行或读取外部命令计划结果。
 
 
 在真正运行 `USE_DRY_RUN_INPUTS = False` 的 Colab 实验前, 建议先生成正式运行清单:

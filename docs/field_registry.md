@@ -410,7 +410,7 @@ Notebook 与 repository module 的跨边界数据
 | evidence_target_path | artifact | none | false | false | false | 正式证据校验 CLI 接收的 paper outputs、paper results package 或 Colab bundle 目标路径。|
 | target_kind | artifact | none | false | false | false | 正式证据校验识别到的目标类型, 例如 paper_output_directory、paper_results_package 或 colab_run_bundle。|
 | allow_dry_run | protocol | none | false | false | false | 正式证据校验是否允许 dry-run 标记存在, 该字段为 true 时只能说明链路调试通过。|
-| require_external_command_results | protocol | none | false | false | false | 正式证据校验是否要求 Colab bundle 中外部 baseline 和高级指标命令结果均通过。|
+| require_external_command_results | protocol | none | false | false | false | 正式证据校验是否要求 Colab bundle 中 `external_plan` 来源的外部 baseline 和高级指标命令结果均通过; `provided_file` 来源改由 `provided_result_files_manifest` 校验。|
 | minimum_quality_metric_coverage | metric | none | false | true | false | 正式证据校验要求每个必需方法在 PSNR、SSIM、LPIPS、FID 和 CLIP score 上达到的最低覆盖率。|
 | gpu_readiness | artifact | none | false | true | false | Colab formal checklist 中记录的 GPU 运行时预检结果。|
 | require_gpu_for_external_plans | protocol | none | false | true | false | 正式外部 baseline / metric 计划是否要求 GPU runtime。|

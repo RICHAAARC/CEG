@@ -295,7 +295,8 @@ def build_colab_formal_input_contract(workspace_root: str | Path) -> dict[str, A
         "baseline_source_mode is provided_file or external_plan",
         "metric_source_mode is provided_file or external_plan",
         "strict paper_result_evidence passes without --allow-dry-run",
-        "strict run_colab_acceptance_checks passes with --require-external-command-results",
+        "provided_file source mode requires provided_result_files_manifest_valid",
+        "external_plan source mode requires strict run_colab_acceptance_checks with --require-external-command-results",
     ]
     contract = {
         "artifact_name": "colab_formal_input_contract.json",
@@ -625,7 +626,7 @@ def build_colab_formal_runbook(workspace_root: str | Path) -> str:
         "## 7. 结果是否可用于论文声明",
         "",
         f"- acceptance decision: `{acceptance_report.get('overall_decision')}`",
-        "- 只有在非 dry-run、实验矩阵覆盖通过、外部 baseline 和高级指标结果存在且严格 evidence / acceptance 均通过时, 才能支撑正式论文结果声明。",
+        "- 只有在非 dry-run、实验矩阵覆盖通过、baseline / 高级指标来源证据按模式通过且严格 evidence / acceptance 均通过时, 才能支撑正式论文结果声明; `provided_file` 模式依赖 `provided_result_files_manifest.json`, `external_plan` 模式依赖 `--require-external-command-results`。",
     ]
     return "\n".join(lines) + "\n"
 
