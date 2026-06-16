@@ -1,0 +1,40 @@
+schema_version: "ceg_profile_v1"
+profile: "paper_mechanism_quickcheck"
+family_role: "paper_mechanism"
+purpose: "快速验证 mechanism 配置与输出闭环"
+sample_roles:
+  active:
+    - "positive_source"
+    - "clean_negative"
+formal_positive_roles:
+  - "positive_source"
+formal_negative_roles:
+  - "clean_negative"
+splits:
+  dev: {}
+  calibration: {}
+  test: {}
+threshold_split: "calibration"
+formal_report_split: "test"
+attack_parent_split: "test"
+formal_table_excluded_splits:
+  - "dev"
+thresholds:
+  content_threshold: 0.5
+  attestation_threshold: 0.5
+  registration_confidence_min: 0.3
+  anchor_inlier_ratio_min: 0.5
+  recovered_sync_consistency_min: 0.55
+  rescue_delta_low: 0.05
+mechanism_ablation_plan:
+  allowed_variants:
+    - "Full"
+    - "Content-only"
+    - "Recover-then-Content"
+    - "No-rescue"
+    - "No-attestation"
+external_baselines:
+  - "tree_ring"
+  - "gaussian_shading"
+  - "shallow_diffuse"
+  - "stable_signature_dee"

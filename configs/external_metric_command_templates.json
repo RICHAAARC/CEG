@@ -1,0 +1,48 @@
+{
+  "templates": [
+    {
+      "metric_name": "lpips",
+      "command_template": [
+        "python",
+        "{metric_root}/compute_lpips.py",
+        "--pairs",
+        "{image_pairs_path}",
+        "--output",
+        "{output_root}/lpips_rows.json"
+      ],
+      "output_path_template": "{output_root}/lpips_rows.json",
+      "working_directory_template": "{metric_root}",
+      "timeout_seconds": 7200
+    },
+    {
+      "metric_name": "fid",
+      "command_template": [
+        "python",
+        "{metric_root}/compute_fid.py",
+        "--reference-dir",
+        "{reference_image_root}",
+        "--generated-dir",
+        "{generated_image_root}",
+        "--output",
+        "{output_root}/fid_rows.json"
+      ],
+      "output_path_template": "{output_root}/fid_rows.json",
+      "working_directory_template": "{metric_root}",
+      "timeout_seconds": 7200
+    },
+    {
+      "metric_name": "clip_score",
+      "command_template": [
+        "python",
+        "{metric_root}/compute_clip_score.py",
+        "--samples",
+        "{image_prompt_rows_path}",
+        "--output",
+        "{output_root}/clip_score_rows.json"
+      ],
+      "output_path_template": "{output_root}/clip_score_rows.json",
+      "working_directory_template": "{metric_root}",
+      "timeout_seconds": 7200
+    }
+  ]
+}

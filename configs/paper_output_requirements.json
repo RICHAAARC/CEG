@@ -1,0 +1,141 @@
+{
+  "required_artifacts": [
+    "formal_final_decision_metrics.json",
+    "content_score_distribution_audit.json",
+    "content_threshold_degeneracy_report.json",
+    "formal_main_table.csv",
+    "rescue_metrics_summary.csv",
+    "baseline_comparison_table.csv",
+    "method_group_comparison_table.csv",
+    "standard_watermark_metrics.json",
+    "quality_metrics_summary.csv",
+    "bit_recovery_metrics.csv",
+    "attack_family_metrics.csv",
+    "paper_figure_specs.json",
+    "rate_confidence_intervals.csv",
+    "method_pairwise_delta_table.csv",
+    "detection_roc_curve.csv",
+    "score_histogram_table.csv",
+    "operating_point_table.csv",
+    "paper_claim_audit.json"
+  ],
+  "required_figure_ids": [
+    "main_detection_comparison",
+    "rescue_ablation_contribution",
+    "quality_detection_tradeoff",
+    "attack_family_robustness",
+    "detection_roc_curves",
+    "score_distribution_by_method",
+    "detection_confidence_intervals",
+    "bit_recovery_comparison"
+  ],
+  "required_latex_tables": [
+    "formal_main_table.tex",
+    "rescue_metrics_summary.tex",
+    "baseline_comparison_table.tex",
+    "method_group_comparison_table.tex",
+    "quality_metrics_summary.tex",
+    "bit_recovery_metrics.tex",
+    "attack_family_metrics.tex",
+    "rate_confidence_intervals.tex",
+    "method_pairwise_delta_table.tex",
+    "detection_roc_curve.tex",
+    "score_histogram_table.tex",
+    "operating_point_table.tex"
+  ],
+  "required_methods": [
+    "ceg",
+    "ceg_full",
+    "ceg_content_only",
+    "ceg_recover_then_content",
+    "ceg_no_rescue",
+    "ceg_no_attestation",
+    "tree_ring",
+    "gaussian_shading",
+    "shallow_diffuse",
+    "stable_signature_dee"
+  ],
+  "required_sample_roles": [
+    "positive_source",
+    "clean_negative",
+    "attacked_negative"
+  ],
+  "required_table_columns": {
+    "formal_main_table.csv": [
+      "method_name",
+      "tpr",
+      "clean_fpr",
+      "attacked_negative_fpr"
+    ],
+    "rescue_metrics_summary.csv": [
+      "method_name",
+      "rescue_gain",
+      "positive_by_geo_rescue_count"
+    ],
+    "baseline_comparison_table.csv": [
+      "method_name",
+      "event_count",
+      "tpr",
+      "clean_fpr"
+    ],
+    "quality_metrics_summary.csv": [
+      "method_name",
+      "metric_name",
+      "metric_mean",
+      "metric_coverage_rate"
+    ],
+    "bit_recovery_metrics.csv": [
+      "method_name",
+      "bit_accuracy",
+      "payload_recovery_rate"
+    ],
+    "attack_family_metrics.csv": [
+      "method_name",
+      "attack_family",
+      "tpr",
+      "bit_accuracy"
+    ],
+    "rate_confidence_intervals.csv": [
+      "method_name",
+      "metric_name",
+      "rate_value",
+      "ci_lower",
+      "ci_upper"
+    ],
+    "method_pairwise_delta_table.csv": [
+      "reference_method",
+      "method_name",
+      "metric_name",
+      "rate_delta"
+    ],
+    "detection_roc_curve.csv": [
+      "method_name",
+      "threshold_label",
+      "tpr",
+      "fpr"
+    ],
+    "score_histogram_table.csv": [
+      "method_name",
+      "label_name",
+      "score_bin_lower",
+      "score_bin_count"
+    ],
+    "operating_point_table.csv": [
+      "method_name",
+      "operating_threshold",
+      "tpr",
+      "fpr"
+    ],
+    "method_group_comparison_table.csv": [
+      "method_name",
+      "method_group",
+      "comparison_role",
+      "event_count",
+      "tpr",
+      "clean_fpr"
+    ]
+  },
+  "minimum_record_count": 1,
+  "minimum_figure_count": 8,
+  "minimum_latex_table_count": 12
+}

@@ -1,0 +1,33 @@
+schema_version: "ceg_profile_v1"
+profile: "paper_main_probe"
+family_role: "paper_main"
+purpose: "最小全流程验证与主线探针"
+sample_roles:
+  active:
+    - "positive_source"
+    - "clean_negative"
+formal_positive_roles:
+  - "positive_source"
+formal_negative_roles:
+  - "clean_negative"
+splits:
+  dev: {}
+  calibration: {}
+  test: {}
+threshold_split: "calibration"
+formal_report_split: "test"
+attack_parent_split: "test"
+formal_table_excluded_splits:
+  - "dev"
+thresholds:
+  content_threshold: 0.5
+  attestation_threshold: 0.5
+  registration_confidence_min: 0.3
+  anchor_inlier_ratio_min: 0.5
+  recovered_sync_consistency_min: 0.55
+  rescue_delta_low: 0.05
+external_baselines:
+  - "tree_ring"
+  - "gaussian_shading"
+  - "shallow_diffuse"
+  - "stable_signature_dee"

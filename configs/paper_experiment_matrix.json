@@ -1,0 +1,15 @@
+{
+  "profiles": [
+    "paper_main_probe",
+    "paper_main_pilot",
+    "paper_main_full",
+    "paper_mechanism_geo_search",
+    "paper_mechanism_quickcheck",
+    "paper_mechanism_pilot"
+  ],
+  "splits": ["dev", "calibration", "test"],
+  "method_groups": ["ceg_main", "ceg_ablation", "external_baseline"],
+  "sample_roles": ["positive_source", "clean_negative", "attacked_negative"],
+  "attack_families": ["clean", "rotation", "scale", "crop", "gaussian_noise", "jpeg", "blur", "color_shift"],
+  "attack_levels": ["none", "light", "medium", "strong"]
+}

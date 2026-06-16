@@ -1,0 +1,23 @@
+schema_version: "ceg_method_contract_v1"
+method_name: "CEG"
+source_document: "D:/Code/CEG-WM/doc/方法机制.md"
+core_semantics:
+  content_chain:
+    role: "primary_evidence"
+  geometry_chain:
+    role: "reference_recovery"
+    direct_positive_allowed: false
+  recover_then_content:
+    uses_same_content_threshold: true
+  attestation:
+    role: "final_attribution_constraint"
+    replaces_watermark_evidence: false
+  payload_probe:
+    role: "diagnostic_only"
+    enters_formal_decision: false
+formal_equations:
+  positive_by_content: "content_margin_raw >= 0"
+  rescue_eligible: "delta_low <= content_margin_raw < 0 AND geometry_reliable AND content_fail_reason in {geometry_suspected, low_confidence}"
+  positive_by_geo_rescue: "rescue_eligible AND content_margin_aligned >= 0"
+  evidence_decision: "positive_by_content OR positive_by_geo_rescue"
+  final_decision: "evidence_decision AND attestation_pass"

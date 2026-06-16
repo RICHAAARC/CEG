@@ -1,0 +1,60 @@
+{
+  "templates": [
+    {
+      "baseline_id": "tree_ring",
+      "command_template": [
+        "python",
+        "{baseline_root}/tree_ring/run_ceg_eval.py",
+        "--events",
+        "{events_path}",
+        "--output",
+        "{output_root}/tree_ring_observations.json"
+      ],
+      "output_path_template": "{output_root}/tree_ring_observations.json",
+      "working_directory_template": "{baseline_root}/tree_ring",
+      "timeout_seconds": 7200
+    },
+    {
+      "baseline_id": "gaussian_shading",
+      "command_template": [
+        "python",
+        "{baseline_root}/gaussian_shading/run_ceg_eval.py",
+        "--events",
+        "{events_path}",
+        "--output",
+        "{output_root}/gaussian_shading_observations.json"
+      ],
+      "output_path_template": "{output_root}/gaussian_shading_observations.json",
+      "working_directory_template": "{baseline_root}/gaussian_shading",
+      "timeout_seconds": 7200
+    },
+    {
+      "baseline_id": "shallow_diffuse",
+      "command_template": [
+        "python",
+        "{baseline_root}/shallow_diffuse/run_ceg_eval.py",
+        "--events",
+        "{events_path}",
+        "--output",
+        "{output_root}/shallow_diffuse_observations.json"
+      ],
+      "output_path_template": "{output_root}/shallow_diffuse_observations.json",
+      "working_directory_template": "{baseline_root}/shallow_diffuse",
+      "timeout_seconds": 7200
+    },
+    {
+      "baseline_id": "stable_signature_dee",
+      "command_template": [
+        "python",
+        "{baseline_root}/stable_signature_dee/run_ceg_eval.py",
+        "--events",
+        "{events_path}",
+        "--output",
+        "{output_root}/stable_signature_dee_observations.json"
+      ],
+      "output_path_template": "{output_root}/stable_signature_dee_observations.json",
+      "working_directory_template": "{baseline_root}/stable_signature_dee",
+      "timeout_seconds": 7200
+    }
+  ]
+}
