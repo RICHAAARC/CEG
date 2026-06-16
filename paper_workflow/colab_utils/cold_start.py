@@ -1705,16 +1705,19 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
             result_index_payload = json.loads(result_index_path.read_text(encoding="utf-8-sig"))
         except json.JSONDecodeError as exc:
             checks.append(_fail_check("colab_paper_result_index_semantic_checks_passed", str(exc)))
+            checks.append(_fail_check("colab_paper_result_index_production_trace_complete", str(exc)))
         else:
             semantic_summary = result_index_payload.get("semantic_check_summary") if isinstance(result_index_payload, dict) else None
             semantic_failures = result_index_payload.get("semantic_check_failures") if isinstance(result_index_payload, dict) else None
             group_failures = result_index_payload.get("required_result_group_failures") if isinstance(result_index_payload, dict) else None
+            production_trace_summary = result_index_payload.get("production_trace_summary") if isinstance(result_index_payload, dict) else None
             index_summary = {
                 "overall_decision": result_index_payload.get("overall_decision") if isinstance(result_index_payload, dict) else None,
                 "required_missing": result_index_payload.get("required_missing") if isinstance(result_index_payload, dict) else None,
                 "required_result_group_failures": group_failures,
                 "semantic_check_summary": semantic_summary,
                 "semantic_check_failures": semantic_failures,
+                "production_trace_summary": production_trace_summary,
             }
             semantic_ok = (
                 isinstance(result_index_payload, dict)
@@ -1727,13 +1730,26 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
                 and isinstance(semantic_failures, list)
                 and not semantic_failures
             )
+            production_trace_ok = (
+                isinstance(result_index_payload, dict)
+                and isinstance(production_trace_summary, dict)
+                and int(production_trace_summary.get("missing_trace_count", -1)) == 0
+                and isinstance(production_trace_summary.get("missing_trace_result_ids"), list)
+                and not production_trace_summary.get("missing_trace_result_ids")
+            )
             checks.append(
                 _pass_check("colab_paper_result_index_semantic_checks_passed", index_summary)
                 if semantic_ok
                 else _fail_check("colab_paper_result_index_semantic_checks_passed", index_summary)
             )
+            checks.append(
+                _pass_check("colab_paper_result_index_production_trace_complete", index_summary)
+                if production_trace_ok
+                else _fail_check("colab_paper_result_index_production_trace_complete", index_summary)
+            )
     else:
         checks.append(_fail_check("colab_paper_result_index_semantic_checks_passed", "missing"))
+        checks.append(_fail_check("colab_paper_result_index_production_trace_complete", "missing"))
     provenance_files = (
         "colab_formal_run_checklist.json",
         "paper_result_evidence_report.json",
@@ -3458,6 +3474,7 @@ def run_colab_cold_start_pipeline(
         "colab_paper_result_semantic_check_summary": paper_result_index.get("semantic_check_summary") if paper_result_index else None,
         "colab_paper_result_semantic_check_failures": paper_result_index.get("semantic_check_failures") if paper_result_index else None,
         "colab_paper_result_required_group_failures": paper_result_index.get("required_result_group_failures") if paper_result_index else None,
+        "colab_paper_result_production_trace_summary": paper_result_index.get("production_trace_summary") if paper_result_index else None,
         "colab_formal_result_gap_report_path": str(workspace / "colab_formal_result_gap_report.json") if formal_result_gap_report else None,
         "colab_formal_result_gap_report": formal_result_gap_report,
         "colab_formal_runbook_path": str(workspace / "colab_formal_runbook.md"),
@@ -3564,6 +3581,7 @@ def run_colab_cold_start_pipeline(
     summary["colab_paper_result_semantic_check_summary"] = paper_result_index.get("semantic_check_summary")
     summary["colab_paper_result_semantic_check_failures"] = paper_result_index.get("semantic_check_failures")
     summary["colab_paper_result_required_group_failures"] = paper_result_index.get("required_result_group_failures")
+    summary["colab_paper_result_production_trace_summary"] = paper_result_index.get("production_trace_summary")
     summary["colab_formal_result_gap_report_path"] = str(workspace / "colab_formal_result_gap_report.json")
     summary["colab_formal_result_gap_report"] = formal_result_gap_report
     summary["colab_formal_runbook_path"] = str(workspace / "colab_formal_runbook.md")

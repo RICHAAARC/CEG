@@ -347,6 +347,7 @@ Notebook 与 repository module 的跨边界数据
 | colab_paper_result_semantic_check_summary | artifact | none | false | true | false | Colab cold start summary 中提升展示的论文结果内容结构校验汇总。 |
 | colab_paper_result_semantic_check_failures | artifact | none | false | true | false | Colab cold start summary 中提升展示的论文结果内容结构校验失败 result_id 集合。 |
 | colab_paper_result_required_group_failures | artifact | none | false | true | false | Colab cold start summary 中提升展示的必需论文结果组缺失集合。 |
+| colab_paper_result_production_trace_summary | artifact | none | false | true | false | Colab cold start summary 中提升展示的论文结果生产追踪覆盖率汇总。 |
 | indexed_results | artifact | none | false | false | false | Colab 论文结果索引中逐项列出的结果文件条目集合。 |
 | result_group | artifact | none | false | false | false | 论文结果索引中的结果组, 例如 watermark_standard_metrics、baseline_and_ablation 或 figures。 |
 | result_id | artifact | none | false | false | false | 论文结果索引中单个结果文件的稳定标识。 |
@@ -369,6 +370,7 @@ Notebook 与 repository module 的跨边界数据
 | missing_trace_count | artifact | none | false | true | false | production_trace_summary 中缺少生产步骤或验收门禁追踪的结果条目数量。 |
 | missing_trace_result_ids | artifact | none | false | true | false | production_trace_summary 中缺少生产追踪的 result_id 集合。 |
 | colab_paper_result_index_semantic_checks_passed | artifact | none | false | true | false | Colab bundle 验收中检查论文结果索引整体通过、必需结果组无失败且语义校验失败数为 0 的门禁项。 |
+| colab_paper_result_index_production_trace_complete | artifact | none | false | true | false | Colab bundle 验收中检查论文结果索引所有 result_id 都具备生产步骤与验收门禁追踪的门禁项。 |
 | result_index_digest | artifact | none | false | true | false | 论文结果索引条目的稳定摘要。 |
 | colab_output_layout_manifest | artifact | none | false | true | false | Colab 结果类型目录 manifest, 用于审计每类输出在 Drive 根目录下的落盘位置。 |
 | drive_output_root | artifact | none | false | false | false | Colab 结果落盘根目录, Notebook 默认指向 /content/drive/MyDrive/CEG。 |
