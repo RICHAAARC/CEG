@@ -155,6 +155,14 @@ def test_colab_paper_result_index_maps_required_paper_outputs(tmp_path) -> None:
     }.issubset(result_ids)
     result_groups = {item["result_group"] for item in index["indexed_results"]}
     assert {"watermark_standard_metrics", "baseline_and_ablation", "figures", "paper_reports"}.issubset(result_groups)
+    required_group_decisions = {item["result_group"]: item["overall_decision"] for item in index["required_result_group_summary"]}
+    assert required_group_decisions["watermark_standard_metrics"] == "fail"
+    assert required_group_decisions["baseline_and_ablation"] == "fail"
+    assert index["required_result_group_count"] >= 5
+    assert index["required_result_group_pass_count"] == 0
+    assert "watermark_standard_metrics" in index["required_result_group_failures"]
+    watermark_group = next(item for item in index["required_result_group_summary"] if item["result_group"] == "watermark_standard_metrics")
+    assert {"standard_watermark_metrics", "quality_metrics_summary", "bit_recovery_metrics"}.issubset(set(watermark_group["missing_required_results"]))
 
 
 @pytest.mark.quick
@@ -380,6 +388,9 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert "strict_paper_result_evidence_passed" in gap_report["blocking_gap_requirements"]
     assert result_index["overall_decision"] == "pass"
     assert result_index["required_missing"] == []
+    assert result_index["required_result_group_failures"] == []
+    assert result_index["required_result_group_pass_count"] == result_index["required_result_group_count"]
+    assert all(item["overall_decision"] == "pass" for item in result_index["required_result_group_summary"])
     result_ids = {item["result_id"] for item in result_index["indexed_results"] if item["exists"]}
     assert {"formal_main_table", "standard_watermark_metrics", "baseline_comparison_table", "paper_figure_specs"}.issubset(result_ids)
     archive_manifest = summary["colab_bundle_archive_manifest"]

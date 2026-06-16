@@ -349,6 +349,11 @@ Notebook 与 repository module 的跨边界数据
 | result_id | artifact | none | false | false | false | 论文结果索引中单个结果文件的稳定标识。 |
 | required_for_paper_outputs | protocol | none | false | false | false | 论文结果索引中标记某文件是否为论文结果产物链路必需文件。 |
 | required_missing | artifact | none | false | true | false | 论文结果索引中缺失的必需结果文件相对路径集合。 |
+| required_result_group_summary | artifact | none | false | true | false | 论文结果索引中按必需结果组聚合的完整性判定, 用于区分标准指标、baseline / 消融、图表和报告等论文结果类型是否齐备。 |
+| required_result_group_count | artifact | none | false | false | false | 论文结果索引中包含必需论文结果的结果组数量。 |
+| required_result_group_pass_count | artifact | none | false | false | false | 论文结果索引中已经通过完整性判定的必需结果组数量。 |
+| required_result_group_failures | artifact | none | false | true | false | 论文结果索引中仍缺少必需结果文件的结果组集合。 |
+| missing_required_results | artifact | none | false | false | false | 单个论文结果组内缺失的必需 result_id 集合。 |
 | result_index_digest | artifact | none | false | true | false | 论文结果索引条目的稳定摘要。 |
 | colab_output_layout_manifest | artifact | none | false | true | false | Colab 结果类型目录 manifest, 用于审计每类输出在 Drive 根目录下的落盘位置。 |
 | drive_output_root | artifact | none | false | false | false | Colab 结果落盘根目录, Notebook 默认指向 /content/drive/MyDrive/CEG。 |

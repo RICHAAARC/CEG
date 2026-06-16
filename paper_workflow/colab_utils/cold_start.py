@@ -855,20 +855,41 @@ def build_colab_paper_result_index(workspace_root: str | Path) -> dict[str, Any]
     for item in indexed_results:
         group = groups.setdefault(
             str(item["result_group"]),
-            {"result_group": item["result_group"], "total": 0, "present": 0, "required_total": 0, "required_present": 0},
+            {
+                "result_group": item["result_group"],
+                "total": 0,
+                "present": 0,
+                "required_total": 0,
+                "required_present": 0,
+                "missing_required_results": [],
+            },
         )
         group["total"] += 1
         group["present"] += int(bool(item["exists"]))
         group["required_total"] += int(bool(item["required_for_paper_outputs"]))
         group["required_present"] += int(bool(item["required_for_paper_outputs"] and item["exists"]))
+        if item["required_for_paper_outputs"] and not item["exists"]:
+            group["missing_required_results"].append(item["result_id"])
+    for group in groups.values():
+        if group["required_total"] == 0:
+            group["overall_decision"] = "not_required"
+        else:
+            group["overall_decision"] = "pass" if not group["missing_required_results"] else "fail"
+    result_group_summary = sorted(groups.values(), key=lambda item: str(item["result_group"]))
+    required_result_group_summary = [item for item in result_group_summary if item["required_total"] > 0]
+    required_group_failures = [item["result_group"] for item in required_result_group_summary if item["overall_decision"] != "pass"]
     manifest = {
         "artifact_name": "colab_paper_result_index.json",
-        "overall_decision": "fail" if required_missing else "pass",
+        "overall_decision": "fail" if (required_missing or required_group_failures) else "pass",
         "drive_output_root": layout["drive_output_root"],
         "workspace_root": layout["workspace_root"],
         "output_layout_manifest_path": str(workspace / "colab_output_layout_manifest.json"),
         "indexed_results": indexed_results,
-        "result_group_summary": sorted(groups.values(), key=lambda item: str(item["result_group"])),
+        "result_group_summary": result_group_summary,
+        "required_result_group_summary": required_result_group_summary,
+        "required_result_group_count": len(required_result_group_summary),
+        "required_result_group_pass_count": sum(1 for item in required_result_group_summary if item["overall_decision"] == "pass"),
+        "required_result_group_failures": required_group_failures,
         "required_missing": required_missing,
         "required_total": sum(1 for item in indexed_results if item["required_for_paper_outputs"]),
         "required_present": sum(1 for item in indexed_results if item["required_for_paper_outputs"] and item["exists"]),
@@ -979,6 +1000,8 @@ def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str
                 "required_missing": result_index.get("required_missing"),
                 "required_present": result_index.get("required_present"),
                 "required_total": result_index.get("required_total"),
+                "required_result_group_failures": result_index.get("required_result_group_failures"),
+                "required_result_group_summary": result_index.get("required_result_group_summary"),
             },
         )
     )
