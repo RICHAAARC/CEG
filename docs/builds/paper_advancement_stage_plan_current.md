@@ -267,6 +267,32 @@ external_result_evidence_report.json
 
 完成门禁：baseline 的输入样本、阈值选择、检测事件、统计口径必须与 CEG 对齐；若外部方法无法完全对齐，必须在 evidence report 中显式说明差异。
 
+
+### 阶段 P5.5：external baseline 输出接收门禁
+
+目标：在 external baseline backend、pilot producer 或离线导入完成后，确认 `baseline_observations.json`、`baseline_execution_manifest.json` 和可选 external evidence 是否满足论文对比表和结果包构建的最小契约。
+
+推荐命令：
+
+```text
+python scripts/validate_pilot_baseline_outputs.py --output-root {workspace}\external_baselines --out {workspace}\pilot_baseline_output_acceptance_report.json --require-pass
+```
+
+若要支撑正式论文 baseline 声明，应启用：
+
+```text
+python scripts/validate_pilot_baseline_outputs.py --output-root {workspace}\external_baselines --out {workspace}\pilot_baseline_output_acceptance_report.json --require-formal-evidence --require-pass
+```
+
+该门禁只检查 baseline 输出契约、注册表一致性和证据报告，不运行第三方 baseline 算法，也不把 dry-run baseline 声明为正式论文结果。
+
+完成门禁：
+
+```text
+pilot_baseline_output_acceptance_report.json: overall_decision = pass
+pilot_baseline_output_acceptance_report.json: recommended_next_stage = quality_metric_pilot
+```
+
 ### 阶段 P6：接入质量指标
 
 目标：补充图像质量和文本一致性评价，避免论文只报告检测性能。
@@ -352,7 +378,9 @@ S10. 图像生成输出接收门禁通过后，再进入 attack pilot。
 S11. attack workflow 完成后，运行 `validate_pilot_attack_outputs.py --require-pass` 接收门禁。
 S12. attack 输出接收门禁通过后，运行 detection。
 S13. detection 完成后运行 `validate_pilot_detection_outputs.py --require-pass` 接收门禁。
-S14. detection 输出接收门禁通过后，再运行 baseline、quality metric 和 fixed-FPR 统计。
+S14. detection 输出接收门禁通过后，运行 external baseline。
+S15. baseline 完成后运行 `validate_pilot_baseline_outputs.py --require-pass` 接收门禁。
+S16. baseline 输出接收门禁通过后，再运行 quality metric 和 fixed-FPR 统计。
 ```
 
 ## 7. MyDrive 落盘规则

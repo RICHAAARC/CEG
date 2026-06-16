@@ -45,7 +45,8 @@ real_pilot_input_preparation
 8. 图像生成完成后先运行 `validate_pilot_image_generation_outputs.py --require-pass`。
 9. 图像生成输出接收门禁通过后，进入 attack pilot。
 10. attack 输出接收门禁通过后，进入 detection。
-11. detection 输出接收门禁通过后，再进入 external baseline、quality metric、fixed-FPR 统计和论文结果包构建。
+11. detection 输出接收门禁通过后，进入 external baseline。
+12. external baseline 输出接收门禁通过后，再进入 quality metric、fixed-FPR 统计和论文结果包构建。
 ```
 
 ### 0.3.4 论文结果包推进顺序
@@ -60,6 +61,7 @@ P3.5: 校验 attack 输出接收门禁。
 P4: 运行 CEG detector 与内部消融。
 P4.5: 校验 detection 输出接收门禁。
 P5: 接入 external baseline。
+P5.5: 校验 external baseline 输出接收门禁。
 P6: 接入质量指标。
 P7: 统计 fixed-FPR / TPR@FPR。
 P8: 构建 paper_results_package 并归档到 MyDrive。
@@ -740,6 +742,56 @@ dry-run / pilot producer 和离线导入入口已建立，真实 baseline backen
 3. baseline_execution_manifest.json 通过 external evidence preflight。
 4. baseline_comparison_table.csv 可由 records 和 manifests 重建。
 ```
+
+---
+
+
+## 阶段 G2: external baseline 输出接收门禁
+
+### 目标
+
+在 external baseline backend、baseline pilot producer 或离线 baseline observation 导入完成后，检查 baseline observations、execution manifest 和可选 external evidence 是否满足论文对比表与结果包构建的最小契约。
+
+### 输入
+
+```text
+external_baselines/
+  baseline_observations.json
+  baseline_execution_manifest.json
+  external_result_evidence_report.json 可选；正式声明时必需
+```
+
+### 输出
+
+```text
+pilot_baseline_output_acceptance_report.json
+```
+
+### 推荐命令
+
+```text
+python scripts/validate_pilot_baseline_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_baselines --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_baseline_output_acceptance_report.json --require-pass
+```
+
+正式论文 baseline 声明应使用：
+
+```text
+python scripts/validate_pilot_baseline_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_baselines --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_baseline_output_acceptance_report.json --require-formal-evidence --require-pass
+```
+
+### 完成门禁
+
+```text
+1. baseline_observations.json 和 baseline_execution_manifest.json 全部存在且可读。
+2. 每条 observation 包含 event_id、baseline_id、score、threshold、higher_is_positive、split、sample_role、attack_family 和 attack_condition。
+3. baseline_id 必须来自 baseline registry。
+4. score 与 threshold 必须为数值。
+5. baseline_execution_manifest.json 中 observation_count 与实际 observation 数一致。
+6. baseline_execution_manifest.json 中 baseline_ids 与 observation 中的 baseline_id 集合一致。
+7. 启用 --require-formal-evidence 时，external_result_evidence_report.json 必须存在且通过。
+```
+
+该阶段属于 baseline 结果接收门禁，不属于第三方 baseline 算法运行阶段。它只决定 baseline 结果是否可以进入 baseline comparison table 和 paper_results_package。
 
 ---
 
