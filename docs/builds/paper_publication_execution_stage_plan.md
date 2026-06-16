@@ -120,6 +120,51 @@ paper_claim_audit.json:
 
 ---
 
+## 0.2 2026-06-17 最新阶段整理
+
+### 0.2.1 当前阶段
+
+当前阶段更新为:
+
+```text
+real_pilot_input_preparation
+```
+
+该阶段表示 `CEG` 已完成 rehearsal 核心字段补齐、pilot readiness checklist 生成、真实 pilot 输入工作区脚手架和输入计划模板生成。下一步不应直接运行正式实验, 而应先检查真实 pilot 输入计划是否仍含 `_placeholder` 字段, 再替换为真实 prompt、split、seed、model 和 watermark 配置。
+
+### 0.2.2 已完成的阶段性产物
+
+```text
+1. rehearsal package 已补齐 detection_execution_manifest 和 experiment_matrix。
+2. pilot_input_gap_report 的 missing_core_fields 已为空。
+3. pilot_readiness_checklist 已生成, 结论为 not_ready_for_formal_pilot。
+4. real_pilot_input_workspace_20260617_034500 已创建。
+5. prompt_plan、split_plan、seed_plan、model_config、watermark_config 草稿模板已创建。
+```
+
+### 0.2.3 当前阻断项
+
+```text
+1. 输入计划模板仍是草稿, 不能直接启动真实 SD / watermark。
+2. 真实 clean / watermarked / attacked 图像尚未产生。
+3. 真实 CEG detection events 尚未产生。
+4. external baseline 尚未形成正式 observation 与 execution evidence。
+5. LPIPS / FID / CLIP score 等高级质量指标尚未形成正式 metric rows。
+6. paper_results_package 仍缺少可支撑正式论文声明的真实 records。
+```
+
+### 0.2.4 下一步执行命令建议
+
+在当前真实 pilot 输入工作区上, 后续应增加并运行输入计划 preflight。建议命令形态如下:
+
+```text
+python scripts/validate_pilot_input_plan_templates.py --workspace D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --out D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_plan_preflight_report.json
+```
+
+若报告仍为 fail, 应先替换所有 `_placeholder` 字段。只有 preflight 通过后, 才能启动真实 SD / watermark / attack / detection pilot。该门禁已由 `experiments/pilot_input_plan_preflight.py` 和 `scripts/validate_pilot_input_plan_templates.py` 承载; 使用 `--require-pass` 时, fail 报告会返回非 0 退出码, 适合作为真实运行前的硬门禁。
+
+---
+
 ## 1. 总目标
 
 最终目标是形成一个可供论文撰写和发表使用的 `paper_results_package`。该结果包必须能够重建论文中的数据表格、统计图、示例水印图像、攻击后图像、质量指标、TPR@FPR 表、外部 baseline 对比表和审计报告。
