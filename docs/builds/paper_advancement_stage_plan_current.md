@@ -75,6 +75,13 @@ blocking_issue_count = 148
 D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_value_pack_fill_sheet.csv
 ```
 
+当前 CSV 填写指南为:
+
+```text
+D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_value_pack_fill_sheet_guidance.md
+D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_value_pack_fill_sheet_guidance.json
+```
+
 当前导入报告失败原因是 `value_json` 列尚未填写, 19 个条目均为 `empty_value_json`。
 
 ## 4. 当前不能声明的内容
@@ -155,6 +162,7 @@ P0 的目标是把当前所有占位输入替换为真实实验配置, 并让输
 
 ```text
 python scripts/export_pilot_input_value_pack_fill_sheet.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+python scripts/export_pilot_input_value_pack_fill_sheet_guidance.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
 python scripts/import_pilot_input_value_pack_fill_sheet.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-pass
 python scripts/build_pilot_input_value_pack_status.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
 python scripts/apply_pilot_input_value_pack.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --value-pack D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_input_value_pack.draft.json --require-pass
@@ -455,25 +463,26 @@ python scripts/validate_pilot_mydrive_archive.py --drive-root D:/content/drive/M
 当前最短推进路径为:
 
 ```text
-S1. 打开 pilot_input_value_pack_fill_sheet.csv。
-S2. 填写 19 个 value_json, 确保均为合法 JSON 值。
-S3. 运行 import_pilot_input_value_pack_fill_sheet.py --require-pass。
-S4. 运行 build_pilot_input_value_pack_status.py。
-S5. 确认 pilot_input_value_pack_status_report.json 通过。
-S6. 运行 apply_pilot_input_value_pack.py --require-pass。
-S7. 运行 validate_pilot_input_plan_templates.py --require-pass。
-S8. 运行 build_pilot_execution_readiness_report.py --require-pass。
-S9. 运行 build_pilot_image_generation_launch_plan.py --require-pass。
-S10. 执行真实 SD / watermark backend。
-S11. 验收 image generation outputs。
-S12. 执行 attack pilot 并验收。
-S13. 执行 CEG detection 并验收。
-S14. 接入 external baseline 并验收。
-S15. 接入 quality metric 并验收。
-S16. 运行 fixed-FPR / TPR@FPR 统计并验收。
-S17. 构建 paper_results_package 并验收。
-S18. 归档到 MyDrive 并验收。
-S19. 每完成一个阶段后运行 build_pilot_stage_progress_summary.py 更新阶段看板。
+S1. 打开 pilot_input_value_pack_fill_sheet_guidance.md, 理解每个 value_json 的类型要求。
+S2. 打开 pilot_input_value_pack_fill_sheet.csv。
+S3. 填写 19 个 value_json, 确保均为合法 JSON 值。
+S4. 运行 import_pilot_input_value_pack_fill_sheet.py --require-pass。
+S5. 运行 build_pilot_input_value_pack_status.py。
+S6. 确认 pilot_input_value_pack_status_report.json 通过。
+S7. 运行 apply_pilot_input_value_pack.py --require-pass。
+S8. 运行 validate_pilot_input_plan_templates.py --require-pass。
+S9. 运行 build_pilot_execution_readiness_report.py --require-pass。
+S10. 运行 build_pilot_image_generation_launch_plan.py --require-pass。
+S11. 执行真实 SD / watermark backend。
+S12. 验收 image generation outputs。
+S13. 执行 attack pilot 并验收。
+S14. 执行 CEG detection 并验收。
+S15. 接入 external baseline 并验收。
+S16. 接入 quality metric 并验收。
+S17. 运行 fixed-FPR / TPR@FPR 统计并验收。
+S18. 构建 paper_results_package 并验收。
+S19. 归档到 MyDrive 并验收。
+S20. 每完成一个阶段后运行 build_pilot_stage_progress_summary.py 更新阶段看板。
 ```
 
 ## 18. 下一步明确结论

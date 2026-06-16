@@ -16,6 +16,7 @@ from experiments.pilot_input_replacement_checklist import write_pilot_input_repl
 from experiments.pilot_input_value_pack import build_pilot_input_value_pack_template
 from experiments.pilot_input_value_pack_sheet import (
     export_pilot_input_value_pack_fill_sheet,
+    export_pilot_input_value_pack_fill_sheet_guidance,
     import_and_write_pilot_input_value_pack_fill_sheet,
 )
 from experiments.pilot_input_value_pack_status import build_pilot_input_value_pack_status
@@ -62,6 +63,29 @@ def test_export_value_pack_fill_sheet_writes_one_row_per_entry(tmp_path) -> None
     assert report["row_count"] == 19
     assert len(rows) == 19
     assert {"task_id", "replacement_key", "value_json"}.issubset(rows[0])
+
+
+@pytest.mark.quick
+def test_export_value_pack_fill_sheet_guidance_does_not_rewrite_value_pack(tmp_path) -> None:
+    """填写指南只应提供格式说明, 不应向 value pack 写入真实 value。"""
+    value_pack_path, _ = _prepare_value_pack(tmp_path)
+    guidance_md = tmp_path / "pilot_input_value_pack_fill_sheet_guidance.md"
+    guidance_json = tmp_path / "pilot_input_value_pack_fill_sheet_guidance.json"
+
+    report = export_pilot_input_value_pack_fill_sheet_guidance(
+        value_pack_path=value_pack_path,
+        output_markdown_path=guidance_md,
+        output_json_path=guidance_json,
+    )
+
+    payload = json.loads(value_pack_path.read_text(encoding="utf-8"))
+    guidance_payload = json.loads(guidance_json.read_text(encoding="utf-8"))
+    assert report["overall_decision"] == "pass"
+    assert report["guidance_only"] is True
+    assert report["summary"]["guidance_row_count"] == 19
+    assert len(guidance_payload["guidance_rows"]) == 19
+    assert guidance_md.is_file()
+    assert all("value" not in entry for entry in payload["value_entries"])
 
 
 @pytest.mark.quick
