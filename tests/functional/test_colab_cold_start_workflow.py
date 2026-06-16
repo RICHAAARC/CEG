@@ -206,6 +206,88 @@ def test_colab_formal_run_checklist_preflights_formal_input_sources(tmp_path) ->
 
 
 @pytest.mark.quick
+def test_colab_formal_result_gap_report_accepts_provided_file_strict_path(tmp_path) -> None:
+    """直接提供 baseline / metric 结果文件时, 严格缺口报告应依赖 provided_results manifest, 而不是强制外部命令结果。"""
+    workspace = tmp_path / "workspace"
+    artifacts_root = workspace / "paper_results_package" / "artifacts"
+    provided_root = workspace / "provided_results"
+    artifacts_root.mkdir(parents=True)
+    provided_root.mkdir(parents=True)
+
+    (workspace / "colab_formal_run_checklist.json").write_text(
+        json.dumps(
+            {
+                "artifact_name": "colab_formal_run_checklist.json",
+                "overall_decision": "pass",
+                "blocking_issue_count": 0,
+                "use_dry_run_inputs": False,
+                "run_external_plans": False,
+                "require_experiment_coverage": True,
+                "baseline_source_mode": "provided_file",
+                "metric_source_mode": "provided_file",
+                "gpu_readiness": {"checked_for_formal_external_plans": False, "gpu_available": False},
+                "issues": [],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (workspace / "colab_paper_result_index.json").write_text(
+        json.dumps({"artifact_name": "colab_paper_result_index.json", "overall_decision": "pass", "required_missing": [], "required_present": 3, "required_total": 3}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    (artifacts_root / "paper_experiment_coverage_report.json").write_text(
+        json.dumps({"artifact_name": "paper_experiment_coverage_report.json", "overall_decision": "pass"}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    (provided_root / "provided_result_files_manifest.json").write_text(
+        json.dumps({"artifact_name": "provided_result_files_manifest.json", "overall_decision": "pass", "copied_files": []}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    (workspace / "paper_result_evidence_report.json").write_text(
+        json.dumps(
+            {
+                "artifact_name": "paper_result_evidence_report.json",
+                "overall_decision": "pass",
+                "allow_dry_run": False,
+                "require_experiment_coverage": True,
+                "require_external_command_results": False,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (workspace / "colab_acceptance_report.json").write_text(
+        json.dumps(
+            {
+                "artifact_name": "colab_acceptance_report.json",
+                "overall_decision": "pass",
+                "allow_dry_run": False,
+                "require_experiment_coverage": True,
+                "require_external_command_results": False,
+                "report_decisions": {"colab_run_bundle_validation": "pass", "paper_result_evidence": "pass"},
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_colab_formal_result_gap_report(workspace)
+
+    assert report["overall_decision"] == "ready_for_formal_claims"
+    assert report["blocking_gap_requirements"] == []
+    checks = {item["requirement"]: item for item in report["checks"]}
+    assert checks["external_command_result_files_present"]["status"] == "pass"
+    assert checks["provided_result_files_manifest_ready"]["status"] == "pass"
+    assert checks["strict_paper_result_evidence_passed"]["status"] == "pass"
+    assert checks["strict_colab_acceptance_passed"]["status"] == "pass"
+
+
+@pytest.mark.quick
 def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     """本地轻量 dry-run 应验证 Colab helper 能从冷启动输入走到结果包。"""
     summary = run_colab_cold_start_pipeline(".", tmp_path / "colab_workspace", repetitions=1)

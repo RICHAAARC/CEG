@@ -1027,6 +1027,9 @@ def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str
         )
     )
 
+    result_source_modes = {baseline_source_mode, metric_source_mode}
+    external_plan_selected = "external_plan" in result_source_modes
+    provided_file_selected = "provided_file" in result_source_modes
     external_command_files = {
         "baseline_command_results": workspace / "external_baselines" / "baseline_command_results.json",
         "baseline_observations": workspace / "external_baselines" / "baseline_observations.json",
@@ -1034,7 +1037,7 @@ def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str
         "metric_rows": workspace / "external_metrics" / "metric_rows.json",
     }
     missing_external_files = [name for name, path in external_command_files.items() if not path.is_file()]
-    external_files_required = run_external_plans and not use_dry_run
+    external_files_required = external_plan_selected and not use_dry_run
     checks.append(
         _formal_gap_check(
             "external_command_result_files_present",
@@ -1049,7 +1052,7 @@ def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str
         )
     )
 
-    provided_manifest_required = "provided_file" in {baseline_source_mode, metric_source_mode}
+    provided_manifest_required = provided_file_selected
     provided_manifest = _read_json_object(workspace / "provided_results" / "provided_result_files_manifest.json")
     provided_manifest_passed = isinstance(provided_manifest, dict) and provided_manifest.get("overall_decision") == "pass"
     checks.append(
@@ -1065,11 +1068,14 @@ def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str
         )
     )
 
+    evidence_external_plan_ok = (not external_plan_selected) or evidence_report.get("require_external_command_results") is True
+    evidence_provided_file_ok = (not provided_file_selected) or provided_manifest_passed
     evidence_formal_passed = (
         evidence_report.get("overall_decision") == "pass"
         and evidence_report.get("allow_dry_run") is False
         and evidence_report.get("require_experiment_coverage") is True
-        and evidence_report.get("require_external_command_results") is True
+        and evidence_external_plan_ok
+        and evidence_provided_file_ok
     )
     checks.append(
         _formal_gap_check(
@@ -1082,15 +1088,21 @@ def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str
                 "allow_dry_run": evidence_report.get("allow_dry_run"),
                 "require_experiment_coverage": evidence_report.get("require_experiment_coverage"),
                 "require_external_command_results": evidence_report.get("require_external_command_results"),
+                "external_plan_selected": external_plan_selected,
+                "provided_file_selected": provided_file_selected,
+                "provided_manifest_passed": provided_manifest_passed,
             },
         )
     )
 
+    acceptance_external_plan_ok = (not external_plan_selected) or acceptance_report.get("require_external_command_results") is True
+    acceptance_provided_file_ok = (not provided_file_selected) or provided_manifest_passed
     acceptance_strict = (
         acceptance_report.get("overall_decision") == "pass"
         and acceptance_report.get("allow_dry_run") is False
         and acceptance_report.get("require_experiment_coverage") is True
-        and acceptance_report.get("require_external_command_results") is True
+        and acceptance_external_plan_ok
+        and acceptance_provided_file_ok
     )
     checks.append(
         _formal_gap_check(
@@ -1104,6 +1116,9 @@ def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str
                 "require_experiment_coverage": acceptance_report.get("require_experiment_coverage"),
                 "require_external_command_results": acceptance_report.get("require_external_command_results"),
                 "report_decisions": acceptance_report.get("report_decisions"),
+                "external_plan_selected": external_plan_selected,
+                "provided_file_selected": provided_file_selected,
+                "provided_manifest_passed": provided_manifest_passed,
             },
         )
     )
