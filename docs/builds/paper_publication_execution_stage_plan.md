@@ -67,7 +67,7 @@ overall_decision = pass
 
 ### 目标
 
-把真实 pilot 输入 value pack 中尚未填写或仍为占位内容的条目整理为可执行清单, 防止后续把未冻结输入误用为正式实验配置。
+把真实 pilot 输入 value pack 中尚未填写、仍为占位内容或类型错误的条目整理为可执行清单, 防止后续把未冻结输入误用为正式实验配置。
 
 ### 命令
 
@@ -88,6 +88,7 @@ D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_0345
 overall_decision = pass
 missing_count = 0
 placeholder_count = 0
+invalid_count = 0
 recommended_next_stage = apply_pilot_input_value_pack
 ```
 

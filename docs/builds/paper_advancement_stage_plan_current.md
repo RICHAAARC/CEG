@@ -122,7 +122,7 @@ pilot_input_value_pack_status_report.json: overall_decision = pass
 pilot_input_value_pack_status_report.json: recommended_next_stage = apply_pilot_input_value_pack
 ```
 
-说明: 该报告不替代 value pack 应用门禁, 只用于把当前最前置阻断点拆成可填写的真实输入清单。
+说明: 该报告不替代 value pack 应用门禁, 只用于把当前最前置阻断点拆成可填写、可校验类型和取值的真实输入清单。
 
 ### P1: 生成真实图像生成启动计划
 

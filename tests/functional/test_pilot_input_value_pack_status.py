@@ -43,6 +43,7 @@ def test_value_pack_status_reports_missing_values(tmp_path) -> None:
     assert report["overall_decision"] == "fail"
     assert report["recommended_next_stage"] == "fill_missing_real_values_in_value_pack"
     assert report["summary"]["missing_count"] == 19
+    assert report["summary"]["invalid_count"] == 0
     assert report["summary"]["blocking_item_count"] == 19
 
 
@@ -60,7 +61,32 @@ def test_value_pack_status_passes_when_all_values_are_filled(tmp_path) -> None:
     assert report["overall_decision"] == "pass"
     assert report["recommended_next_stage"] == "apply_pilot_input_value_pack"
     assert report["summary"]["filled_count"] == 19
+    assert report["summary"]["invalid_count"] == 0
     assert report["summary"]["blocking_item_count"] == 0
+
+
+@pytest.mark.quick
+def test_value_pack_status_rejects_invalid_value_types(tmp_path) -> None:
+    """value 字段存在但类型错误时, 状态报告应阻断后续应用阶段。"""
+    value_pack_path, value_pack = _prepare_value_pack(tmp_path)
+    filled = copy.deepcopy(value_pack)
+    for entry in filled["value_entries"]:
+        entry["value"] = REAL_VALUES[entry["task_id"]]
+    for entry in filled["value_entries"]:
+        if entry["replacement_key"] == "image_size":
+            entry["value"] = "512x512"
+        if entry["replacement_key"] == "requires_huggingface_token":
+            entry["value"] = "false"
+    value_pack_path.write_text(json.dumps(filled, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    report = build_pilot_input_value_pack_status(workspace_root=tmp_path)
+
+    assert report["overall_decision"] == "fail"
+    assert report["summary"]["invalid_count"] == 2
+    assert report["summary"]["blocking_item_count"] == 2
+    reasons = {tuple(item["validation_errors"]) for item in report["blocking_items"]}
+    assert ("must_be_two_positive_integers",) in reasons
+    assert ("must_be_boolean",) in reasons
 
 
 @pytest.mark.quick
@@ -79,7 +105,7 @@ def test_value_pack_status_writes_json_and_markdown(tmp_path) -> None:
 
     assert report["overall_decision"] == "fail"
     assert json.loads(out_json.read_text(encoding="utf-8"))["artifact_name"] == "pilot_input_value_pack_status_report.json"
-    assert "pilot 输入 value pack 填写状态" in out_md.read_text(encoding="utf-8")
+    assert "value pack" in out_md.read_text(encoding="utf-8")
 
 
 @pytest.mark.quick
