@@ -2,7 +2,7 @@
 
 ## 0. 文档定位
 
-本文档是 `D:\Code\CEG` 当前向论文发表结果包推进的阶段计划整理稿。它面向后续工程实施与论文撰写准备, 用于回答以下问题:
+本文档是 `D:\Code\CEG` 当前向论文发表结果包推进的阶段计划整理稿。最后整理时间为 2026-06-17。它面向后续工程实施与论文撰写准备, 用于回答以下问题:
 
 ```text
 论文发表需要哪些结果产物
@@ -118,6 +118,10 @@ Colab bundle / archive / acceptance 校验结构
 result index 对 required artifacts 的索引门禁
 fixed-FPR / TPR@FPR 统计模块雏形
 image example package 结构雏形
+prompt plan 到 mock clean / watermarked image 的 dry-run 链路
+external SD / watermark backend command plan 接口
+attack workflow manifest 链路
+CEG detection event producer dry-run 链路
 ```
 
 ### 2.2 当前仍不应宣称具备的能力
@@ -143,7 +147,7 @@ image example package 结构雏形
 工程契约与 dry-run 链路完善阶段
 ```
 
-该阶段的主要目标不是追求论文数值, 而是确保真实实验一旦运行, 其产物可以被稳定、可复核地进入结果包。
+该阶段的主要目标不是追求论文数值, 而是确保真实实验一旦运行, 其产物可以被稳定、可复核地进入结果包。当前工程重心已经从结果包骨架转入 `external baseline pilot` 与 `quality metric runner` 的接口闭环。
 
 ---
 
@@ -274,6 +278,23 @@ attack_tpr_at_fixed_fpr_table.csv
 
 ## 5. 阶段推进计划
 
+### 5.0 当前阶段快照
+
+```text
+阶段 1: 结果包契约, 基本完成, 后续随新增产物维护。
+阶段 2: prompt 到图像样本 manifest, dry-run 已打通, external backend plan 已具备。
+阶段 3: attack workflow, dry-run 契约链路已打通。
+阶段 4: CEG detection 与内部 ablation 统一记录, dry-run 契约链路已打通。
+阶段 5: 外部 baseline 接入, 当前最优先推进。
+阶段 6: fixed-FPR / TPR@FPR 正式统计, 已有雏形, 等待真实 detection 与 baseline records。
+阶段 7: 图像质量指标与论文示例图, 示例图 package 已有雏形, quality runner 待补齐。
+阶段 8: Colab 端到端入口, dry-run 能力持续扩展, pilot 仍待真实 backend。
+阶段 9: pilot 实验, 待外部 baseline 和 quality metrics 接入后启动。
+阶段 10: 正式论文实验, 待 pilot 通过后启动。
+```
+
+---
+
 ## 阶段 1: 冻结论文结果包契约
 
 ### 目标
@@ -293,9 +314,9 @@ attack_tpr_at_fixed_fpr_table.csv
 ### 当前状态
 
 ```text
-部分完成。
-fixed-FPR 表、image examples、attack manifests 的契约已经进入推进范围。
-仍需持续确保 Colab dry-run 与 package validation 对新增 required outputs 一致。
+基本完成, 后续随新增产物持续维护。
+fixed-FPR 表、image examples、attack manifests、image generation manifests、CEG detection manifests 已进入推进范围。
+仍需补齐 external baseline execution manifest 与 quality metric runner 的 package validation 覆盖。
 ```
 
 ### 完成标准
@@ -425,9 +446,10 @@ sample_role
 ### 当前状态
 
 ```text
-进行中。
-本地轻量 attack workflow 已进入实现范围。
-下一步重点是让 Colab dry-run pipeline 自动生成 attack manifests, 并让 build_paper_outputs.py 在正式 readiness requirements 下接收这些 manifests。
+已完成 dry-run 契约链路。
+本地轻量 attack workflow 已可生成 attacked_image_manifest.json 与 attack_shard_manifest.json。
+Colab dry-run pipeline 已可自动生成 attack manifests, 并将其纳入结果包归档。
+该状态不代表正式鲁棒性实验已经完成, 只代表 attack 产物契约和打包链路已经打通。
 ```
 
 ### 完成标准
@@ -468,9 +490,10 @@ method_pairwise_delta_table.csv
 ### 当前状态
 
 ```text
-进行中。
+已完成 dry-run 契约链路。
 轻量 CEG detection producer 已具备 image_pairs / attacked_image_manifest -> detection_events.json / detection_thresholds.json / ceg_detection_producer_manifest.json 的契约链路。
-该 producer 只用于 dry-run 和正式 detector 接口验证, 不代表正式检测模型分数。
+该 producer 已通过本地测试、harness audit 与 completion audit, 只用于 dry-run 和正式 detector 接口验证, 不代表正式检测模型分数。
+下一步应让 external baseline pilot 直接消费 detection_events.json, 形成 baseline_observations.json 与 baseline_execution_manifest.json。
 ```
 
 ### 完成标准
@@ -509,6 +532,15 @@ baseline_comparison_table.csv
 ### 实现边界
 
 外部 baseline 算法本体可以由外部脚本、外部仓库、Colab 环境或预生成结果产生。但是进入 `CEG` 的结果必须满足统一记录结构, 不能只保存零散日志或截图。
+
+### 当前状态
+
+```text
+下一步优先推进。
+当前已有 baseline file / command / plan 适配结构, 但尚未形成从 CEG detection events 到 baseline_observations.json / baseline_execution_manifest.json 的统一 pilot producer。
+优先实现一个 dry-run / pilot producer, 覆盖 Tree-Ring、Gaussian Shading、Shallow Diffuse、Stable Signature DEE 四类 baseline 的输出契约。
+该 producer 只能声明为接口验证与 pilot 数据适配, 不能伪装成外部 baseline 算法本体的正式复现。
+```
 
 ### 完成标准
 
@@ -706,21 +738,22 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 ### 6.1 当前最优先事项
 
 ```text
-1. 完成 attack workflow manifests 与 Colab dry-run pipeline 的打通。
-2. 确保 attacked_image_manifest.json 和 attack_shard_manifest.json 进入 paper_results_package。
-3. 确保启用 configs/paper_output_requirements.json 时 dry-run package validation 通过。
-4. 继续保持 fixed-FPR / TPR@FPR 表由 records 和 manifests 重建。
+1. 实现 external baseline pilot producer。
+2. 让 baseline pilot producer 消费 detection_events.json。
+3. 输出 baseline_observations.json 与 baseline_execution_manifest.json。
+4. 将 baseline_execution_manifest.json 纳入 paper_results_package / colab_run_bundle 的可追溯产物。
+5. 继续保持 fixed-FPR / TPR@FPR 表由 records 和 manifests 重建。
 ```
 
 ### 6.2 随后推进事项
 
 ```text
-1. prompt / image generation manifest mock backend。
-2. external backend 接口, 用于真实 SD / watermark 图像生成。
-3. CEG detection score producer。
-4. external baseline pilot 接入。
-5. quality metric runner。
-6. Colab pilot 小样本正式运行。
+1. quality metric runner。
+2. 真实 CEG detector backend pilot。
+3. 真实 SD / watermark backend pilot。
+4. 至少一个外部 baseline 的真实小样本运行。
+5. Colab pilot 小样本正式运行。
+6. 正式实验配置冻结和资源排期。
 ```
 
 ### 6.3 不应优先做的事项
