@@ -808,9 +808,10 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 4. 对 pilot_input_manifest.json 执行 preflight 校验, 在构建 paper_results_package 前确认所有输入文件存在、schema 可解析、路径可追溯。
 5. 使用 scripts/import_baseline_observations.py 接入至少一个真实 external baseline backend 输出或离线正式 observation 文件。
 6. 使用 scripts/import_metric_rows.py 接入真实 LPIPS / FID / CLIP score backend 输出或离线正式 metric rows。
-7. 将真实 baseline 与高级 metric execution manifest 和 result package provenance 对齐。
-8. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR、quality metrics 和 image examples。
-9. 继续保持所有论文表格由 records 和 manifests 重建。
+7. 对 baseline_execution_manifest.json 与 metric_execution_manifest.json 运行 scripts/validate_external_result_evidence.py, 在正式声明时要求 formal_result_claim 和 evidence_paths 同时通过。
+8. 将真实 baseline 与高级 metric execution manifest 和 result package provenance 对齐。
+9. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR、quality metrics 和 image examples。
+10. 继续保持所有论文表格由 records 和 manifests 重建。
 ```
 
 ### 6.2 随后推进事项

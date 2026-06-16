@@ -509,3 +509,10 @@ Notebook 与 repository module 的跨边界数据
 | raw_input_package_build_decision | artifact | none | false | true | false | 分散输入一键构建入口的整体结论, 覆盖 materialize、preflight、build、export 和 archive 阶段. |
 | materialized_input_root | artifact | none | false | false | false | 分散输入一键构建入口传给 materializer 的 canonical pilot 输入目录. |
 | pilot_package_root | artifact | none | false | false | false | 分散输入一键构建入口生成 paper_outputs 和 paper_results_package 的构建根目录. |
+
+| external_result_evidence_report | artifact | none | false | true | false | 统一校验外部 baseline 与高级 metric execution manifest 是否具备正式运行证据的报告. |
+| require_formal_claim | protocol | none | false | true | false | 外部结果证据预检是否要求 baseline 和 metric manifest 显式声明 formal_result_claim. |
+| formal_result_claim | artifact | none | false | true | false | 外部 baseline 或高级 metric 导入 manifest 中声明该输入是否可支撑正式论文结果的布尔字段. |
+| evidence_paths | artifact | none | false | false | false | 外部运行日志、配置、摘要或其他 provenance 文件路径集合. |
+| evidence_path_count | metric | none | false | true | false | 外部结果 manifest 中登记的证据文件数量. |
+| evidence_digest | artifact | none | false | true | false | 外部结果证据预检报告对检查结果生成的稳定摘要. |

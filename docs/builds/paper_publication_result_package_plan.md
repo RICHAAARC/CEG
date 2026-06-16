@@ -607,6 +607,7 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 真实 CEG detector backend pilot
 至少一个真实 external baseline pilot
 真实 LPIPS / FID / CLIP score 或离线正式 metric rows 接入
+external_result_evidence_report.json 证明确有外部 baseline 和高级 metric 运行证据
 fixed-FPR / TPR@FPR 和论文示例图复核
 ```
 
