@@ -1010,6 +1010,13 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
     },
     {
         "result_group": "external_evidence",
+        "result_id": "external_baseline_execution_manifest",
+        "relative_path": "external_baselines/baseline_execution_manifest.json",
+        "required_for_paper_outputs": False,
+        "purpose": "外部 baseline pilot 或第三方 baseline 执行摘要 manifest。",
+    },
+    {
+        "result_group": "external_evidence",
         "result_id": "external_metric_rows",
         "relative_path": "external_metrics/metric_rows.json",
         "required_for_paper_outputs": False,
@@ -1110,6 +1117,7 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
             "scripts/build_paper_outputs.py",
             "main.analysis.aggregation.build_baseline_comparison_table",
             "scripts/run_baseline_plan.py 或 copy_provided_result_files",
+            "scripts/run_baseline_pilot_producer.py",
             "scripts/export_paper_results_package.py",
         ),
         "required_inputs": (
@@ -1183,6 +1191,7 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
     "external_evidence": {
         "producer_steps": (
             "scripts/run_baseline_plan.py",
+            "scripts/run_baseline_pilot_producer.py",
             "scripts/run_metric_plan.py",
             "copy_provided_result_files",
         ),
@@ -1220,9 +1229,14 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
 
 COLAB_RESULT_ID_PRODUCTION_TRACE_OVERRIDES: dict[str, dict[str, tuple[str, ...]]] = {
     "external_baseline_observations": {
-        "producer_steps": ("scripts/run_baseline_plan.py",),
-        "required_inputs": ("baseline command plan", "governed event records"),
+        "producer_steps": ("scripts/run_baseline_plan.py", "scripts/run_baseline_pilot_producer.py"),
+        "required_inputs": ("baseline command plan 或 detection_events.json", "governed event records"),
         "validation_gates": ("paper_result_evidence_report.json baseline_source_ready",),
+    },
+    "external_baseline_execution_manifest": {
+        "producer_steps": ("scripts/run_baseline_plan.py", "scripts/run_baseline_pilot_producer.py"),
+        "required_inputs": ("baseline command plan 或 detection_events.json", "baseline_observations.json"),
+        "validation_gates": ("colab_run_bundle_validation.json",),
     },
     "external_metric_rows": {
         "producer_steps": ("scripts/run_metric_plan.py", "scripts/compute_image_quality_metrics.py"),
@@ -2504,6 +2518,7 @@ def export_colab_run_bundle(workspace_root: str | Path, bundle_root: str | Path 
         "external_image_generation/image_generation_command_results.json",
         "external_baselines/baseline_command_plan_manifest.json",
         "external_baselines/baseline_command_results.json",
+        "external_baselines/baseline_execution_manifest.json",
         "external_baselines/baseline_observations.json",
         "external_metrics/metric_command_plan_manifest.json",
         "external_metrics/metric_command_results.json",
@@ -2822,6 +2837,7 @@ def _build_external_plan_steps(
         "materialize_metric_command": materialize_metric_command,
         "metric_execution_command": metric_execution_command,
         "baseline_observations_path": str(baseline_output_root / "baseline_observations.json") if run_external_plans else None,
+        "baseline_execution_manifest_path": str(baseline_output_root / "baseline_execution_manifest.json") if run_external_plans else None,
         "metric_rows_path": str(metric_output_root / "metric_rows.json") if run_external_plans else None,
     }
 
@@ -3018,6 +3034,8 @@ def build_colab_command_plan(
         build_command.append("--require-experiment-coverage")
     if effective_baseline_path is not None:
         build_command.extend(["--baseline-observations", str(effective_baseline_path)])
+    if run_external_plans and external_steps.get("baseline_execution_manifest_path"):
+        build_command.extend(["--baseline-execution-manifest", str(external_steps["baseline_execution_manifest_path"])])
     if effective_metric_rows_path is not None:
         build_command.extend(["--metric-rows", str(effective_metric_rows_path)])
     if effective_image_pairs_path is not None:
@@ -3078,7 +3096,7 @@ def build_colab_command_plan(
 def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
     """根据命令计划生成输入路径和输出契约清单。"""
     build_command = list(command_plan.get("build_command", []))
-    path_flags = {"--events", "--thresholds", "--baseline-observations", "--metric-rows", "--image-pairs", "--experiment-matrix", "--attacked-image-manifest", "--attack-shard-manifest"}
+    path_flags = {"--events", "--thresholds", "--baseline-observations", "--baseline-execution-manifest", "--metric-rows", "--image-pairs", "--experiment-matrix", "--attacked-image-manifest", "--attack-shard-manifest"}
     input_paths = []
     for index, part in enumerate(build_command[:-1]):
         if part in path_flags:
@@ -3174,7 +3192,7 @@ def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
         )
     if command_plan.get("run_external_plans"):
         external_steps = command_plan.get("external_plan_steps", {})
-        for key in ("baseline_observations_path", "metric_rows_path"):
+        for key in ("baseline_observations_path", "baseline_execution_manifest_path", "metric_rows_path"):
             if external_steps.get(key):
                 generated_paths.add(str(Path(str(external_steps[key]))))
     if command_plan.get("basic_metric_command"):

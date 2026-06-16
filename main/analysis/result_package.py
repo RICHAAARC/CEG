@@ -33,6 +33,7 @@ SOURCE_MANIFEST_FILES = (
     "image_manifests/image_generation_manifest.json",
     "image_manifests/image_pair_manifest.json",
     "image_examples/image_example_manifest.json",
+    "baseline_results/baseline_execution_manifest.json",
 )
 
 
@@ -122,6 +123,15 @@ def _image_example_files(output_root: Path) -> list[str]:
     return files
 
 
+def _baseline_result_files(output_root: Path) -> list[str]:
+    """收集可选外部 baseline observation 和执行 manifest。"""
+    candidates = [
+        "baseline_results/baseline_observations.json",
+        "baseline_results/baseline_execution_manifest.json",
+    ]
+    return [relative for relative in candidates if (output_root / relative).is_file()]
+
+
 def collect_paper_result_files(output_root: str | Path) -> list[str]:
     """收集一个完整论文结果输出目录中应进入交付包的相对路径。"""
     root = Path(output_root)
@@ -133,6 +143,7 @@ def collect_paper_result_files(output_root: str | Path) -> list[str]:
         *_pdf_files(root),
         *_image_manifest_files(root),
         *_image_example_files(root),
+        *_baseline_result_files(root),
     ]
     return sorted(dict.fromkeys(str(path).replace("\\", "/") for path in candidates))
 

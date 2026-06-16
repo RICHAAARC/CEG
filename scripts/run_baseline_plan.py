@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from experiments.baseline_command_adapter import run_baseline_commands
 from experiments.baseline_plan import build_baseline_plan_manifest, load_baseline_command_plan
+from main.core.digest import build_stable_digest
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -41,6 +42,29 @@ def main() -> None:
     )
     (output_root / "baseline_observations.json").write_text(
         json.dumps(rows, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    execution_manifest = {
+        "artifact_name": "baseline_execution_manifest.json",
+        "producer_id": "external_baseline_command_plan_runner",
+        "producer_role": "external_baseline_command_execution",
+        "formal_result_claim": False,
+        "execution_boundary": "external_command_results_require_separate_formal_evidence",
+        "command_count": len(specs),
+        "observation_count": len(rows),
+        "baseline_ids": sorted({spec.baseline_id for spec in specs}),
+        "baseline_observations_path": str(output_root / "baseline_observations.json"),
+        "command_results_path": str(output_root / "baseline_command_results.json"),
+        "execution_digest": build_stable_digest(
+            {
+                "specs": [spec.to_dict() for spec in specs],
+                "results": [result.to_dict() for result in results],
+                "rows": rows,
+            }
+        ),
+    }
+    (output_root / "baseline_execution_manifest.json").write_text(
+        json.dumps(execution_manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     print(json.dumps({"command_count": len(specs), "observation_count": len(rows)}, ensure_ascii=False, indent=2))

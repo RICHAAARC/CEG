@@ -285,7 +285,7 @@ attack_tpr_at_fixed_fpr_table.csv
 阶段 2: prompt 到图像样本 manifest, dry-run 已打通, external backend plan 已具备。
 阶段 3: attack workflow, dry-run 契约链路已打通。
 阶段 4: CEG detection 与内部 ablation 统一记录, dry-run 契约链路已打通。
-阶段 5: 外部 baseline 接入, 当前最优先推进。
+阶段 5: 外部 baseline 接入, dry-run / pilot producer 已打通, 后续推进真实 baseline。
 阶段 6: fixed-FPR / TPR@FPR 正式统计, 已有雏形, 等待真实 detection 与 baseline records。
 阶段 7: 图像质量指标与论文示例图, 示例图 package 已有雏形, quality runner 待补齐。
 阶段 8: Colab 端到端入口, dry-run 能力持续扩展, pilot 仍待真实 backend。
@@ -536,10 +536,11 @@ baseline_comparison_table.csv
 ### 当前状态
 
 ```text
-下一步优先推进。
-当前已有 baseline file / command / plan 适配结构, 但尚未形成从 CEG detection events 到 baseline_observations.json / baseline_execution_manifest.json 的统一 pilot producer。
-优先实现一个 dry-run / pilot producer, 覆盖 Tree-Ring、Gaussian Shading、Shallow Diffuse、Stable Signature DEE 四类 baseline 的输出契约。
+已完成 dry-run / pilot producer 契约链路。
+当前已有 baseline file / command / plan 适配结构, 并新增从 CEG detection events 到 baseline_observations.json / baseline_execution_manifest.json 的统一 pilot producer。
+pilot producer 覆盖 Tree-Ring、Gaussian Shading、Shallow Diffuse、Stable Signature DEE 四类 baseline 的输出契约。
 该 producer 只能声明为接口验证与 pilot 数据适配, 不能伪装成外部 baseline 算法本体的正式复现。
+下一步应接入至少一个真实外部 baseline backend 或离线正式 observation 文件。
 ```
 
 ### 完成标准
@@ -738,11 +739,11 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 ### 6.1 当前最优先事项
 
 ```text
-1. 实现 external baseline pilot producer。
-2. 让 baseline pilot producer 消费 detection_events.json。
-3. 输出 baseline_observations.json 与 baseline_execution_manifest.json。
-4. 将 baseline_execution_manifest.json 纳入 paper_results_package / colab_run_bundle 的可追溯产物。
-5. 继续保持 fixed-FPR / TPR@FPR 表由 records 和 manifests 重建。
+1. 实现 quality metric runner 与高级指标来源证据闭环。
+2. 接入至少一个真实 external baseline backend 或离线正式 observation 文件。
+3. 将真实 baseline_execution_manifest.json、baseline_observations.json 与 result package provenance 对齐。
+4. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR 和 image examples。
+5. 继续保持所有论文表格由 records 和 manifests 重建。
 ```
 
 ### 6.2 随后推进事项
