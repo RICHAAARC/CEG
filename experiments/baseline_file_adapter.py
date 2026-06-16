@@ -15,6 +15,7 @@ from main.protocol.experiment import EventProtocolRecord
 
 
 REQUIRED_BASELINE_COLUMNS = ("event_id", "baseline_id", "score", "threshold")
+BASELINE_OBSERVATION_IMPORT_MANIFEST_NAME = "baseline_execution_manifest.json"
 
 
 def _load_json_or_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -51,6 +52,48 @@ def load_baseline_observation_rows(path: str | Path) -> list[dict[str, Any]]:
     if missing_by_index:
         raise ValueError(f"baseline observation rows missing columns: {missing_by_index}")
     return rows
+
+
+def build_baseline_observation_import_manifest(
+    rows: Iterable[dict[str, Any]],
+    *,
+    source_observation_path: str | Path,
+    output_observation_path: str | Path,
+    formal_result_claim: bool = False,
+    evidence_paths: Iterable[str | Path] = (),
+    producer_id: str = "external_baseline_observation_importer",
+) -> dict[str, Any]:
+    """为离线 baseline observation 文件生成可归档的执行 manifest.
+
+    通用工程写法:
+    - 第三方 baseline 可以在外部仓库、Colab 或其他服务器中运行.
+    - 进入本项目时只要求 observation rows 满足统一契约, 并用 manifest 记录来源.
+
+    项目特定写法:
+    - `formal_result_claim=False` 表示该导入只证明接口和 provenance 链路, 不能支撑论文结论.
+    - 当用户显式声明 `formal_result_claim=True` 时, 必须额外提供外部证据文件路径.
+    """
+    materialized_rows = [dict(row) for row in rows]
+    materialized_evidence_paths = [str(path) for path in evidence_paths]
+    if formal_result_claim and not materialized_evidence_paths:
+        raise ValueError("formal baseline import requires at least one evidence path")
+    baseline_ids = sorted({str(row["baseline_id"]) for row in materialized_rows})
+    return {
+        "artifact_name": BASELINE_OBSERVATION_IMPORT_MANIFEST_NAME,
+        "producer_id": producer_id,
+        "producer_role": "offline_external_baseline_observation_import",
+        "formal_result_claim": bool(formal_result_claim),
+        "execution_boundary": (
+            "offline_external_baseline_evidence_provided"
+            if formal_result_claim
+            else "offline_observation_import_requires_separate_formal_evidence"
+        ),
+        "source_observation_path": str(source_observation_path),
+        "baseline_observations_path": str(output_observation_path),
+        "observation_count": len(materialized_rows),
+        "baseline_ids": baseline_ids,
+        "evidence_paths": materialized_evidence_paths,
+    }
 
 
 def attach_baseline_observations(

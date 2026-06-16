@@ -263,7 +263,7 @@ def build_colab_formal_input_contract(workspace_root: str | Path) -> dict[str, A
             "optional_fields": ["score_name", "higher_is_positive", "metadata", "metadata.bit_accuracy", "metadata.psnr", "metadata.ssim"],
             "required_when": "RUN_EXTERNAL_PLANS=False 的正式对比实验, 或第三方 baseline 已离线运行完成",
             "consumed_by": ["scripts/build_paper_outputs.py"],
-            "can_generate_from": "external baseline command plan via scripts/run_baseline_plan.py",
+            "can_generate_from": "external baseline command plan via scripts/run_baseline_plan.py, or offline observation import via scripts/import_baseline_observations.py",
         },
         {
             "role": "metric_rows",
@@ -1131,6 +1131,7 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
             "scripts/build_paper_outputs.py",
             "main.analysis.aggregation.build_baseline_comparison_table",
             "scripts/run_baseline_plan.py 或 copy_provided_result_files",
+            "scripts/import_baseline_observations.py",
             "scripts/run_baseline_pilot_producer.py",
             "scripts/export_paper_results_package.py",
         ),
@@ -1207,6 +1208,7 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
             "scripts/run_detection_plan.py",
             "scripts/run_ceg_detection_producer.py",
             "scripts/run_baseline_plan.py",
+            "scripts/import_baseline_observations.py",
             "scripts/run_baseline_pilot_producer.py",
             "scripts/run_metric_plan.py",
             "copy_provided_result_files",
@@ -1245,12 +1247,12 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
 
 COLAB_RESULT_ID_PRODUCTION_TRACE_OVERRIDES: dict[str, dict[str, tuple[str, ...]]] = {
     "external_baseline_observations": {
-        "producer_steps": ("scripts/run_baseline_plan.py", "scripts/run_baseline_pilot_producer.py"),
+        "producer_steps": ("scripts/run_baseline_plan.py", "scripts/import_baseline_observations.py", "scripts/run_baseline_pilot_producer.py"),
         "required_inputs": ("baseline command plan 或 detection_events.json", "governed event records"),
         "validation_gates": ("paper_result_evidence_report.json baseline_source_ready",),
     },
     "external_baseline_execution_manifest": {
-        "producer_steps": ("scripts/run_baseline_plan.py", "scripts/run_baseline_pilot_producer.py"),
+        "producer_steps": ("scripts/run_baseline_plan.py", "scripts/import_baseline_observations.py", "scripts/run_baseline_pilot_producer.py"),
         "required_inputs": ("baseline command plan 或 detection_events.json", "baseline_observations.json"),
         "validation_gates": ("colab_run_bundle_validation.json",),
     },

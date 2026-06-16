@@ -222,6 +222,8 @@ Notebook 与 repository module 的跨边界数据
 | fixture_role | artifact | none | false | false | false | fixture 在产物链路中的用途, 例如 paper_readiness_dry_run。|
 | fixture_digest | artifact | none | false | false | false | dry-run 输入 bundle 的稳定摘要。|
 | baseline_observations_path | artifact | none | false | false | false | dry-run 或正式输出链路中 baseline observation 输入文件路径。|
+| source_observation_path | artifact | none | false | false | false | 离线外部 baseline observation 导入时记录的原始 observation 文件路径。|
+| evidence_paths | artifact | none | false | true | false | 离线外部 baseline 正式结果声明绑定的外部运行证据路径集合。|
 | thresholds_path | artifact | none | false | false | false | dry-run 或正式输出链路中阈值输入文件路径。|
 | baseline_observation_count | metric | none | false | false | false | dry-run 输入或 baseline runner 输出中的 baseline observation 数量。|
 | paper_readiness_dry_run_summary | artifact | none | false | true | false | 端到端 paper readiness dry-run 运行摘要文件标识。|

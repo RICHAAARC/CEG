@@ -539,6 +539,7 @@ baseline_comparison_table.csv
 ```text
 已完成 dry-run / pilot producer 契约链路。
 当前已有 baseline file / command / plan 适配结构, 并新增从 CEG detection events 到 baseline_observations.json / baseline_execution_manifest.json 的统一 pilot producer。
+离线外部 baseline observation 导入入口已具备, 可将用户提供的真实 observation JSON / JSONL / CSV 归一化为 baseline_observations.json 与 baseline_execution_manifest.json, 并在正式声明时要求绑定外部运行证据。
 pilot producer 覆盖 Tree-Ring、Gaussian Shading、Shallow Diffuse、Stable Signature DEE 四类 baseline 的输出契约。
 该 producer 只能声明为接口验证与 pilot 数据适配, 不能伪装成外部 baseline 算法本体的正式复现。
 下一步应接入至少一个真实外部 baseline backend 或离线正式 observation 文件。
@@ -749,7 +750,7 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 ### 6.1 当前最优先事项
 
 ```text
-1. 接入至少一个真实 external baseline backend 或离线正式 observation 文件。
+1. 使用 scripts/import_baseline_observations.py 接入至少一个真实 external baseline backend 输出或离线正式 observation 文件。
 2. 接入真实 LPIPS / FID / CLIP score backend 或离线正式 metric rows。
 3. 将真实 baseline 与高级 metric execution manifest 和 result package provenance 对齐。
 4. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR、quality metrics 和 image examples。
