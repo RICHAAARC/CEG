@@ -54,8 +54,6 @@ def test_build_paper_outputs_with_image_pairs_exports_image_examples_and_package
             str(input_root / manifest["metric_rows_path"]),
             "--image-pairs",
             str(input_root / manifest["image_pairs_path"]),
-            "--readiness-requirements",
-            "configs/paper_output_requirements.json",
             "--out",
             str(output_root),
             "--require-paper-readiness",

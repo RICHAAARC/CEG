@@ -81,6 +81,7 @@ def build_colab_output_layout(workspace_root: str | Path) -> dict[str, str]:
         "external_metrics_root": str(workspace / "external_metrics"),
         "plans_root": str(workspace / "plans"),
         "basic_image_metrics_root": str(workspace / "basic_image_metrics"),
+        "image_attacks_root": str(workspace / "image_attacks"),
         "threshold_calibration_root": str(workspace / "threshold_calibration"),
         "acceptance_root": str(workspace / "acceptance"),
         "archives_root": str(workspace / "archives"),
@@ -959,6 +960,20 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
         "purpose": "论文示例图 manifest, 记录示例图来源、角色、摘要和相对路径。",
     },
     {
+        "result_group": "image_examples",
+        "result_id": "attacked_image_manifest",
+        "relative_path": "paper_results_package/image_manifests/attacked_image_manifest.json",
+        "required_for_paper_outputs": True,
+        "purpose": "攻击后图像 provenance manifest, 记录攻击族、攻击参数和 attacked image 路径。",
+    },
+    {
+        "result_group": "image_examples",
+        "result_id": "attack_shard_manifest",
+        "relative_path": "paper_results_package/image_manifests/attack_shard_manifest.json",
+        "required_for_paper_outputs": True,
+        "purpose": "attack shard 执行 manifest, 记录 PW03 attack workflow 的输入、输出和摘要。",
+    },
+    {
         "result_group": "external_evidence",
         "result_id": "external_baseline_observations",
         "relative_path": "external_baselines/baseline_observations.json",
@@ -1123,7 +1138,9 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
     "image_examples": {
         "producer_steps": (
             "scripts/export_image_examples.py",
+            "scripts/run_image_attack_workflow.py",
             "main.analysis.image_examples.export_image_example_package",
+            "main.analysis.attack_images.run_attack_workflow",
             "scripts/export_paper_results_package.py",
         ),
         "required_inputs": (
@@ -1596,6 +1613,8 @@ def _check_colab_result_semantics(result_id: str, path: Path) -> dict[str, Any]:
         "formal_final_decision_metrics",
         "content_score_distribution_audit",
         "content_threshold_degeneracy_report",
+        "attacked_image_manifest",
+        "attack_shard_manifest",
     }:
         checks = [_check_json_object_result_semantics(path)]
     elif result_id == "rendered_figure_manifest":
@@ -2434,6 +2453,9 @@ def export_colab_run_bundle(workspace_root: str | Path, bundle_root: str | Path 
         "inputs/paper_dry_run_inputs_manifest.json",
         "inputs/sample_event_build_manifest.json",
         "inputs/image_pairs.json",
+        "image_attacks/image_manifests/attacked_image_manifest.json",
+        "image_attacks/image_manifests/attack_shard_manifest.json",
+        "image_attacks/image_pairs_attacked.json",
         "threshold_calibration/thresholds.json",
         "threshold_calibration/threshold_calibration_report.json",
         "basic_image_metrics/metric_rows.json",
@@ -2805,9 +2827,12 @@ def build_colab_command_plan(
     basic_metric_root = Path(output_layout["basic_image_metrics_root"])
     provided_results_root = Path(output_layout["provided_results_root"])
     threshold_root = Path(output_layout["threshold_calibration_root"])
+    attack_root = Path(output_layout["image_attacks_root"])
     generated_image_pairs_path = inputs_root / "image_pairs.json"
     basic_metric_rows_path = basic_metric_root / "metric_rows.json"
     calibrated_thresholds_path = threshold_root / "thresholds.json"
+    attacked_image_manifest_path = attack_root / "image_manifests" / "attacked_image_manifest.json"
+    attack_shard_manifest_path = attack_root / "image_manifests" / "attack_shard_manifest.json"
 
     basic_metric_command: list[str] = []
     threshold_calibration_command: list[str] = []
@@ -2926,6 +2951,17 @@ def build_colab_command_plan(
         effective_baseline_path = Path(str(external_steps["baseline_observations_path"])).resolve()
         effective_metric_rows_path = Path(str(external_steps["metric_rows_path"])).resolve()
 
+    attack_command = [
+        sys.executable,
+        str(root / "scripts" / "run_image_attack_workflow.py"),
+        "--image-pairs",
+        str(effective_image_pairs_path),
+        "--out",
+        str(attack_root),
+        "--attack-families",
+        "brightness_contrast",
+    ]
+
     build_command = [
         sys.executable,
         str(root / "scripts" / "build_paper_outputs.py"),
@@ -2948,6 +2984,8 @@ def build_colab_command_plan(
         build_command.extend(["--metric-rows", str(effective_metric_rows_path)])
     if effective_image_pairs_path is not None:
         build_command.extend(["--image-pairs", str(effective_image_pairs_path)])
+    build_command.extend(["--attacked-image-manifest", str(attacked_image_manifest_path)])
+    build_command.extend(["--attack-shard-manifest", str(attack_shard_manifest_path)])
 
     package_command = [
         sys.executable,
@@ -2980,6 +3018,9 @@ def build_colab_command_plan(
         "threshold_calibration_split": threshold_calibration_split,
         "threshold_root": str(threshold_root),
         "calibrated_thresholds_path": str(calibrated_thresholds_path),
+        "attack_root": str(attack_root),
+        "attacked_image_manifest_path": str(attacked_image_manifest_path),
+        "attack_shard_manifest_path": str(attack_shard_manifest_path),
         "basic_metric_root": str(basic_metric_root),
         "provided_results_root": str(provided_results_root),
         "provided_result_copy_plan": provided_result_copy_plan,
@@ -2989,6 +3030,7 @@ def build_colab_command_plan(
         "threshold_calibration_command": threshold_calibration_command,
         "prepare_command": prepare_command,
         "basic_metric_command": basic_metric_command,
+        "attack_command": attack_command,
         "external_plan_steps": external_steps,
         "build_command": build_command,
         "package_command": package_command,
@@ -2998,7 +3040,7 @@ def build_colab_command_plan(
 def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
     """根据命令计划生成输入路径和输出契约清单。"""
     build_command = list(command_plan.get("build_command", []))
-    path_flags = {"--events", "--thresholds", "--baseline-observations", "--metric-rows", "--image-pairs", "--experiment-matrix"}
+    path_flags = {"--events", "--thresholds", "--baseline-observations", "--metric-rows", "--image-pairs", "--experiment-matrix", "--attacked-image-manifest", "--attack-shard-manifest"}
     input_paths = []
     for index, part in enumerate(build_command[:-1]):
         if part in path_flags:
@@ -3021,6 +3063,7 @@ def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
         "threshold_calibration_command": {"--samples"},
         "prepare_command": {"--samples", "--thresholds"},
         "basic_metric_command": {"--pairs"},
+        "attack_command": {"--image-pairs"},
     }.items():
         command = list(command_plan.get(command_name, []))
         for index, part in enumerate(command[:-1]):
@@ -3048,6 +3091,10 @@ def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
             preflight_outputs.append(str(Path(str(command_plan["inputs_root"])) / "sample_event_build_manifest.json"))
     if command_plan.get("basic_metric_command"):
         preflight_outputs.append(str(command_plan["basic_metric_rows_path"]))
+    if command_plan.get("attack_command"):
+        preflight_outputs.append(str(command_plan["attacked_image_manifest_path"]))
+        preflight_outputs.append(str(command_plan["attack_shard_manifest_path"]))
+        preflight_outputs.append(str(Path(str(command_plan["attack_root"])) / "image_pairs_attacked.json"))
     if command_plan.get("provided_result_copy_plan"):
         provided_root = Path(str(command_plan["provided_results_root"]))
         preflight_outputs.append(str(provided_root / "provided_result_files_manifest.json"))
@@ -3076,6 +3123,10 @@ def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
                 generated_paths.add(str(Path(str(external_steps[key]))))
     if command_plan.get("basic_metric_command"):
         generated_paths.add(str(Path(str(command_plan["basic_metric_rows_path"]))))
+    if command_plan.get("attack_command"):
+        generated_paths.add(str(Path(str(command_plan["attacked_image_manifest_path"]))))
+        generated_paths.add(str(Path(str(command_plan["attack_shard_manifest_path"]))))
+        generated_paths.add(str(Path(str(command_plan["attack_root"])) / "image_pairs_attacked.json"))
     if command_plan.get("provided_result_copy_plan"):
         generated_paths.add(str(Path(str(command_plan["provided_results_root"])) / "provided_result_files_manifest.json"))
         for item in command_plan.get("provided_result_copy_plan", []):
@@ -3088,7 +3139,7 @@ def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
             continue
         if item["path"] in generated_paths:
             continue
-        if item["role"] in {"events", "thresholds"} or item["role"].startswith("prepare_command:") or item["role"].startswith("basic_metric_command:"):
+        if item["role"] in {"events", "thresholds"} or item["role"].startswith("prepare_command:") or item["role"].startswith("basic_metric_command:") or item["role"].startswith("attack_command:"):
             missing_required_inputs.append(item)
     return {
         "artifact_name": "colab_input_manifest.json",
@@ -4007,6 +4058,8 @@ def run_colab_cold_start_pipeline(
         results.append(run_command(plan["prepare_command"], cwd=plan["repo_root"], timeout_seconds=timeout_seconds))
     if all(item["return_code"] == 0 for item in results) and plan.get("basic_metric_command"):
         results.append(run_command(plan["basic_metric_command"], cwd=plan["repo_root"], timeout_seconds=timeout_seconds))
+    if all(item["return_code"] == 0 for item in results) and plan.get("attack_command"):
+        results.append(run_command(plan["attack_command"], cwd=plan["repo_root"], timeout_seconds=timeout_seconds))
     external_steps = plan["external_plan_steps"]
     for key in (
         "materialize_baseline_command",

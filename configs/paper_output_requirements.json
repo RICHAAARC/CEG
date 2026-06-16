@@ -167,7 +167,9 @@
   "required_image_manifests": [
     "image_manifests/image_generation_manifest.json",
     "image_manifests/image_pair_manifest.json",
-    "image_examples/image_example_manifest.json"
+    "image_examples/image_example_manifest.json",
+    "image_manifests/attacked_image_manifest.json",
+    "image_manifests/attack_shard_manifest.json"
   ],
   "minimum_image_example_count": 1
 }

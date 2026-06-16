@@ -102,6 +102,8 @@ def _image_manifest_files(output_root: Path) -> list[str]:
         "image_manifests/image_generation_manifest.json",
         "image_manifests/image_pair_manifest.json",
         "image_examples/image_example_manifest.json",
+        "image_manifests/attacked_image_manifest.json",
+        "image_manifests/attack_shard_manifest.json",
     ]
     return [relative for relative in candidates if (output_root / relative).is_file()]
 
