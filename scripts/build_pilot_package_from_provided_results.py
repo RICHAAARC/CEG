@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -90,6 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--drive-root", default=None, help="可选 Drive 归档根目录.")
     parser.add_argument("--run-id", default=None, help="可选归档运行标识.")
     parser.add_argument("--allow-invalid-archive-package", action="store_true")
+    parser.add_argument("--external-result-evidence-report", default=None, help="可选 external_result_evidence_report.json, 会复制到 paper outputs 并随结果包归档.")
     return parser
 
 
@@ -189,6 +191,31 @@ def main() -> None:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         raise SystemExit(int(build_result["return_code"]))
 
+    external_result_evidence_report_path = None
+    if _optional_path(args.external_result_evidence_report) is not None:
+        source_report = Path(str(args.external_result_evidence_report))
+        if not source_report.is_file():
+            summary = {
+                "artifact_name": "pilot_package_build_manifest.json",
+                "overall_decision": "fail",
+                "failed_step": "copy_external_result_evidence_report",
+                "pilot_input_manifest": str(pilot_input_manifest_path) if pilot_input_manifest_path else None,
+                "pilot_input_manifest_validation": pilot_input_report,
+                "external_result_evidence_report": str(source_report),
+                "error": "external_result_evidence_report_missing",
+                "build_result": build_result,
+            }
+            (output_root / "pilot_package_build_manifest.json").write_text(
+                json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            print(json.dumps(summary, ensure_ascii=False, indent=2))
+            raise SystemExit(1)
+        target_report = paper_outputs_root / "external_result_evidence_report.json"
+        target_report.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_report, target_report)
+        external_result_evidence_report_path = str(target_report)
+
     export_command = [
         sys.executable,
         str(ROOT / "scripts" / "export_paper_results_package.py"),
@@ -208,6 +235,7 @@ def main() -> None:
             "pilot_input_manifest": str(pilot_input_manifest_path) if pilot_input_manifest_path else None,
             "pilot_input_manifest_validation": pilot_input_report,
             "build_result": build_result,
+            "external_result_evidence_report_path": external_result_evidence_report_path,
             "export_result": export_result,
         }
         (output_root / "pilot_package_build_manifest.json").write_text(
@@ -239,6 +267,7 @@ def main() -> None:
                 "pilot_input_manifest": str(pilot_input_manifest_path) if pilot_input_manifest_path else None,
                 "pilot_input_manifest_validation": pilot_input_report,
                 "build_result": build_result,
+                "external_result_evidence_report_path": external_result_evidence_report_path,
                 "export_result": export_result,
                 "archive_result": archive_result,
             }
@@ -259,6 +288,7 @@ def main() -> None:
         "pilot_input_manifest": str(pilot_input_manifest_path) if pilot_input_manifest_path else None,
         "pilot_input_manifest_validation": pilot_input_report,
         "build_result": build_result,
+        "external_result_evidence_report_path": external_result_evidence_report_path,
         "export_result": export_result,
         "archive_result": archive_result,
         "execution_digest": build_stable_digest(

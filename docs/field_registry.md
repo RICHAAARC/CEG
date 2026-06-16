@@ -520,3 +520,4 @@ Notebook 与 repository module 的跨边界数据
 | check_external_result_evidence | protocol | none | false | true | false | raw pilot 输入一键构建入口是否在构建结果包前执行外部 baseline 与高级 metric 证据预检. |
 | require_formal_external_result_claim | protocol | none | false | true | false | raw pilot 输入一键构建入口是否要求外部 baseline 与高级 metric manifest 均声明 formal_result_claim 并提供 evidence_paths. |
 | external_result_evidence_digest | artifact | none | false | true | false | raw pilot 输入一键构建总控 manifest 中记录的外部结果证据预检报告稳定摘要. |
+| external_result_evidence_report_path | artifact | none | false | true | false | pilot package 构建 manifest 中记录的外部结果证据预检报告复制后路径, 用于确认该报告已经进入 paper outputs 并可随 paper_results_package 归档. |

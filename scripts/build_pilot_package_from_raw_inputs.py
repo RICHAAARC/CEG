@@ -158,6 +158,13 @@ def main() -> None:
         build_command.append("--require-paper-readiness")
     if args.allow_incomplete_package:
         build_command.append("--allow-incomplete-package")
+    if external_result_evidence_report is not None:
+        build_command.extend(
+            [
+                "--external-result-evidence-report",
+                str(output_root / "external_result_evidence_report.json"),
+            ]
+        )
     _append_optional(build_command, "--drive-root", args.drive_root)
     _append_optional(build_command, "--run-id", args.run_id)
     if args.allow_invalid_archive_package:

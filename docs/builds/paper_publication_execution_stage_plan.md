@@ -208,14 +208,14 @@ metric_execution_manifest.json
 1. 确保 baseline_execution_manifest.json 声明 backend、command、input、output 和 evidence_paths。
 2. 确保 metric_execution_manifest.json 声明 backend、metric families、input、output 和 evidence_paths。
 3. 正式论文声明前启用 --require-formal-external-result-claim。
-4. 将 external_result_evidence_report.json 随 paper_results_package 一起归档，便于论文结果包复核。
+4. 将 external_result_evidence_report.json 复制到 paper outputs 根目录, 并随 paper_results_package 一起归档, 便于论文结果包复核。
 ```
 
 ### 完成门禁
 
 ```text
 1. formal_result_claim 为 true 时必须存在可解析 evidence_paths。
-2. external_result_evidence_report.json 必须为 pass。
+2. external_result_evidence_report.json 必须为 pass, 且 paper_results_package_manifest.json 的 copied_files 必须包含 external_result_evidence_report.json。
 3. 不允许无证据 external baseline 或高级 metric 支撑 supported claims。
 ```
 
@@ -563,7 +563,7 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 2. 生成 pilot_input_manifest.json。
 3. 运行 pilot input preflight。
 4. 如果包含外部 baseline 或高级 metric 正式声明，运行 external result evidence preflight。
-5. 将 external_result_evidence_report.json 纳入 paper_results_package 归档。
+5. 将 external_result_evidence_report.json 纳入 paper_outputs 和 paper_results_package 归档, 并在 package manifest 中保留 copied_files 证据。
 6. 用 raw builder 或 provided-results builder 构建 paper_results_package。
 7. 归档到 MyDrive 分类目录。
 8. 检查 readiness、claim audit、package manifest 和 Colab acceptance。

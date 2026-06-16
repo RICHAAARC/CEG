@@ -381,6 +381,12 @@ def test_raw_input_builder_can_require_external_result_evidence(tmp_path) -> Non
     evidence_report = json.loads((output_root / "external_result_evidence_report.json").read_text(encoding="utf-8"))
     assert raw_manifest["overall_decision"] == "pass"
     assert raw_manifest["external_result_evidence_report"]["overall_decision"] == "pass"
+    assert raw_manifest["build_result"]["return_code"] == 0
     assert evidence_report["overall_decision"] == "pass"
     assert evidence_report["require_formal_claim"] is True
+    package_manifest = json.loads(
+        (output_root / "paper_results_package" / "paper_results_package_manifest.json").read_text(encoding="utf-8")
+    )
+    assert "external_result_evidence_report.json" in package_manifest["copied_files"]
+    assert (output_root / "paper_results_package" / "external_result_evidence_report.json").is_file()
     assert (drive_root / "package_archives" / "paper_results_package_raw_inputs_formal_evidence_cli.zip").is_file()
