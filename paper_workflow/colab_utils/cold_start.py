@@ -1031,6 +1031,44 @@ def _build_colab_result_production_trace(spec: dict[str, Any]) -> dict[str, Any]
 
 
 COLAB_RESULT_QUALITY_METRIC_FIELDS: tuple[str, ...] = ("psnr", "ssim", "lpips", "fid", "clip_score")
+COLAB_RESULT_REQUIRED_METHODS: tuple[str, ...] = (
+    "ceg",
+    "ceg_full",
+    "ceg_content_only",
+    "ceg_recover_then_content",
+    "ceg_no_rescue",
+    "ceg_no_attestation",
+    "tree_ring",
+    "gaussian_shading",
+    "shallow_diffuse",
+    "stable_signature_dee",
+)
+COLAB_RESULT_INTERNAL_ABLATION_METHODS: tuple[str, ...] = (
+    "ceg_full",
+    "ceg_content_only",
+    "ceg_recover_then_content",
+    "ceg_no_rescue",
+    "ceg_no_attestation",
+)
+COLAB_RESULT_EXTERNAL_BASELINE_METHODS: tuple[str, ...] = (
+    "tree_ring",
+    "gaussian_shading",
+    "shallow_diffuse",
+    "stable_signature_dee",
+)
+COLAB_RESULT_PAIRWISE_METRIC_FIELDS: tuple[str, ...] = ("tpr", "clean_fpr", "attacked_negative_fpr")
+COLAB_RESULT_STANDARD_METRIC_FIELDS: tuple[str, ...] = (
+    "event_count",
+    "tpr",
+    "clean_fpr",
+    "attacked_negative_fpr",
+    "detection_auroc",
+    "tpr_at_fpr_1_percent",
+    "tpr_at_fpr_0_1_percent",
+    "bit_accuracy",
+    "bit_error_rate",
+    "payload_recovery_rate",
+)
 
 
 COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
@@ -1055,6 +1093,16 @@ def _semantic_check(status: str, reason: str, evidence: Any) -> dict[str, Any]:
     return {"status": status, "reason": reason, "evidence": evidence}
 
 
+def _as_result_index_float(value: Any) -> float | None:
+    """把结果索引校验读取到的字符串值转为 float, 用于判断数值单元是否可复核。"""
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _check_csv_result_semantics(path: Path, required_fields: tuple[str, ...]) -> dict[str, Any]:
     """检查 CSV 论文结果表是否非空且包含必需字段。"""
     try:
@@ -1070,6 +1118,125 @@ def _check_csv_result_semantics(path: Path, required_fields: tuple[str, ...]) ->
     return _semantic_check("pass", "csv_required_fields_present", {"row_count": len(rows), "required_fields": list(required_fields)})
 
 
+def _check_method_rows_semantics(
+    rows: list[dict[str, Any]],
+    *,
+    required_methods: tuple[str, ...],
+    numeric_fields: tuple[str, ...],
+    reason: str,
+) -> dict[str, Any]:
+    """检查方法级 CSV 行覆盖。
+
+    该实现属于通用工程写法: 任何以 `method_name` 为主键的结果表都可以复用该检查。
+    它只验证现有表格是否包含必需方法和可解析数值, 不会替代正式统计计算。
+    """
+    by_method = {str(row.get("method_name")): row for row in rows}
+    violations: list[dict[str, Any]] = []
+    for method_name in required_methods:
+        row = by_method.get(method_name)
+        if row is None:
+            violations.append({"method_name": method_name, "reason": "missing_method_row"})
+            continue
+        for field in numeric_fields:
+            if _as_result_index_float(row.get(field)) is None:
+                violations.append({"method_name": method_name, "field": field, "reason": "missing_or_invalid_numeric_value"})
+    if violations:
+        return _semantic_check("fail", "required_method_rows_incomplete", {"violations": violations[:50], "violation_count": len(violations)})
+    return _semantic_check(
+        "pass",
+        reason,
+        {"required_methods": list(required_methods), "numeric_fields": list(numeric_fields), "row_count": len(rows)},
+    )
+
+
+def _check_baseline_comparison_semantics(path: Path) -> dict[str, Any]:
+    """检查 baseline 对比表是否同时覆盖 CEG 内部方法和外部 baseline 方法。"""
+    base_check = _check_csv_result_semantics(path, COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS["baseline_comparison_table"])
+    if base_check["status"] != "pass":
+        return base_check
+    rows = _read_csv_rows_for_result_index(path)
+    return _check_method_rows_semantics(
+        rows,
+        required_methods=COLAB_RESULT_REQUIRED_METHODS,
+        numeric_fields=("event_count", "tpr", "clean_fpr"),
+        reason="baseline_comparison_methods_cover_internal_and_external",
+    )
+
+
+def _check_method_group_comparison_semantics(path: Path) -> dict[str, Any]:
+    """检查方法组对比表是否保留主方法、内部消融和外部 baseline 的角色语义。"""
+    base_check = _check_csv_result_semantics(path, COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS["method_group_comparison_table"])
+    if base_check["status"] != "pass":
+        return base_check
+    rows = _read_csv_rows_for_result_index(path)
+    method_check = _check_method_rows_semantics(
+        rows,
+        required_methods=COLAB_RESULT_REQUIRED_METHODS,
+        numeric_fields=("event_count", "tpr", "clean_fpr"),
+        reason="method_group_rows_cover_required_methods",
+    )
+    if method_check["status"] != "pass":
+        return method_check
+    by_method = {str(row.get("method_name")): row for row in rows}
+    expected_roles = {
+        "ceg": ("ceg_primary", "proposed_method"),
+        **{method_name: ("ceg_internal_ablation", "mechanism_ablation") for method_name in COLAB_RESULT_INTERNAL_ABLATION_METHODS},
+        **{method_name: ("external_baseline", "external_comparison") for method_name in COLAB_RESULT_EXTERNAL_BASELINE_METHODS},
+    }
+    violations: list[dict[str, Any]] = []
+    for method_name, (expected_group, expected_role) in expected_roles.items():
+        row = by_method.get(method_name, {})
+        if row.get("method_group") != expected_group or row.get("comparison_role") != expected_role:
+            violations.append(
+                {
+                    "method_name": method_name,
+                    "reason": "method_group_or_role_mismatch",
+                    "expected_method_group": expected_group,
+                    "actual_method_group": row.get("method_group"),
+                    "expected_comparison_role": expected_role,
+                    "actual_comparison_role": row.get("comparison_role"),
+                }
+            )
+    if violations:
+        return _semantic_check("fail", "method_group_roles_mismatch", {"violations": violations[:50], "violation_count": len(violations)})
+    return _semantic_check("pass", "method_group_roles_cover_proposed_ablation_and_external", {"required_roles": expected_roles})
+
+
+def _check_method_pairwise_delta_semantics(path: Path) -> dict[str, Any]:
+    """检查成对差值表是否包含以 CEG 为参考的内部消融和外部 baseline 指标差值。"""
+    base_check = _check_csv_result_semantics(path, COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS["method_pairwise_delta_table"])
+    if base_check["status"] != "pass":
+        return base_check
+    rows = _read_csv_rows_for_result_index(path)
+    observed_pairs = {
+        (str(row.get("reference_method")), str(row.get("method_name")), str(row.get("metric_name")))
+        for row in rows
+    }
+    violations: list[dict[str, Any]] = []
+    for method_name in (method for method in COLAB_RESULT_REQUIRED_METHODS if method != "ceg"):
+        for metric_name in COLAB_RESULT_PAIRWISE_METRIC_FIELDS:
+            if ("ceg", method_name, metric_name) not in observed_pairs:
+                violations.append(
+                    {
+                        "reference_method": "ceg",
+                        "method_name": method_name,
+                        "metric_name": metric_name,
+                        "reason": "missing_pairwise_delta_row",
+                    }
+                )
+    if violations:
+        return _semantic_check("fail", "pairwise_delta_rows_incomplete", {"violations": violations[:50], "violation_count": len(violations)})
+    return _semantic_check(
+        "pass",
+        "pairwise_delta_rows_cover_ablation_and_external_methods",
+        {
+            "reference_method": "ceg",
+            "compared_methods": [method for method in COLAB_RESULT_REQUIRED_METHODS if method != "ceg"],
+            "metric_names": list(COLAB_RESULT_PAIRWISE_METRIC_FIELDS),
+        },
+    )
+
+
 def _check_standard_watermark_metrics_semantics(path: Path) -> dict[str, Any]:
     """检查标准水印指标 JSON 是否包含方法级指标和质量指标槽位。"""
     payload = _read_json_object(path)
@@ -1078,16 +1245,38 @@ def _check_standard_watermark_metrics_semantics(path: Path) -> dict[str, Any]:
     by_method = payload.get("by_method")
     if not isinstance(by_method, dict) or not by_method:
         return _semantic_check("fail", "by_method_missing_or_empty", {"artifact_name": payload.get("artifact_name")})
+    missing_methods = [method_name for method_name in COLAB_RESULT_REQUIRED_METHODS if method_name not in by_method]
+    if missing_methods:
+        return _semantic_check("fail", "required_methods_missing_from_standard_metrics", {"missing_methods": missing_methods})
     missing_quality_metrics: dict[str, list[str]] = {}
+    missing_standard_metric_fields: dict[str, list[str]] = {}
     for method_name, summary in by_method.items():
+        standard_missing = [
+            field
+            for field in COLAB_RESULT_STANDARD_METRIC_FIELDS
+            if not isinstance(summary, dict) or summary.get(field) is None or summary.get(field) == ""
+        ]
+        if standard_missing:
+            missing_standard_metric_fields[str(method_name)] = standard_missing
         quality_metrics = summary.get("quality_metrics") if isinstance(summary, dict) else None
         metric_names = set(quality_metrics.keys()) if isinstance(quality_metrics, dict) else set()
         missing = [field for field in COLAB_RESULT_QUALITY_METRIC_FIELDS if field not in metric_names]
         if missing:
             missing_quality_metrics[str(method_name)] = missing
+    if missing_standard_metric_fields:
+        return _semantic_check("fail", "standard_metric_fields_missing", missing_standard_metric_fields)
     if missing_quality_metrics:
         return _semantic_check("fail", "quality_metric_slots_missing", missing_quality_metrics)
-    return _semantic_check("pass", "standard_watermark_metrics_shape_valid", {"method_count": len(by_method), "quality_metric_fields": list(COLAB_RESULT_QUALITY_METRIC_FIELDS)})
+    return _semantic_check(
+        "pass",
+        "standard_watermark_metrics_cover_required_methods_and_fields",
+        {
+            "method_count": len(by_method),
+            "required_methods": list(COLAB_RESULT_REQUIRED_METHODS),
+            "standard_metric_fields": list(COLAB_RESULT_STANDARD_METRIC_FIELDS),
+            "quality_metric_fields": list(COLAB_RESULT_QUALITY_METRIC_FIELDS),
+        },
+    )
 
 
 def _check_quality_metrics_summary_semantics(path: Path) -> dict[str, Any]:
@@ -1142,6 +1331,12 @@ def _check_colab_result_semantics(result_id: str, path: Path) -> dict[str, Any]:
         checks = [_check_standard_watermark_metrics_semantics(path)]
     elif result_id == "quality_metrics_summary":
         checks = [_check_quality_metrics_summary_semantics(path)]
+    elif result_id == "baseline_comparison_table":
+        checks = [_check_baseline_comparison_semantics(path)]
+    elif result_id == "method_group_comparison_table":
+        checks = [_check_method_group_comparison_semantics(path)]
+    elif result_id == "method_pairwise_delta_table":
+        checks = [_check_method_pairwise_delta_semantics(path)]
     elif result_id == "paper_figure_specs":
         checks = [_check_paper_figure_specs_semantics(path)]
     elif result_id in COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS:

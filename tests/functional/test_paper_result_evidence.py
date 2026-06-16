@@ -72,6 +72,35 @@ def test_formal_result_evidence_passes_for_non_dry_run_probe_outputs(tmp_path) -
 
 
 @pytest.mark.quick
+def test_formal_result_evidence_rejects_incomplete_baseline_and_ablation_coverage(tmp_path) -> None:
+    """正式证据门禁应拒绝缺少外部 baseline 或内部消融行的结果表。"""
+    source_root = tmp_path / "source_inputs"
+    input_root = tmp_path / "formal_inputs"
+    output_root = tmp_path / "paper_outputs"
+    manifest = write_paper_dry_run_inputs(source_root)
+    input_root.mkdir()
+    for key in ("events_path", "baseline_observations_path", "metric_rows_path", "thresholds_path"):
+        payload = json.loads((source_root / manifest[key]).read_text(encoding="utf-8"))
+        (input_root / manifest[key]).write_text(
+            json.dumps(_replace_dry_run_markers(payload), ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    _build_outputs_from_manifest(input_root, output_root, manifest)
+    baseline_table = output_root / "artifacts" / "baseline_comparison_table.csv"
+    baseline_lines = baseline_table.read_text(encoding="utf-8").splitlines()
+    baseline_table.write_text("\n".join(line for line in baseline_lines if line.startswith("clean_fpr") or ",ceg," in line) + "\n", encoding="utf-8")
+
+    report = validate_paper_result_evidence(output_root, require_experiment_coverage=False)
+    coverage_check = next(
+        item for item in report["checks"] if item["requirement"] == "baseline_and_ablation_semantic_coverage_complete"
+    )
+
+    assert report["overall_decision"] == "fail"
+    assert coverage_check["status"] == "fail"
+    assert any(item["reason"] == "missing_method_row" for item in coverage_check["evidence"]["violations"])
+
+
+@pytest.mark.quick
 def test_formal_result_evidence_rejects_dry_run_outputs_by_default(tmp_path) -> None:
     """dry-run 输出即使 readiness 通过, 也不能默认冒充正式论文实验结果。"""
     input_root = tmp_path / "inputs"

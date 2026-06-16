@@ -23,6 +23,15 @@ from main.analysis.standard_metrics import QUALITY_METRIC_FIELDS
 
 
 DEFAULT_REQUIRED_QUALITY_METRICS = tuple(QUALITY_METRIC_FIELDS)
+DEFAULT_REQUIRED_EXTERNAL_BASELINES = ("tree_ring", "gaussian_shading", "shallow_diffuse", "stable_signature_dee")
+DEFAULT_REQUIRED_INTERNAL_ABLATIONS = (
+    "ceg_full",
+    "ceg_content_only",
+    "ceg_recover_then_content",
+    "ceg_no_rescue",
+    "ceg_no_attestation",
+)
+DEFAULT_REQUIRED_PAIRWISE_METRICS = ("tpr", "clean_fpr", "attacked_negative_fpr")
 
 
 def _pass(requirement: str, evidence: Any) -> dict[str, Any]:
@@ -232,6 +241,153 @@ def _check_quality_metric_coverage(
         "standard_quality_metrics_complete",
         {"required_methods": list(required_methods), "required_metrics": list(required_metrics), "minimum_coverage": minimum_coverage},
     )
+
+
+def _check_required_method_rows(
+    rows: list[dict[str, str]],
+    *,
+    required_methods: tuple[str, ...],
+    table_name: str,
+    numeric_fields: tuple[str, ...],
+) -> list[dict[str, Any]]:
+    """检查论文结果表是否为每个必需方法提供可解释的数值行。
+
+    该 helper 属于通用表格证据检查写法: 上层传入方法集合和数值字段后, 可以复用于
+    baseline 表、消融表或其他方法级汇总表。这里不重新计算指标, 只验证已有表格是否足以支撑论文对比声明。
+    """
+    by_method = {str(row.get("method_name")): row for row in rows}
+    violations: list[dict[str, Any]] = []
+    for method_name in required_methods:
+        row = by_method.get(method_name)
+        if row is None:
+            violations.append({"table_name": table_name, "method_name": method_name, "reason": "missing_method_row"})
+            continue
+        for field in numeric_fields:
+            if _as_float(row.get(field)) is None:
+                violations.append(
+                    {
+                        "table_name": table_name,
+                        "method_name": method_name,
+                        "field": field,
+                        "reason": "missing_or_invalid_numeric_value",
+                    }
+                )
+    return violations
+
+
+def _check_baseline_and_ablation_result_coverage(
+    result_root: Path,
+    *,
+    required_methods: tuple[str, ...],
+    required_external_baselines: tuple[str, ...],
+    required_internal_ablations: tuple[str, ...],
+    required_pairwise_metrics: tuple[str, ...],
+) -> dict[str, Any]:
+    """检查 baseline 与 ablation 关键表是否覆盖论文必需的方法原语。
+
+    此处是项目特定的论文证据门禁: CEG 论文需要同时证明主方法、内部消融和外部图像水印 baseline
+    均进入正式结果表。通用工程可复用部分是按 CSV 行集合校验必需方法、角色和成对指标覆盖。
+    """
+    artifact_root = result_root / "artifacts"
+    baseline_path = artifact_root / "baseline_comparison_table.csv"
+    group_path = artifact_root / "method_group_comparison_table.csv"
+    pairwise_path = artifact_root / "method_pairwise_delta_table.csv"
+    violations: list[dict[str, Any]] = []
+    evidence: dict[str, Any] = {
+        "required_methods": list(required_methods),
+        "required_external_baselines": list(required_external_baselines),
+        "required_internal_ablations": list(required_internal_ablations),
+        "required_pairwise_metrics": list(required_pairwise_metrics),
+    }
+
+    if not baseline_path.is_file():
+        violations.append({"table_name": baseline_path.name, "reason": "missing_table", "path": str(baseline_path)})
+        baseline_rows: list[dict[str, str]] = []
+    else:
+        baseline_rows = _read_csv_rows(baseline_path)
+        evidence["baseline_method_names"] = sorted({str(row.get("method_name")) for row in baseline_rows})
+        violations.extend(
+            _check_required_method_rows(
+                baseline_rows,
+                required_methods=required_methods,
+                table_name=baseline_path.name,
+                numeric_fields=("event_count", "tpr", "clean_fpr"),
+            )
+        )
+
+    if not group_path.is_file():
+        violations.append({"table_name": group_path.name, "reason": "missing_table", "path": str(group_path)})
+        group_rows: list[dict[str, str]] = []
+    else:
+        group_rows = _read_csv_rows(group_path)
+        group_by_method = {str(row.get("method_name")): row for row in group_rows}
+        evidence["method_group_roles"] = {
+            method_name: {
+                "method_group": group_by_method.get(method_name, {}).get("method_group"),
+                "comparison_role": group_by_method.get(method_name, {}).get("comparison_role"),
+            }
+            for method_name in required_methods
+        }
+        violations.extend(
+            _check_required_method_rows(
+                group_rows,
+                required_methods=required_methods,
+                table_name=group_path.name,
+                numeric_fields=("event_count", "tpr", "clean_fpr"),
+            )
+        )
+        expected_roles = {
+            "ceg": ("ceg_primary", "proposed_method"),
+            **{method_name: ("ceg_internal_ablation", "mechanism_ablation") for method_name in required_internal_ablations},
+            **{method_name: ("external_baseline", "external_comparison") for method_name in required_external_baselines},
+        }
+        for method_name, (expected_group, expected_role) in expected_roles.items():
+            row = group_by_method.get(method_name)
+            if row is None:
+                continue
+            if row.get("method_group") != expected_group or row.get("comparison_role") != expected_role:
+                violations.append(
+                    {
+                        "table_name": group_path.name,
+                        "method_name": method_name,
+                        "reason": "method_group_or_role_mismatch",
+                        "expected_method_group": expected_group,
+                        "actual_method_group": row.get("method_group"),
+                        "expected_comparison_role": expected_role,
+                        "actual_comparison_role": row.get("comparison_role"),
+                    }
+                )
+
+    if not pairwise_path.is_file():
+        violations.append({"table_name": pairwise_path.name, "reason": "missing_table", "path": str(pairwise_path)})
+    else:
+        pairwise_rows = _read_csv_rows(pairwise_path)
+        pairwise_targets = tuple(method for method in required_methods if method != "ceg")
+        observed_pairs = {
+            (str(row.get("reference_method")), str(row.get("method_name")), str(row.get("metric_name")))
+            for row in pairwise_rows
+        }
+        evidence["pairwise_reference_methods"] = sorted({str(row.get("reference_method")) for row in pairwise_rows})
+        evidence["pairwise_method_names"] = sorted({str(row.get("method_name")) for row in pairwise_rows})
+        evidence["pairwise_metric_names"] = sorted({str(row.get("metric_name")) for row in pairwise_rows})
+        for method_name in pairwise_targets:
+            for metric_name in required_pairwise_metrics:
+                if ("ceg", method_name, metric_name) not in observed_pairs:
+                    violations.append(
+                        {
+                            "table_name": pairwise_path.name,
+                            "reference_method": "ceg",
+                            "method_name": method_name,
+                            "metric_name": metric_name,
+                            "reason": "missing_pairwise_delta_row",
+                        }
+                    )
+
+    if violations:
+        evidence["violations"] = violations[:50]
+        evidence["violation_count"] = len(violations)
+        return _fail("baseline_and_ablation_semantic_coverage_complete", evidence)
+    return _pass("baseline_and_ablation_semantic_coverage_complete", evidence)
 
 
 def _check_colab_formal_run_checklist(bundle_root: Path | None, *, allow_dry_run: bool) -> dict[str, Any]:
@@ -453,6 +609,9 @@ def validate_paper_result_evidence(
     minimum_quality_metric_coverage: float = 1.0,
     required_methods: tuple[str, ...] = tuple(DEFAULT_REQUIRED_METHODS),
     required_quality_metrics: tuple[str, ...] = DEFAULT_REQUIRED_QUALITY_METRICS,
+    required_external_baselines: tuple[str, ...] = DEFAULT_REQUIRED_EXTERNAL_BASELINES,
+    required_internal_ablations: tuple[str, ...] = DEFAULT_REQUIRED_INTERNAL_ABLATIONS,
+    required_pairwise_metrics: tuple[str, ...] = DEFAULT_REQUIRED_PAIRWISE_METRICS,
 ) -> dict[str, Any]:
     """校验论文结果目标是否能支撑正式论文结果声明。"""
     roots = _resolve_roots(target_root)
@@ -470,6 +629,13 @@ def validate_paper_result_evidence(
             required_metrics=required_quality_metrics,
             minimum_coverage=minimum_quality_metric_coverage,
         ),
+        _check_baseline_and_ablation_result_coverage(
+            result_root,
+            required_methods=required_methods,
+            required_external_baselines=required_external_baselines,
+            required_internal_ablations=required_internal_ablations,
+            required_pairwise_metrics=required_pairwise_metrics,
+        ),
         _check_colab_formal_run_checklist(bundle_root, allow_dry_run=allow_dry_run),
         _check_provided_result_files(bundle_root),
         _check_external_command_results(bundle_root, require_external_command_results=require_external_command_results),
@@ -485,6 +651,9 @@ def validate_paper_result_evidence(
         "require_experiment_coverage": require_experiment_coverage,
         "require_external_command_results": require_external_command_results,
         "minimum_quality_metric_coverage": minimum_quality_metric_coverage,
+        "required_external_baselines": list(required_external_baselines),
+        "required_internal_ablations": list(required_internal_ablations),
+        "required_pairwise_metrics": list(required_pairwise_metrics),
         "checks": checks,
         "summary": {"total": len(checks), "fail_count": fail_count, "pass_count": len(checks) - fail_count},
     }

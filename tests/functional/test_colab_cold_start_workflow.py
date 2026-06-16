@@ -204,7 +204,39 @@ def test_colab_paper_result_index_rejects_malformed_required_result_content(tmp_
     metrics_entry = next(item for item in index["indexed_results"] if item["result_id"] == "standard_watermark_metrics")
     assert metrics_entry["exists"] is True
     assert metrics_entry["semantic_check"]["status"] == "fail"
-    assert metrics_entry["semantic_check"]["checks"][0]["reason"] == "quality_metric_slots_missing"
+    assert metrics_entry["semantic_check"]["checks"][0]["reason"] == "required_methods_missing_from_standard_metrics"
+
+
+@pytest.mark.quick
+def test_colab_paper_result_index_rejects_incomplete_baseline_and_ablation_tables(tmp_path) -> None:
+    """论文结果索引应拒绝缺少外部 baseline 或内部消融覆盖的关键对比表。"""
+    artifact_root = tmp_path / "workspace" / "paper_results_package" / "artifacts"
+    artifact_root.mkdir(parents=True)
+    (artifact_root / "baseline_comparison_table.csv").write_text(
+        "method_name,event_count,tpr,clean_fpr\nceg,4,0.5,0.0\n",
+        encoding="utf-8",
+    )
+    (artifact_root / "method_group_comparison_table.csv").write_text(
+        "method_name,method_group,comparison_role,event_count,tpr,clean_fpr\n"
+        "ceg,ceg_primary,proposed_method,4,0.5,0.0\n"
+        "tree_ring,external_baseline,mechanism_ablation,4,1.0,0.0\n",
+        encoding="utf-8",
+    )
+    (artifact_root / "method_pairwise_delta_table.csv").write_text(
+        "reference_method,method_name,metric_name,rate_delta\nceg,ceg_full,tpr,0.0\n",
+        encoding="utf-8",
+    )
+
+    index = build_colab_paper_result_index(tmp_path / "workspace")
+
+    assert index["overall_decision"] == "fail"
+    assert {"baseline_comparison_table", "method_group_comparison_table", "method_pairwise_delta_table"}.issubset(
+        set(index["semantic_check_failures"])
+    )
+    entries = {item["result_id"]: item for item in index["indexed_results"]}
+    assert entries["baseline_comparison_table"]["semantic_check"]["checks"][0]["reason"] == "required_method_rows_incomplete"
+    assert entries["method_group_comparison_table"]["semantic_check"]["checks"][0]["reason"] == "required_method_rows_incomplete"
+    assert entries["method_pairwise_delta_table"]["semantic_check"]["checks"][0]["reason"] == "pairwise_delta_rows_incomplete"
 
 
 @pytest.mark.quick
@@ -532,6 +564,12 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert "colab_paper_result_index semantic_check" in standard_metrics_entry["production_trace"]["validation_gates"]
     quality_metrics_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "quality_metrics_summary")
     assert quality_metrics_entry["semantic_check"]["checks"][0]["reason"] == "quality_metric_rows_cover_standard_fields"
+    baseline_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "baseline_comparison_table")
+    assert baseline_entry["semantic_check"]["checks"][0]["reason"] == "baseline_comparison_methods_cover_internal_and_external"
+    group_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "method_group_comparison_table")
+    assert group_entry["semantic_check"]["checks"][0]["reason"] == "method_group_roles_cover_proposed_ablation_and_external"
+    pairwise_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "method_pairwise_delta_table")
+    assert pairwise_entry["semantic_check"]["checks"][0]["reason"] == "pairwise_delta_rows_cover_ablation_and_external_methods"
     result_ids = {item["result_id"] for item in result_index["indexed_results"] if item["exists"]}
     assert {"formal_main_table", "standard_watermark_metrics", "baseline_comparison_table", "paper_figure_specs"}.issubset(result_ids)
     archive_manifest = summary["colab_bundle_archive_manifest"]
