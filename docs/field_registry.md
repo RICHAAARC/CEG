@@ -344,6 +344,9 @@ Notebook 与 repository module 的跨边界数据
 | template_roles | artifact | none | false | false | false | 正式输入模板 manifest 中按输入角色列出的模板集合。|
 | template_manifest_digest | artifact | none | false | true | false | 正式输入模板 manifest 中模板条目的稳定摘要。|
 | colab_paper_result_index | artifact | none | false | true | false | Colab 论文结果索引 manifest, 显式映射论文表格、图表、指标、baseline、消融和交付件路径。 |
+| colab_paper_result_semantic_check_summary | artifact | none | false | true | false | Colab cold start summary 中提升展示的论文结果内容结构校验汇总。 |
+| colab_paper_result_semantic_check_failures | artifact | none | false | true | false | Colab cold start summary 中提升展示的论文结果内容结构校验失败 result_id 集合。 |
+| colab_paper_result_required_group_failures | artifact | none | false | true | false | Colab cold start summary 中提升展示的必需论文结果组缺失集合。 |
 | indexed_results | artifact | none | false | false | false | Colab 论文结果索引中逐项列出的结果文件条目集合。 |
 | result_group | artifact | none | false | false | false | 论文结果索引中的结果组, 例如 watermark_standard_metrics、baseline_and_ablation 或 figures。 |
 | result_id | artifact | none | false | false | false | 论文结果索引中单个结果文件的稳定标识。 |

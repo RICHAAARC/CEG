@@ -3198,6 +3198,9 @@ def run_colab_cold_start_pipeline(
         "formal_input_templates_manifest": formal_input_templates_manifest,
         "colab_paper_result_index_path": str(workspace / "colab_paper_result_index.json") if paper_result_index else None,
         "colab_paper_result_index": paper_result_index,
+        "colab_paper_result_semantic_check_summary": paper_result_index.get("semantic_check_summary") if paper_result_index else None,
+        "colab_paper_result_semantic_check_failures": paper_result_index.get("semantic_check_failures") if paper_result_index else None,
+        "colab_paper_result_required_group_failures": paper_result_index.get("required_result_group_failures") if paper_result_index else None,
         "colab_formal_result_gap_report_path": str(workspace / "colab_formal_result_gap_report.json") if formal_result_gap_report else None,
         "colab_formal_result_gap_report": formal_result_gap_report,
         "colab_formal_runbook_path": str(workspace / "colab_formal_runbook.md"),
@@ -3301,6 +3304,9 @@ def run_colab_cold_start_pipeline(
     summary["formal_input_templates_manifest"] = formal_input_templates_manifest
     summary["colab_paper_result_index_path"] = str(workspace / "colab_paper_result_index.json")
     summary["colab_paper_result_index"] = paper_result_index
+    summary["colab_paper_result_semantic_check_summary"] = paper_result_index.get("semantic_check_summary")
+    summary["colab_paper_result_semantic_check_failures"] = paper_result_index.get("semantic_check_failures")
+    summary["colab_paper_result_required_group_failures"] = paper_result_index.get("required_result_group_failures")
     summary["colab_formal_result_gap_report_path"] = str(workspace / "colab_formal_result_gap_report.json")
     summary["colab_formal_result_gap_report"] = formal_result_gap_report
     summary["colab_formal_runbook_path"] = str(workspace / "colab_formal_runbook.md")

@@ -41,6 +41,9 @@ def test_colab_notebook_is_parseable_and_delegates_to_helpers() -> None:
     assert "formal_input_contract_version" in source
     assert "formal_input_template_count" in source
     assert "colab_paper_result_index" in source
+    assert "colab_paper_result_semantic_check_summary" in source
+    assert "colab_paper_result_semantic_check_failures" in source
+    assert "colab_paper_result_required_group_failures" in source
     assert "colab_formal_result_gap_report" in source
     assert "colab_formal_runbook" in source
     assert "formal_result_gap_decision" in source
@@ -417,6 +420,11 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert result_index["semantic_check_failures"] == []
     assert result_index["semantic_check_summary"]["checkable_total"] > 0
     assert result_index["semantic_check_summary"]["fail_count"] == 0
+    assert summary["colab_paper_result_semantic_check_summary"] == result_index["semantic_check_summary"]
+    assert summary["colab_paper_result_semantic_check_failures"] == []
+    assert summary["colab_paper_result_required_group_failures"] == []
+    assert bundled_summary["colab_paper_result_semantic_check_summary"] == result_index["semantic_check_summary"]
+    assert bundled_summary["colab_paper_result_semantic_check_failures"] == []
     standard_metrics_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "standard_watermark_metrics")
     assert standard_metrics_entry["semantic_check"]["status"] == "pass"
     quality_metrics_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "quality_metrics_summary")
