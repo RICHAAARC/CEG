@@ -17,6 +17,7 @@ from main.analysis.aggregation import aggregate_decision_rows
 from main.analysis.claim_audit import build_paper_claim_audit
 from main.analysis.detection_curves import build_detection_curve_artifacts
 from main.analysis.figure_specs import build_paper_figure_specs
+from main.analysis.fixed_fpr import build_fixed_fpr_artifacts
 from main.analysis.standard_metrics import (
     aggregate_standard_watermark_metrics,
     build_attack_family_metrics_table,
@@ -64,6 +65,12 @@ PW08_DETECTION_CURVE_ARTIFACT_NAMES = (
 
 PW09_CLAIM_AUDIT_ARTIFACT_NAMES = (
     "paper_claim_audit.json",
+)
+
+PW10_FIXED_FPR_ARTIFACT_NAMES = (
+    "fixed_fpr_threshold_table.csv",
+    "tpr_at_fixed_fpr_table.csv",
+    "attack_tpr_at_fixed_fpr_table.csv",
 )
 
 
@@ -284,6 +291,7 @@ def build_all_paper_artifacts(
         **build_standard_metric_artifacts(materialized),
         **build_uncertainty_artifacts(materialized),
         **build_detection_curve_artifacts(materialized),
+        **build_fixed_fpr_artifacts(materialized),
         **build_figure_artifacts(materialized),
     }
     artifacts.update(build_claim_audit_artifact(materialized, artifacts))

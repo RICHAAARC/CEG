@@ -58,6 +58,8 @@ from main.analysis.rebuild_artifacts import (
 
     PW09_CLAIM_AUDIT_ARTIFACT_NAMES,
 
+    PW10_FIXED_FPR_ARTIFACT_NAMES,
+
 )
 
 from main.methods.baselines import BASELINE_REGISTRY
@@ -121,6 +123,7 @@ REQUIRED_CLEAN_FILES = (
     "main/analysis/paper_readiness.py",
     "main/analysis/uncertainty.py",
     "main/analysis/detection_curves.py",
+    "main/analysis/fixed_fpr.py",
     "main/analysis/claim_audit.py",
     "main/analysis/result_package.py",
     "main/analysis/paper_report.py",
@@ -236,6 +239,8 @@ REQUIRED_ARTIFACT_NAMES = (
 
     | set(PW09_CLAIM_AUDIT_ARTIFACT_NAMES)
 
+    | set(PW10_FIXED_FPR_ARTIFACT_NAMES)
+
 )
 
 
@@ -301,6 +306,7 @@ REQUIRED_ARTIFACT_RELEASE_FILES = {
     "main/analysis/paper_readiness.py",
     "main/analysis/uncertainty.py",
     "main/analysis/detection_curves.py",
+    "main/analysis/fixed_fpr.py",
     "main/analysis/claim_audit.py",
     "main/analysis/result_package.py",
     "main/analysis/paper_report.py",

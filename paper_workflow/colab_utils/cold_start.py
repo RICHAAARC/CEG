@@ -742,6 +742,27 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
         "purpose": "检测分数直方图数据, 供分数分布图复核。",
     },
     {
+        "result_group": "watermark_standard_metrics",
+        "result_id": "fixed_fpr_threshold_table",
+        "relative_path": "paper_results_package/artifacts/fixed_fpr_threshold_table.csv",
+        "required_for_paper_outputs": True,
+        "purpose": "fixed-FPR 阈值校准表, 记录目标 FPR、校准阈值和校准集观测 FPR。",
+    },
+    {
+        "result_group": "watermark_standard_metrics",
+        "result_id": "tpr_at_fixed_fpr_table",
+        "relative_path": "paper_results_package/artifacts/tpr_at_fixed_fpr_table.csv",
+        "required_for_paper_outputs": True,
+        "purpose": "TPR@FPR 主结果表, 用于论文在固定 FPR 下报告检测能力。",
+    },
+    {
+        "result_group": "watermark_standard_metrics",
+        "result_id": "attack_tpr_at_fixed_fpr_table",
+        "relative_path": "paper_results_package/artifacts/attack_tpr_at_fixed_fpr_table.csv",
+        "required_for_paper_outputs": True,
+        "purpose": "攻击分组 TPR@FPR 表, 用于鲁棒性评价和 attack family 对比。",
+    },
+    {
         "result_group": "baseline_and_ablation",
         "result_id": "baseline_comparison_table",
         "relative_path": "paper_results_package/artifacts/baseline_comparison_table.csv",
@@ -880,6 +901,27 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
         "relative_path": "paper_results_package/latex_tables/operating_point_table.tex",
         "required_for_paper_outputs": True,
         "purpose": "operating point 表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_fixed_fpr_threshold_table",
+        "relative_path": "paper_results_package/latex_tables/fixed_fpr_threshold_table.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "fixed-FPR 阈值校准表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_tpr_at_fixed_fpr_table",
+        "relative_path": "paper_results_package/latex_tables/tpr_at_fixed_fpr_table.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "TPR@FPR 主结果表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_attack_tpr_at_fixed_fpr_table",
+        "relative_path": "paper_results_package/latex_tables/attack_tpr_at_fixed_fpr_table.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "攻击分组 TPR@FPR 表的 LaTeX 导出。",
     },
     {
         "result_group": "paper_reports",
@@ -1224,6 +1266,9 @@ COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     "method_pairwise_delta_table": ("reference_method", "method_name", "metric_name", "rate_delta"),
     "detection_roc_curve": ("method_name", "threshold_label", "tpr", "fpr"),
     "score_histogram_table": ("method_name", "label_name", "score_bin_lower", "score_bin_count"),
+    "fixed_fpr_threshold_table": ("method_name", "target_fpr", "threshold_value", "calibration_observed_fpr"),
+    "tpr_at_fixed_fpr_table": ("method_name", "target_fpr", "test_fpr_at_threshold", "tpr_at_fixed_fpr"),
+    "attack_tpr_at_fixed_fpr_table": ("method_name", "target_fpr", "attack_family", "attack_tpr_at_fixed_fpr"),
 }
 
 

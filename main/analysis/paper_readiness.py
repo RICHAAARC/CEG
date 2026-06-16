@@ -20,6 +20,7 @@ from main.analysis.rebuild_artifacts import (
     PW07_UNCERTAINTY_ARTIFACT_NAMES,
     PW08_DETECTION_CURVE_ARTIFACT_NAMES,
     PW09_CLAIM_AUDIT_ARTIFACT_NAMES,
+    PW10_FIXED_FPR_ARTIFACT_NAMES,
 )
 
 DEFAULT_REQUIRED_ARTIFACTS = tuple(
@@ -30,6 +31,7 @@ DEFAULT_REQUIRED_ARTIFACTS = tuple(
     + list(PW07_UNCERTAINTY_ARTIFACT_NAMES)
     + list(PW08_DETECTION_CURVE_ARTIFACT_NAMES)
     + list(PW09_CLAIM_AUDIT_ARTIFACT_NAMES)
+    + list(PW10_FIXED_FPR_ARTIFACT_NAMES)
 )
 DEFAULT_REQUIRED_FIGURE_IDS = (
     "main_detection_comparison",
@@ -67,6 +69,9 @@ DEFAULT_REQUIRED_TABLE_COLUMNS = {
     "detection_roc_curve.csv": ("method_name", "threshold_label", "tpr", "fpr"),
     "score_histogram_table.csv": ("method_name", "label_name", "score_bin_lower", "score_bin_count"),
     "operating_point_table.csv": ("method_name", "operating_threshold", "tpr", "fpr"),
+    "fixed_fpr_threshold_table.csv": ("method_name", "target_fpr", "threshold_value", "calibration_negative_count", "calibration_observed_fpr"),
+    "tpr_at_fixed_fpr_table.csv": ("method_name", "target_fpr", "threshold_value", "test_fpr_at_threshold", "tpr_at_fixed_fpr"),
+    "attack_tpr_at_fixed_fpr_table.csv": ("method_name", "target_fpr", "attack_family", "attack_tpr_at_fixed_fpr"),
 }
 
 

@@ -17,7 +17,10 @@
     "detection_roc_curve.csv",
     "score_histogram_table.csv",
     "operating_point_table.csv",
-    "paper_claim_audit.json"
+    "paper_claim_audit.json",
+    "fixed_fpr_threshold_table.csv",
+    "tpr_at_fixed_fpr_table.csv",
+    "attack_tpr_at_fixed_fpr_table.csv"
   ],
   "required_figure_ids": [
     "main_detection_comparison",
@@ -41,7 +44,10 @@
     "method_pairwise_delta_table.tex",
     "detection_roc_curve.tex",
     "score_histogram_table.tex",
-    "operating_point_table.tex"
+    "operating_point_table.tex",
+    "fixed_fpr_threshold_table.tex",
+    "tpr_at_fixed_fpr_table.tex",
+    "attack_tpr_at_fixed_fpr_table.tex"
   ],
   "required_methods": [
     "ceg",
@@ -133,9 +139,29 @@
       "event_count",
       "tpr",
       "clean_fpr"
+    ],
+    "fixed_fpr_threshold_table.csv": [
+      "method_name",
+      "target_fpr",
+      "threshold_value",
+      "calibration_negative_count",
+      "calibration_observed_fpr"
+    ],
+    "tpr_at_fixed_fpr_table.csv": [
+      "method_name",
+      "target_fpr",
+      "threshold_value",
+      "test_fpr_at_threshold",
+      "tpr_at_fixed_fpr"
+    ],
+    "attack_tpr_at_fixed_fpr_table.csv": [
+      "method_name",
+      "target_fpr",
+      "attack_family",
+      "attack_tpr_at_fixed_fpr"
     ]
   },
   "minimum_record_count": 1,
   "minimum_figure_count": 8,
-  "minimum_latex_table_count": 12
+  "minimum_latex_table_count": 15
 }

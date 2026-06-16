@@ -21,6 +21,9 @@ DEFAULT_LATEX_TABLES = (
     "detection_roc_curve.csv",
     "score_histogram_table.csv",
     "operating_point_table.csv",
+    "fixed_fpr_threshold_table.csv",
+    "tpr_at_fixed_fpr_table.csv",
+    "attack_tpr_at_fixed_fpr_table.csv",
 )
 
 
