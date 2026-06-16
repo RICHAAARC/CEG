@@ -1275,6 +1275,20 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
         if missing_required
         else _pass_check("colab_run_bundle_core_files_present", list(required_files))
     )
+    runbook_path = root / "colab_formal_runbook.md"
+    if runbook_path.is_file():
+        runbook_body = runbook_path.read_text(encoding="utf-8-sig")
+        runbook_guidance = {
+            "contains_acceptance_section": "验收命令" in runbook_body or "楠屾敹鍛戒护" in runbook_body,
+            "contains_acceptance_cli": "run_colab_acceptance_checks.py" in runbook_body,
+        }
+        checks.append(
+            _pass_check("colab_formal_runbook_contains_acceptance_guidance", runbook_guidance)
+            if all(runbook_guidance.values())
+            else _fail_check("colab_formal_runbook_contains_acceptance_guidance", runbook_guidance)
+        )
+    else:
+        checks.append(_fail_check("colab_formal_runbook_contains_acceptance_guidance", "missing"))
     provenance_files = (
         "colab_formal_run_checklist.json",
         "paper_result_evidence_report.json",

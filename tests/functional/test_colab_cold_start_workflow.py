@@ -233,6 +233,8 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert (bundle_root / "paper_results_package" / "paper_results_package_manifest.json").exists()
     validation = validate_colab_run_bundle(bundle_root)
     assert validation["overall_decision"] == "pass"
+    validation_requirements = {item["requirement"] for item in validation["checks"] if item["status"] == "pass"}
+    assert "colab_formal_runbook_contains_acceptance_guidance" in validation_requirements
     persisted_validation = json.loads((bundle_root / "colab_run_bundle_validation.json").read_text(encoding="utf-8"))
     assert persisted_validation["overall_decision"] == "pass"
     checklist = json.loads((bundle_root / "colab_formal_run_checklist.json").read_text(encoding="utf-8"))
