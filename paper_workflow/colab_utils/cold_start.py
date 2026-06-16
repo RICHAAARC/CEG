@@ -297,6 +297,8 @@ def build_colab_formal_input_contract(workspace_root: str | Path) -> dict[str, A
         "strict paper_result_evidence passes without --allow-dry-run",
         "provided_file source mode requires provided_result_files_manifest_valid",
         "external_plan source mode requires strict run_colab_acceptance_checks with --require-external-command-results",
+        "colab_formal_result_gap_report records ready_for_formal_claims before formal paper claims",
+        "colab_paper_result_index production_trace_summary missing_trace_count=0",
     ]
     contract = {
         "artifact_name": "colab_formal_input_contract.json",
@@ -1839,14 +1841,23 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
                 "artifact_name": acceptance_payload.get("artifact_name") if isinstance(acceptance_payload, dict) else None,
                 "overall_decision": acceptance_payload.get("overall_decision") if isinstance(acceptance_payload, dict) else None,
                 "report_decisions": acceptance_payload.get("report_decisions") if isinstance(acceptance_payload, dict) else None,
+                "blocking_report_decisions": acceptance_payload.get("blocking_report_decisions") if isinstance(acceptance_payload, dict) else None,
+                "formal_result_gap_decision": acceptance_payload.get("formal_result_gap_decision") if isinstance(acceptance_payload, dict) else None,
             }
+            report_decisions = acceptance_payload.get("report_decisions", {}) if isinstance(acceptance_payload, dict) else {}
+            blocking_report_decisions = acceptance_payload.get("blocking_report_decisions", {}) if isinstance(acceptance_payload, dict) else {}
             acceptance_valid = (
                 isinstance(acceptance_payload, dict)
                 and acceptance_payload.get("artifact_name") == "colab_acceptance_report.json"
                 and acceptance_payload.get("overall_decision") in {"pass", "fail"}
-                and isinstance(acceptance_payload.get("report_decisions"), dict)
-                and "colab_run_bundle_validation" in acceptance_payload.get("report_decisions", {})
-                and "paper_result_evidence" in acceptance_payload.get("report_decisions", {})
+                and isinstance(report_decisions, dict)
+                and isinstance(blocking_report_decisions, dict)
+                and "colab_run_bundle_validation" in report_decisions
+                and "paper_result_evidence" in report_decisions
+                and "formal_result_gap" in report_decisions
+                and "colab_run_bundle_validation" in blocking_report_decisions
+                and "paper_result_evidence" in blocking_report_decisions
+                and acceptance_payload.get("formal_result_gap_decision") == report_decisions.get("formal_result_gap")
             )
             checks.append(
                 _pass_check("embedded_colab_acceptance_report_parseable", acceptance_summary)
@@ -3312,12 +3323,20 @@ def run_colab_acceptance_checks(
         else:
             parsed_reports[name] = {"overall_decision": "fail", "reason": "missing_report"}
 
+    formal_gap_report_path = bundle_root / "colab_formal_result_gap_report.json"
+    parsed_reports["formal_result_gap"] = _read_json_object(formal_gap_report_path) or {
+        "overall_decision": "fail",
+        "reason": "missing_or_malformed_report",
+    }
+
     report_decisions = {name: payload.get("overall_decision") for name, payload in parsed_reports.items()}
+    blocking_report_names = ("colab_run_bundle_validation", "paper_result_evidence")
+    blocking_report_decisions = {name: report_decisions.get(name) for name in blocking_report_names}
     all_commands_passed = all(item.get("return_code") == 0 for item in command_results)
-    all_reports_passed = all(decision == "pass" for decision in report_decisions.values())
+    all_blocking_reports_passed = all(decision == "pass" for decision in blocking_report_decisions.values())
     acceptance_report = {
         "artifact_name": "colab_acceptance_report.json",
-        "overall_decision": "pass" if all_commands_passed and all_reports_passed else "fail",
+        "overall_decision": "pass" if all_commands_passed and all_blocking_reports_passed else "fail",
         "drive_output_root": output_layout["drive_output_root"],
         "bundle_root": str(bundle_root),
         "acceptance_root": str(acceptance_root),
@@ -3325,10 +3344,13 @@ def run_colab_acceptance_checks(
         "require_experiment_coverage": require_experiment_coverage,
         "require_external_command_results": require_external_command_results,
         "report_decisions": report_decisions,
+        "blocking_report_decisions": blocking_report_decisions,
+        "formal_result_gap_decision": report_decisions.get("formal_result_gap"),
         "command_results": command_results,
         "report_paths": {
             "colab_run_bundle_validation": str(acceptance_root / "colab_run_bundle_validation_cli.json"),
             "paper_result_evidence": str(acceptance_root / "paper_result_evidence_cli.json"),
+            "formal_result_gap": str(formal_gap_report_path),
         },
     }
     (workspace / "colab_acceptance_report.json").write_text(
@@ -3575,6 +3597,8 @@ def run_colab_cold_start_pipeline(
     summary["colab_acceptance_report_path"] = str(workspace / "colab_acceptance_report.json")
     summary["colab_acceptance_decision"] = acceptance_report.get("overall_decision")
     summary["colab_acceptance_report_decisions"] = acceptance_report.get("report_decisions")
+    summary["colab_acceptance_blocking_report_decisions"] = acceptance_report.get("blocking_report_decisions")
+    summary["colab_acceptance_formal_result_gap_decision"] = acceptance_report.get("formal_result_gap_decision")
     (workspace / "colab_cold_start_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

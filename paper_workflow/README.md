@@ -79,7 +79,7 @@ Colab Notebook 支持两种真实实验输入方式:
 1. 已经有 `baseline_observations.json` 和 `metric_rows.json` 时, 直接填写 `BASELINE_OBSERVATIONS_PATH` 和 `METRIC_ROWS_PATH`。
 2. 需要在 Colab GPU 环境运行第三方 baseline 或 LPIPS/FID/CLIP score 时, 设置 `RUN_EXTERNAL_PLANS = True`, 并填写 `BASELINE_ROOT`、`METRIC_ROOT` 以及图像配对或图像目录路径。Notebook 会通过仓库脚本物化命令计划, 再调用 `run_baseline_plan.py` 和 `run_metric_plan.py` 汇总输出。
 
-正式输入契约会写入 `colab_formal_input_contract.json`: 其中 `input_files` 列出 `events`、`thresholds`、`sample_manifest`、`baseline_observations`、`metric_rows` 和 `image_pairs` 的推荐路径、格式与最小字段; `third_party_command_interfaces` 列出第三方 baseline 和高级指标脚本需要输出的统一字段; `formal_acceptance_requirements` 列出正式验收必须满足的非 dry-run、实验矩阵覆盖、来源模式证据和严格 acceptance 条件。这里的来源模式证据分为两类: `provided_file` 依赖 `provided_result_files_manifest.json` 校验直接提供结果副本, `external_plan` 才依赖 `--require-external-command-results` 校验外部命令结果。
+正式输入契约会写入 `colab_formal_input_contract.json`: 其中 `input_files` 列出 `events`、`thresholds`、`sample_manifest`、`baseline_observations`、`metric_rows` 和 `image_pairs` 的推荐路径、格式与最小字段; `third_party_command_interfaces` 列出第三方 baseline 和高级指标脚本需要输出的统一字段; `formal_acceptance_requirements` 列出正式验收必须满足的非 dry-run、实验矩阵覆盖、来源模式证据、论文结果索引生产追踪完整性、正式结果缺口报告 readiness 和严格 acceptance 条件。这里的来源模式证据分为两类: `provided_file` 依赖 `provided_result_files_manifest.json` 校验直接提供结果副本, `external_plan` 才依赖 `--require-external-command-results` 校验外部命令结果。
 
 运行前建议先查看 `colab_environment_summary.json` 中的 `nvidia_smi` 和 `torch_cuda` 字段, 确认 Colab 已分配 GPU。正式运行清单也会写出 `gpu_readiness`: 当 `RUN_EXTERNAL_PLANS = True` 且 `USE_DRY_RUN_INPUTS = False` 时, 默认要求检测到 GPU, 否则会产生 `gpu_runtime_unavailable_for_external_plans` 阻断项。若第三方 baseline / metric 任务已确认只需要 CPU, 可将 `REQUIRE_GPU_FOR_EXTERNAL_PLANS = False` 作为显式放宽。
 
@@ -203,7 +203,7 @@ colab_acceptance_report.json
 
 其中 `colab_formal_run_checklist.json` 记录运行前输入、阈值、外部 baseline 和高级指标来源是否满足正式实验要求; `paper_result_evidence_report.json` 以最终 `colab_run_bundle/` 为目标, 记录结果包、正式运行清单和外部命令 provenance 是否能够共同作为论文结果证据。bundle 校验会要求该 evidence 报告 `overall_decision = pass` 且 `target_kind = colab_run_bundle`。dry-run 链路中正式运行清单可以是 `overall_decision = fail`, 因为它用于明确声明当前运行不能替代正式 GPU 实验; 但文件本身必须存在并可解析, 这样下载后的 `ceg_colab_run_bundle.zip` 才能被离线复核。
 
-cold-start helper 还会实际运行 `validate_colab_run_bundle.py --require-pass` 和 `validate_paper_result_evidence.py --require-pass`, 并把命令返回码、子报告路径和子报告结论写入 `colab_acceptance_report.json`。dry-run 调试链路会显式传入 `--allow-dry-run` 和 `--allow-missing-experiment-coverage`; 正式运行则不使用这些放宽参数, 因此该报告可以直接区分“链路可跑通”和“正式论文证据可验收”。
+cold-start helper 还会实际运行 `validate_colab_run_bundle.py --require-pass` 和 `validate_paper_result_evidence.py --require-pass`, 并把命令返回码、子报告路径和子报告结论写入 `colab_acceptance_report.json`。该报告现在同时读取 `colab_formal_result_gap_report.json`, 在 `report_decisions.formal_result_gap` 与 `formal_result_gap_decision` 中记录正式结果缺口报告的 readiness 结论; 但 `overall_decision` 只由 `blocking_report_decisions` 中的 bundle validation 与 paper result evidence 决定, 因此 dry-run 调试链路仍可通过验收并显式保留 `not_ready_for_formal_claims` 提示。dry-run 调试链路会显式传入 `--allow-dry-run` 和 `--allow-missing-experiment-coverage`; 正式运行则不使用这些放宽参数。正式论文声明必须额外确认 `colab_formal_result_gap_report.overall_decision = ready_for_formal_claims`, 不能只依赖 acceptance report 的整体通过结论。
 
 下载后的目录或 zip 也可以独立复跑同一套验收逻辑:
 

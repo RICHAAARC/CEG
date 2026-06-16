@@ -457,6 +457,11 @@ Notebook 与 repository module 的跨边界数据
 | colab_acceptance_report | artifact | none | false | true | false | Colab 冷启动完成后实际运行验收 CLI 的结构化报告。|
 | colab_acceptance_decision | artifact | none | false | true | false | Colab cold start summary 中记录的最终验收报告结论。|
 | colab_acceptance_report_decisions | artifact | none | false | true | false | Colab acceptance report 中各个验收子报告的通过状态集合。|
+| blocking_report_decisions | artifact | none | false | true | false | Colab acceptance report 中决定 overall_decision 的阻断性子报告结论集合, 当前包含 bundle validation 和 paper result evidence。|
+| colab_acceptance_blocking_report_decisions | artifact | none | false | true | false | Colab cold start summary 中提升展示的阻断性 acceptance 子报告结论集合。|
+| formal_result_gap_decision | artifact | none | false | true | false | Colab acceptance report 中记录的 formal_result_gap 子报告结论, 用于提示当前运行是否已具备正式论文声明 readiness。|
+| colab_acceptance_formal_result_gap_decision | artifact | none | false | true | false | Colab cold start summary 中提升展示的 formal_result_gap_decision。|
+| formal_result_gap | artifact | none | false | true | false | Colab acceptance report 的 report_decisions 中记录正式论文结果缺口报告 overall_decision 的子报告键。|
 | source_bundle_path | artifact | none | false | false | false | 独立 Colab acceptance CLI 接收的 bundle 目录或 zip 路径。|
 | validated_archive_path | artifact | none | false | false | false | 独立 Colab acceptance CLI 复核 zip 文件时记录的原始压缩包路径。|
 | colab_formal_run_checklist_path | artifact | none | false | true | false | Colab cold start summary 中记录的正式实验运行清单路径。|

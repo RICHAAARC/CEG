@@ -1,7 +1,8 @@
 """运行 Colab bundle 最终验收命令的独立 CLI。
 
 该脚本只读取已经生成的 `colab_run_bundle/` 目录或 `ceg_colab_run_bundle.zip`, 并串联已有的
-`validate_colab_run_bundle.py` 与 `validate_paper_result_evidence.py`。它不重新生成 records、tables、figures
+`validate_colab_run_bundle.py` 与 `validate_paper_result_evidence.py`, 同时记录
+`colab_formal_result_gap_report.json` 的 readiness 结论。它不重新生成 records、tables、figures
 或 reports, 因此可用于 Colab 下载后的本地 / CI 离线复核。
 """
 
@@ -143,16 +144,20 @@ def build_acceptance_report(
             _run_command(bundle_validation_command, cwd=root, timeout_seconds=timeout_seconds),
             _run_command(evidence_command, cwd=root, timeout_seconds=timeout_seconds),
         ]
+        formal_gap_report_path = bundle_root / "colab_formal_result_gap_report.json"
         parsed_reports = {
             "colab_run_bundle_validation": _read_json_report(bundle_report_path),
             "paper_result_evidence": _read_json_report(evidence_report_path),
+            "formal_result_gap": _read_json_report(formal_gap_report_path),
         }
         report_decisions = {name: payload.get("overall_decision") for name, payload in parsed_reports.items()}
+        blocking_report_names = ("colab_run_bundle_validation", "paper_result_evidence")
+        blocking_report_decisions = {name: report_decisions.get(name) for name in blocking_report_names}
         all_commands_passed = all(item["return_code"] == 0 for item in command_results)
-        all_reports_passed = all(decision == "pass" for decision in report_decisions.values())
+        all_blocking_reports_passed = all(decision == "pass" for decision in blocking_report_decisions.values())
         acceptance_report = {
             "artifact_name": "colab_acceptance_report.json",
-            "overall_decision": "pass" if all_commands_passed and all_reports_passed else "fail",
+            "overall_decision": "pass" if all_commands_passed and all_blocking_reports_passed else "fail",
             "source_bundle_path": str(source_bundle_path),
             "validated_bundle_path": str(bundle_root),
             "validated_archive_path": validated_archive_path,
@@ -161,10 +166,13 @@ def build_acceptance_report(
             "require_experiment_coverage": require_experiment_coverage,
             "require_external_command_results": require_external_command_results,
             "report_decisions": report_decisions,
+            "blocking_report_decisions": blocking_report_decisions,
+            "formal_result_gap_decision": report_decisions.get("formal_result_gap"),
             "command_results": command_results,
             "report_paths": {
                 "colab_run_bundle_validation": str(bundle_report_path),
                 "paper_result_evidence": str(evidence_report_path),
+                "formal_result_gap": str(formal_gap_report_path),
             },
         }
         if output_path is not None:
