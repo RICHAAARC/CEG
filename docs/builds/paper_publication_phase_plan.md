@@ -668,7 +668,7 @@ paper_workflow/notebook_utils/
 7. 运行 external baseline detection。
 8. 运行 quality metrics。
 9. 运行 fixed-FPR / TPR@FPR 统计。
-10. 导出 paper_results_package 和 colab_run_bundle。
+10. 通过 scripts/build_pilot_package_from_provided_results.py 或 Colab helper 导出 paper_results_package 和 colab_run_bundle。
 ```
 
 ### 完成标准
@@ -705,7 +705,7 @@ image manifests 完整。
 CEG records 完整。
 至少一个 external baseline 进入 comparison table。
 fixed-FPR 表可生成。
-paper_results_package 可导出, 并可通过 scripts/archive_paper_results_to_drive.py 归档到 MyDrive 分类目录。
+paper_results_package 可导出, 可通过 scripts/build_pilot_package_from_provided_results.py 从已提供产物一键构建, 并可通过 scripts/archive_paper_results_to_drive.py 归档到 MyDrive 分类目录。
 示例图可进入 image_examples。
 ```
 
@@ -766,7 +766,7 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 3. 真实 SD / watermark backend pilot。
 4. 至少一个外部 baseline 的真实小样本运行。
 5. 真实 LPIPS / FID / CLIP score 小样本运行。
-6. Colab pilot 小样本正式运行。
+6. 使用 scripts/build_pilot_package_from_provided_results.py 将真实或半真实 pilot 产物一键构建为 paper_results_package, 再推进 Colab pilot 小样本正式运行。
 7. 正式实验配置冻结和资源排期。
 ```
 
