@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from experiments.baseline_command_adapter import BaselineCommandSpec
+from experiments.image_generation_plan import ImageGenerationCommandSpec
 from main.methods.baselines import get_baseline_spec
 
 
@@ -43,7 +44,7 @@ def load_command_templates(path: str | Path, *, template_role: str) -> list[Comm
     """读取命令模板并归一化字段。"""
     specs: list[CommandTemplateSpec] = []
     for index, row in enumerate(_load_template_rows(Path(path))):
-        template_id = str(row.get("baseline_id") or row.get("metric_name") or row.get("template_id") or "").strip()
+        template_id = str(row.get("baseline_id") or row.get("metric_name") or row.get("backend_id") or row.get("template_id") or "").strip()
         if not template_id:
             raise ValueError(f"command template row {index} missing template id")
         command_template = row.get("command_template")
@@ -112,4 +113,21 @@ def materialize_metric_command_plan(template_path: str | Path, variables: dict[s
         row = materialize_command_template(spec, {"metric_name": spec.template_id, **variables})
         row["metric_name"] = spec.template_id
         rows.append(row)
+    return rows
+
+
+def materialize_image_generation_command_plan(template_path: str | Path, variables: dict[str, Any]) -> list[ImageGenerationCommandSpec]:
+    """把图像生成命令模板物化为外部 image generation runner 可消费的计划。"""
+    rows: list[ImageGenerationCommandSpec] = []
+    for spec in load_command_templates(template_path, template_role="external_image_generation"):
+        row = materialize_command_template(spec, {"backend_id": spec.template_id, **variables})
+        rows.append(
+            ImageGenerationCommandSpec(
+                backend_id=spec.template_id,
+                command=tuple(row["command"]),
+                output_root=str(row["output_path"]),
+                working_directory=str(row["working_directory"]) if row.get("working_directory") else None,
+                timeout_seconds=int(row["timeout_seconds"]),
+            )
+        )
     return rows

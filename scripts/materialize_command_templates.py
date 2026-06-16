@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from experiments.command_templates import materialize_baseline_command_plan, materialize_metric_command_plan
+from experiments.command_templates import materialize_baseline_command_plan, materialize_image_generation_command_plan, materialize_metric_command_plan
 
 
 def _variables_from_args(values: list[str]) -> dict[str, str]:
@@ -29,7 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     """构造命令行参数解析器。"""
     parser = argparse.ArgumentParser(description="物化 CEG 外部命令模板。")
     parser.add_argument("--templates", required=True, help="命令模板 JSON 文件。")
-    parser.add_argument("--kind", choices=("baseline", "metric"), required=True, help="模板类型。")
+    parser.add_argument("--kind", choices=("baseline", "metric", "image_generation"), required=True, help="模板类型。")
     parser.add_argument("--out", required=True, help="输出命令计划 JSON 文件。")
     parser.add_argument("--var", action="append", default=[], help="模板变量, 格式为 key=value, 可重复。")
     return parser
@@ -52,8 +52,20 @@ def main() -> None:
             }
             for spec in specs
         ]
-    else:
+    elif args.kind == "metric":
         rows = materialize_metric_command_plan(args.templates, variables)
+    else:
+        specs = materialize_image_generation_command_plan(args.templates, variables)
+        rows = [
+            {
+                "backend_id": spec.backend_id,
+                "command": list(spec.command),
+                "output_root": spec.output_root,
+                "working_directory": spec.working_directory,
+                "timeout_seconds": spec.timeout_seconds,
+            }
+            for spec in specs
+        ]
     output_path = Path(args.out)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(rows, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

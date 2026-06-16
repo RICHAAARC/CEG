@@ -1,0 +1,20 @@
+{
+  "templates": [
+    {
+      "backend_id": "external_sd_watermark_backend",
+      "command_template": [
+        "python",
+        "{image_generation_root}/run_image_generation.py",
+        "--prompt-plan",
+        "{prompt_plan_path}",
+        "--out",
+        "{output_root}",
+        "--model-config",
+        "{model_config_path}"
+      ],
+      "output_path_template": "{output_root}",
+      "working_directory_template": "{image_generation_root}",
+      "timeout_seconds": 7200
+    }
+  ]
+}

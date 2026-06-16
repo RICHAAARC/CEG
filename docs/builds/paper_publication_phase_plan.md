@@ -361,6 +361,7 @@ external_backend:
 ```text
 进行中。
 本地 mock backend 已具备 prompt_plan -> clean / watermarked PPM 图像 -> image_pairs.json -> image_generation_manifest.json / image_pair_manifest.json 的轻量链路。
+external backend 命令计划接口已具备, 可通过 configs/external_image_generation_command_templates.json 和 scripts/run_image_generation_plan.py 调度真实 SD / watermark 脚本并校验输出契约。
 该能力已接入 dry-run 输入生成器, 用于验证 prompt provenance 和图像 manifest 契约, 但不代表正式 SD 图像生成。
 ```
 
