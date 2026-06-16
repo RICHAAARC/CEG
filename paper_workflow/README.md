@@ -129,7 +129,7 @@ python scripts/validate_colab_run_bundle.py --bundle path\to\colab_run_bundle --
 
 ### 正式结果证据完整性校验
 
-`validate_paper_result_evidence.py` 在目标是 `colab_run_bundle/` 时, 还会读取 `colab_formal_run_checklist.json`。正式论文证据默认要求该清单 `overall_decision = pass` 且 `blocking_issue_count = 0`。如果只是验证 dry-run 调试链路, 可以显式使用 `--allow-dry-run`; 此时清单失败会被记录为 dry-run 放宽证据, 但不能支持正式论文结果声明。
+`validate_paper_result_evidence.py` 在目标是 `colab_run_bundle/` 时, 还会读取 `colab_formal_run_checklist.json`。正式论文证据默认要求该清单 `overall_decision = pass` 且 `blocking_issue_count = 0`。`validate_colab_run_bundle.py` 还会检查 `colab_paper_result_index.json` 中的 `semantic_check_summary` 和 `semantic_check_failures`, 因此关键论文结果文件即使存在, 只要内容结构校验失败也不能通过运行级 bundle 验收。如果只是验证 dry-run 调试链路, 可以显式使用 `--allow-dry-run`; 此时清单失败会被记录为 dry-run 放宽证据, 但不能支持正式论文结果声明。
 
 `--require-external-command-results` 只用于 `external_plan` 来源模式。启用后, 该门禁还会读取 `external_baselines/baseline_observations.json` 与 `external_metrics/metric_rows.json`。外部命令返回码为 0 只是必要条件; baseline observation 必须包含 `event_id`、`baseline_id`、`score`、`threshold`, 高级指标行必须包含 `event_id` 且至少包含 `lpips`、`fid` 或 `clip_score` 之一。这样可以防止第三方脚本空跑或只生成基础 PSNR / SSIM 文件时被误判为正式高级指标结果。若来源模式是 `provided_file`, 严格验收不应强制该参数, 而是校验 `provided_results/provided_result_files_manifest.json` 及其副本摘要。
 

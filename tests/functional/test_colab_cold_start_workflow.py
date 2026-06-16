@@ -353,6 +353,7 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert validation["overall_decision"] == "pass"
     validation_requirements = {item["requirement"] for item in validation["checks"] if item["status"] == "pass"}
     assert "colab_formal_runbook_contains_acceptance_guidance" in validation_requirements
+    assert "colab_paper_result_index_semantic_checks_passed" in validation_requirements
     persisted_validation = json.loads((bundle_root / "colab_run_bundle_validation.json").read_text(encoding="utf-8"))
     assert persisted_validation["overall_decision"] == "pass"
     checklist = json.loads((bundle_root / "colab_formal_run_checklist.json").read_text(encoding="utf-8"))
@@ -604,6 +605,29 @@ def test_validate_colab_run_bundle_requires_formal_provenance_files(tmp_path) ->
     assert missing_evidence_report["overall_decision"] == "fail"
     missing_evidence_requirements = {check["requirement"] for check in missing_evidence_report["checks"] if check["status"] == "fail"}
     assert "colab_run_bundle_formal_provenance_files_present" in missing_evidence_requirements
+
+
+@pytest.mark.quick
+def test_validate_colab_run_bundle_rejects_result_index_semantic_failures(tmp_path) -> None:
+    """Colab bundle 验收应拒绝论文结果索引中已经存在但语义结构失败的必需结果。"""
+    run_colab_cold_start_pipeline(".", tmp_path / "colab_workspace", repetitions=1)
+    bundle_root = tmp_path / "colab_workspace" / "colab_run_bundle"
+
+    malformed_index_root = tmp_path / "malformed_result_index_bundle"
+    shutil.copytree(bundle_root, malformed_index_root)
+    result_index_path = malformed_index_root / "colab_paper_result_index.json"
+    result_index = json.loads(result_index_path.read_text(encoding="utf-8"))
+    result_index["overall_decision"] = "fail"
+    result_index["semantic_check_summary"]["fail_count"] = 1
+    result_index["semantic_check_summary"]["required_failures"] = ["standard_watermark_metrics"]
+    result_index["semantic_check_failures"] = ["standard_watermark_metrics"]
+    result_index_path.write_text(json.dumps(result_index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    report = validate_colab_run_bundle(malformed_index_root)
+
+    assert report["overall_decision"] == "fail"
+    failed_requirements = {check["requirement"] for check in report["checks"] if check["status"] == "fail"}
+    assert "colab_paper_result_index_semantic_checks_passed" in failed_requirements
 
 
 @pytest.mark.quick

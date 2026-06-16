@@ -1477,6 +1477,41 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
         )
     else:
         checks.append(_fail_check("colab_formal_runbook_contains_acceptance_guidance", "missing"))
+    result_index_path = root / "colab_paper_result_index.json"
+    if result_index_path.is_file():
+        try:
+            result_index_payload = json.loads(result_index_path.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as exc:
+            checks.append(_fail_check("colab_paper_result_index_semantic_checks_passed", str(exc)))
+        else:
+            semantic_summary = result_index_payload.get("semantic_check_summary") if isinstance(result_index_payload, dict) else None
+            semantic_failures = result_index_payload.get("semantic_check_failures") if isinstance(result_index_payload, dict) else None
+            group_failures = result_index_payload.get("required_result_group_failures") if isinstance(result_index_payload, dict) else None
+            index_summary = {
+                "overall_decision": result_index_payload.get("overall_decision") if isinstance(result_index_payload, dict) else None,
+                "required_missing": result_index_payload.get("required_missing") if isinstance(result_index_payload, dict) else None,
+                "required_result_group_failures": group_failures,
+                "semantic_check_summary": semantic_summary,
+                "semantic_check_failures": semantic_failures,
+            }
+            semantic_ok = (
+                isinstance(result_index_payload, dict)
+                and result_index_payload.get("overall_decision") == "pass"
+                and not result_index_payload.get("required_missing")
+                and isinstance(group_failures, list)
+                and not group_failures
+                and isinstance(semantic_summary, dict)
+                and int(semantic_summary.get("fail_count", -1)) == 0
+                and isinstance(semantic_failures, list)
+                and not semantic_failures
+            )
+            checks.append(
+                _pass_check("colab_paper_result_index_semantic_checks_passed", index_summary)
+                if semantic_ok
+                else _fail_check("colab_paper_result_index_semantic_checks_passed", index_summary)
+            )
+    else:
+        checks.append(_fail_check("colab_paper_result_index_semantic_checks_passed", "missing"))
     provenance_files = (
         "colab_formal_run_checklist.json",
         "paper_result_evidence_report.json",
