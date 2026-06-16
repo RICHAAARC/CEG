@@ -289,8 +289,58 @@ attack_tpr_at_fixed_fpr_table.csv
 阶段 6: fixed-FPR / TPR@FPR 正式统计, 已有雏形, 等待真实 detection 与 baseline records。
 阶段 7: 图像质量指标与论文示例图, 轻量 quality runner provenance 已打通, 高级指标真实 backend 待补齐。
 阶段 8: Colab 端到端入口, dry-run 能力持续扩展, pilot 仍待真实 backend。
-阶段 9: pilot 实验, 待外部 baseline 和 quality metrics 接入后启动。
+阶段 8.5: pilot 输入 manifest 与 preflight, 作为真实 pilot 前的输入冻结门禁。
+阶段 9: pilot 实验, 待外部 baseline、quality metrics 和 pilot 输入 preflight 通过后启动。
 阶段 10: 正式论文实验, 待 pilot 通过后启动。
+```
+
+### 5.0.1 pilot 输入 manifest 门禁
+
+该门禁的作用是把真实或半真实 pilot 的所有上游产物整理成一个可审计入口。它不生成论文数值, 也不替代真实模型执行, 只负责在构建结果包前确认输入产物已经满足论文结果包的基本契约。
+
+推荐文件名为:
+
+```text
+pilot_input_manifest.json
+```
+
+推荐由模板复制生成:
+
+```text
+configs/pilot_input_manifest_template.json
+```
+
+该 manifest 至少应声明:
+
+```text
+events
+thresholds
+```
+
+在 pilot 或正式实验中, 还应尽量声明:
+
+```text
+baseline_observations
+baseline_execution_manifest
+metric_rows
+metric_execution_manifest
+detection_execution_manifest
+image_pairs
+attacked_image_manifest
+attack_shard_manifest
+experiment_matrix
+readiness_requirements
+detection_output_root
+```
+
+完成标准如下:
+
+```text
+1. 所有 manifest 中声明的路径都能按 manifest 所在目录解析。
+2. events、thresholds、baseline observations、metric rows 等输入能通过轻量 schema 校验。
+3. detection_output_root 能通过 detection 输出目录校验。
+4. 结果包构建脚本可通过 --pilot-input-manifest 从该 manifest 自动填充输入路径。
+5. preflight 报告随结果包构建 manifest 一起归档。
 ```
 
 ---
@@ -751,11 +801,13 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 ### 6.1 当前最优先事项
 
 ```text
-1. 使用 scripts/import_baseline_observations.py 接入至少一个真实 external baseline backend 输出或离线正式 observation 文件。
-2. 使用 scripts/import_metric_rows.py 接入真实 LPIPS / FID / CLIP score backend 输出或离线正式 metric rows。
-3. 将真实 baseline 与高级 metric execution manifest 和 result package provenance 对齐。
-4. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR、quality metrics 和 image examples。
-5. 继续保持所有论文表格由 records 和 manifests 重建。
+1. 先冻结 pilot 输入交付契约, 使用 pilot_input_manifest.json 统一声明真实或半真实 pilot 所需的 events、thresholds、baseline observations、metric rows、image pairs、attack manifests、experiment matrix 和 readiness requirements。
+2. 对 pilot_input_manifest.json 执行 preflight 校验, 在构建 paper_results_package 前确认所有输入文件存在、schema 可解析、路径可追溯。
+3. 使用 scripts/import_baseline_observations.py 接入至少一个真实 external baseline backend 输出或离线正式 observation 文件。
+4. 使用 scripts/import_metric_rows.py 接入真实 LPIPS / FID / CLIP score backend 输出或离线正式 metric rows。
+5. 将真实 baseline 与高级 metric execution manifest 和 result package provenance 对齐。
+6. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR、quality metrics 和 image examples。
+7. 继续保持所有论文表格由 records 和 manifests 重建。
 ```
 
 ### 6.2 随后推进事项

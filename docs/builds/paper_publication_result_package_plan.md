@@ -70,6 +70,7 @@ CEG-WM 风格 fixed-FPR threshold calibration
 TPR@FPR 正式统计表
 示例图选择与 image_examples 结果包目录
 外部 baseline 从执行到结果表的正式 pilot 验证
+pilot_input_manifest.json 统一输入门禁与 preflight 报告接入一键结果包构建流程
 ```
 
 ---
@@ -588,20 +589,27 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 
 ## 4. 推荐立即执行的下一步
 
-建议下一步优先完成以下两项, 因为它们决定后续真实图像实验产物是否能进入论文结果包:
+建议下一步优先完成 pilot 输入门禁, 因为它决定后续真实图像实验、真实检测结果、外部 baseline 和高级指标是否能被稳定纳入论文结果包。
 
 ```text
-1. 更新 paper_output_requirements, 增加 image_manifests、image_examples 和 fixed_fpr 必需产物。
-2. 实现 main/analysis/fixed_fpr.py, 明确 calibration clean negative -> test TPR@FPR 的正式统计口径。
+1. 复制 configs/pilot_input_manifest_template.json, 形成某次 pilot 的 pilot_input_manifest.json。
+2. 在该 manifest 中声明 events、thresholds、baseline observations、metric rows、image pairs、attack manifests、experiment matrix 和 readiness requirements。
+3. 运行 pilot input preflight, 确认所有输入文件存在、路径可解析、schema 可解析。
+4. 使用已支持 --pilot-input-manifest 的 scripts/build_pilot_package_from_provided_results.py, 避免手工传入一长串路径。
+5. 在 preflight 通过后, 再使用一键构建脚本导出 paper_results_package 并归档到 MyDrive 分类目录。
 ```
 
 随后再进入:
 
 ```text
-prompt / SD / watermark image / attack / detection backend 接入
+真实 SD / watermark backend pilot
+真实 CEG detector backend pilot
+至少一个真实 external baseline pilot
+真实 LPIPS / FID / CLIP score 或离线正式 metric rows 接入
+fixed-FPR / TPR@FPR 和论文示例图复核
 ```
 
-这样可以避免先跑出大量图像, 但后续无法按论文发表口径统计和打包。
+这样可以避免先跑出大量图像和分数, 但后续无法按论文发表口径统计、审计和打包。
 
 ---
 

@@ -1,0 +1,23 @@
+{
+  "artifact_name": "pilot_input_manifest.json",
+  "description": "用于把真实或半真实 pilot 产物交给 scripts/build_pilot_package_from_provided_results.py 的输入契约模板.",
+  "events": "ceg_detection/detection_events.json",
+  "thresholds": "ceg_detection/detection_thresholds.json",
+  "baseline_observations": "external_baselines/baseline_observations.json",
+  "baseline_execution_manifest": "external_baselines/baseline_execution_manifest.json",
+  "metric_rows": "external_metrics/metric_rows.json",
+  "metric_execution_manifest": "external_metrics/metric_execution_manifest.json",
+  "detection_execution_manifest": "ceg_detection/ceg_detection_execution_manifest.json",
+  "image_pairs": "inputs/image_pairs.json",
+  "attacked_image_manifest": "image_attacks/image_manifests/attacked_image_manifest.json",
+  "attack_shard_manifest": "image_attacks/image_manifests/attack_shard_manifest.json",
+  "experiment_matrix": "plans/paper_experiment_matrix.json",
+  "readiness_requirements": "configs/paper_output_requirements.json",
+  "detection_output_root": "ceg_detection",
+  "notes": [
+    "相对路径按 pilot_input_manifest.json 所在目录解析.",
+    "events 和 thresholds 为必需字段.",
+    "其他字段可按实际 pilot 是否已经产生而保留、置空或删除.",
+    "该模板不代表正式实验结果, 只定义 pilot 输入路径契约."
+  ]
+}

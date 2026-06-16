@@ -491,3 +491,9 @@ Notebook 与 repository module 的跨边界数据
 | external_command_plan_violation_count | metric | none | false | true | false | Colab 正式运行清单中外部命令计划预检发现的脚本或工作目录问题数量。|
 | plan_kind | protocol | none | false | false | false | 外部命令计划预检中的计划类型, 例如 baseline 或 metric。|
 | template_id | protocol | none | true | false | false | 外部命令模板或预检条目的稳定标识。|
+
+| pilot_input_manifest | artifact | none | false | true | false | pilot 一键结果包构建前的统一输入 manifest 文件标识, 用于声明 events、thresholds、baseline、metric、image 和 attack 输入路径. |
+| pilot_input_manifest_validation | artifact | none | false | true | false | pilot 输入 manifest 的 preflight 校验报告, 记录路径解析、schema 检查和整体通过状态. |
+| pilot_input_preflight | artifact | none | false | true | false | pilot package 构建 manifest 中记录的输入预检步骤与证据集合. |
+| pilot_input_preflight_decision | artifact | none | false | true | false | pilot 输入 preflight 的整体结论, 用于阻断缺失必需输入或 schema 不可解析的结果包构建. |
+| resolved_inputs | artifact | none | false | false | false | pilot 输入 manifest 校验报告中按 manifest 所在目录解析后的输入路径映射. |
