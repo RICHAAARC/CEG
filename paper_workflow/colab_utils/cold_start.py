@@ -1942,6 +1942,7 @@ def export_colab_run_bundle(workspace_root: str | Path, bundle_root: str | Path 
         "colab_formal_runbook.md",
         "colab_paper_result_index.json",
         "colab_formal_result_gap_report.json",
+        "archives/colab_bundle_archive_manifest.json",
         "acceptance/colab_run_bundle_validation_cli.json",
         "acceptance/paper_result_evidence_cli.json",
         "inputs/paper_dry_run_inputs_manifest.json",
@@ -2048,6 +2049,7 @@ def create_colab_bundle_archive(
 
     archive_manifest_base = {
         "artifact_name": "colab_bundle_archive_manifest.json",
+        "archive_manifest_stage": "pre_archive_sidecar",
         "workspace_root": str(workspace),
         "drive_output_root": output_layout["drive_output_root"],
         "archives_root": str(final_archive_path.parent),
@@ -2082,6 +2084,7 @@ def create_colab_bundle_archive(
         "archive_path": str(created_archive),
         "archive_manifest_path": str(archive_manifest_path),
         "archive_name": created_archive.name,
+        "archive_manifest_stage": "post_archive_sidecar",
         "archive_size_bytes": created_archive.stat().st_size,
         "archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
         "bundle_file_count": bundle_manifest["file_count"],
@@ -3628,6 +3631,14 @@ def run_colab_cold_start_pipeline(
         encoding="utf-8",
     )
     final_bundle_manifest = export_colab_run_bundle(workspace)
+    archive_preview_path = Path(build_colab_output_layout(workspace)["archives_root"]) / "ceg_colab_run_bundle.zip"
+    summary["colab_bundle_archive_path"] = str(archive_preview_path)
+    summary["colab_bundle_archive_manifest_path"] = str(archive_preview_path.parent / "colab_bundle_archive_manifest.json")
+    summary["colab_bundle_archive_name"] = archive_preview_path.name
+    (workspace / "colab_cold_start_summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     archive_manifest = create_colab_bundle_archive(
         workspace,
         allow_dry_run=use_dry_run_inputs,

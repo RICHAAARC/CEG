@@ -537,6 +537,7 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     archive_manifest = summary["colab_bundle_archive_manifest"]
     assert archive_manifest["artifact_name"] == "colab_bundle_archive_manifest.json"
     assert archive_manifest["archive_name"] == "ceg_colab_run_bundle.zip"
+    assert archive_manifest["archive_manifest_stage"] == "post_archive_sidecar"
     assert archive_manifest["archive_size_bytes"] > 0
     assert len(archive_manifest["archive_sha256"]) == 64
     assert summary["colab_bundle_archive_path"].endswith("ceg_colab_run_bundle.zip")
@@ -547,9 +548,18 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert "--allow-missing-experiment-coverage" in offline_command_text
     assert (tmp_path / "colab_workspace" / "archives" / "ceg_colab_run_bundle.zip").exists()
     with zipfile.ZipFile(tmp_path / "colab_workspace" / "archives" / "ceg_colab_run_bundle.zip") as archive:
+        zipped_names = set(archive.namelist())
         zipped_runbook_body = archive.read("colab_formal_runbook.md").decode("utf-8")
+        zipped_summary = json.loads(archive.read("colab_cold_start_summary.json").decode("utf-8"))
+        embedded_archive_manifest = json.loads(archive.read("archives/colab_bundle_archive_manifest.json").decode("utf-8"))
     assert "offline_acceptance" in zipped_runbook_body
     assert "path/to/ceg_colab_run_bundle.zip" in zipped_runbook_body
+    assert "archives/colab_bundle_archive_manifest.json" in zipped_names
+    assert zipped_summary["colab_bundle_archive_path"].endswith("ceg_colab_run_bundle.zip")
+    assert zipped_summary["colab_bundle_archive_manifest_path"].endswith("colab_bundle_archive_manifest.json")
+    assert zipped_summary["colab_bundle_archive_name"] == "ceg_colab_run_bundle.zip"
+    assert embedded_archive_manifest["archive_manifest_stage"] == "pre_archive_sidecar"
+    assert embedded_archive_manifest["offline_acceptance_command"][embedded_archive_manifest["offline_acceptance_command"].index("--bundle") + 1] == "path/to/ceg_colab_run_bundle.zip"
     assert (tmp_path / "colab_workspace" / "archives" / "colab_bundle_archive_manifest.json").exists()
     assert archive_manifest["archive_manifest_path"].endswith("archives" + __import__("os").sep + "colab_bundle_archive_manifest.json")
     assert archive_manifest["archives_root"].endswith("archives")

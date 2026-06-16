@@ -415,10 +415,12 @@ Notebook 与 repository module 的跨边界数据
 | colab_bundle_archive_manifest | artifact | none | false | true | false | Colab 下载 zip 的 sidecar manifest, 记录 archive 路径、大小、SHA-256 和离线验收命令。|
 | colab_bundle_archive_manifest_path | artifact | none | false | true | false | Colab cold start summary 中记录的 archive manifest 路径。|
 | colab_bundle_archive_path | artifact | none | false | true | false | Colab cold start summary 中记录的可下载 zip 路径。|
+| colab_bundle_archive_name | artifact | none | false | true | false | Colab cold start summary 中记录的可下载 zip 文件名, 用于让 zip 内 summary 在 archive_sha256 写出前也能声明预期下载件。|
 | colab_bundle_archive_sha256 | artifact | none | false | true | false | Colab 可下载 zip 的 SHA-256 摘要。|
 | colab_bundle_offline_acceptance_command | protocol | none | false | true | false | 下载 zip 后可在本地或 CI 复跑的统一验收命令。|
 | colab_acceptance_command | protocol | none | false | false | false | archive manifest 中记录的 Colab 会话内绝对路径验收命令。|
 | archive_manifest_path | artifact | none | false | false | false | archive manifest 中记录的 sidecar manifest 自身路径。 |
+| archive_manifest_stage | artifact | none | false | true | false | archive manifest 的阶段标识, pre_archive_sidecar 表示嵌入 zip 的预归档说明, post_archive_sidecar 表示 Drive 外层带 archive_sha256 的最终 sidecar。 |
 | output_layout_manifest_path | artifact | none | false | false | false | archive manifest 中记录的 Colab 输出布局 manifest 路径。 |
 | paper_result_index_path | artifact | none | false | false | false | archive manifest 中记录的 Colab 论文结果索引路径。 |
 | archive_size_bytes | metric | none | false | false | false | Colab 可下载 zip 的字节大小。|
