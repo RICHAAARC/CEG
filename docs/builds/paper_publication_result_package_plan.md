@@ -516,7 +516,7 @@ paper_workflow/notebook_utils/
 ```text
 Colab dry-run / mock backend 可全链路通过
 Colab pilot 可用真实小样本生成图像和结果包
-正式运行可输出 paper_results_package.zip 和 colab_run_bundle.zip
+正式运行可输出 paper_results_package.zip 和 colab_run_bundle.zip, 且 paper_results_package 可按 package_snapshots / package_archives / package_manifests 分类归档到 MyDrive
 ```
 
 ---
@@ -545,7 +545,7 @@ image manifest 完整
 CEG records 完整
 至少一个外部 baseline 能进入对比表
 fixed-FPR 表可生成
-paper_results_package 可导出
+paper_results_package 可导出, 并可通过 scripts/archive_paper_results_to_drive.py 归档到 MyDrive 分类目录
 示例图可进入 image_examples
 ```
 

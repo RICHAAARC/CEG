@@ -424,6 +424,14 @@ Notebook 与 repository module 的跨边界数据
 | colab_bundle_archive_sha256 | artifact | none | false | true | false | Colab 可下载 zip 的 SHA-256 摘要。|
 | colab_bundle_offline_acceptance_command | protocol | none | false | true | false | 下载 zip 后可在本地或 CI 复跑的统一验收命令。|
 | colab_acceptance_command | protocol | none | false | false | false | archive manifest 中记录的 Colab 会话内绝对路径验收命令。|
+| drive_root | artifact | none | false | false | false | paper_results_package 归档到 MyDrive 风格目录时使用的根目录。|
+| snapshot_root | artifact | none | false | false | false | paper_results_package 归档后的可浏览目录快照路径。|
+| archive_path | artifact | none | false | false | false | paper_results_package 归档 zip 文件路径。|
+| archive_sha256 | artifact | none | false | true | false | paper_results_package 归档 zip 的 SHA-256 摘要。|
+| archive_digest | artifact | none | false | true | false | paper_results_package 归档 manifest 的稳定摘要。|
+| package_validation_decision | artifact | none | false | true | false | paper_results_package 归档前 validation 的总体结论。|
+| archived_file_count | metric | none | false | true | false | paper_results_package zip 中包含的文件数量。|
+| archived_files | artifact | none | false | false | false | paper_results_package zip 中包含的相对文件路径集合。|
 | archive_manifest_path | artifact | none | false | false | false | archive manifest 中记录的 sidecar manifest 自身路径。 |
 | archive_manifest_stage | artifact | none | false | true | false | archive manifest 的阶段标识, pre_archive_sidecar 表示嵌入 zip 的预归档说明, post_archive_sidecar 表示 Drive 外层带 archive_sha256 的最终 sidecar。 |
 | embedded_colab_archive_sidecar_parseable | artifact | none | false | true | false | Colab bundle 校验中检查内嵌 archive sidecar 可解析、阶段为 pre_archive_sidecar 且离线验收命令指向 path/to/ceg_colab_run_bundle.zip 的门禁项。 |

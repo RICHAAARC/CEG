@@ -705,7 +705,7 @@ image manifests 完整。
 CEG records 完整。
 至少一个 external baseline 进入 comparison table。
 fixed-FPR 表可生成。
-paper_results_package 可导出。
+paper_results_package 可导出, 并可通过 scripts/archive_paper_results_to_drive.py 归档到 MyDrive 分类目录。
 示例图可进入 image_examples。
 ```
 
@@ -831,5 +831,5 @@ FID: 取决于样本量, GPU 更快, CPU 可小规模验证。
 5. fixed-FPR 阈值必须由 calibration clean negative 决定。
 6. external baseline 必须进入统一 records 或 baseline observations。
 7. 示例图必须有 manifest 和 provenance。
-8. 结果包必须可以落盘到 D:\content\drive\MyDrive\CEG 下按类型归档。
+8. 结果包必须可以通过 scripts/archive_paper_results_to_drive.py 落盘到 D:\content\drive\MyDrive\CEG 或 /content/drive/MyDrive/CEG 下, 并按 package_snapshots、package_archives、package_manifests 分类归档。
 ```
