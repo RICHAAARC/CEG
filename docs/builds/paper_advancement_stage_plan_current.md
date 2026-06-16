@@ -80,14 +80,15 @@ paper_claim_audit.json
 
 ```text
 python scripts/scaffold_pilot_run_workspace.py --checklist <pilot_readiness_checklist.json> --out <MyDrive>/pilot_runs/<run_id> --run-id <run_id>
+python scripts/scaffold_pilot_input_plan_templates.py --workspace <MyDrive>/pilot_runs/<run_id> --run-id <run_id>
 ```
 
-该命令只创建目录、`pilot_input_manifest.draft.json`、`pilot_run_workspace_manifest.json` 和 README, 不生成任何正式实验结果。其主要价值是把真实 SD / watermark / attack / detector / external baseline / advanced metric 输出放到统一位置, 便于后续运行 preflight、gap audit 和 paper package builder。
+第一条命令只创建目录、`pilot_input_manifest.draft.json`、`pilot_run_workspace_manifest.json` 和 README。第二条命令写出 prompt、split、seed、model 和 watermark 配置草稿。两者都不生成任何正式实验结果。其主要价值是把真实 SD / watermark / attack / detector / external baseline / advanced metric 输出放到统一位置, 便于后续运行 preflight、gap audit 和 paper package builder。
 
 推荐填充顺序如下:
 
 ```text
-1. inputs/prompts/ 写入 prompt、split 和 seed 配置。
+1. inputs/prompts/ 先生成 prompt_plan.draft.json、split_plan.draft.json 和 seed_plan.draft.json, 再替换其中的 *_placeholder 字段。
 2. inputs/images/clean/ 写入真实 clean 图像。
 3. inputs/images/watermarked/ 写入真实 watermarked 图像。
 4. inputs/image_pairs.json 绑定 prompt、seed、clean 图像和 watermarked 图像。
@@ -96,7 +97,7 @@ python scripts/scaffold_pilot_run_workspace.py --checklist <pilot_readiness_chec
 7. external_baselines/ 写入 baseline_observations.json 和 baseline_execution_manifest.json。
 8. external_metrics/ 写入 metric_rows.json 和 metric_execution_manifest.json。
 9. plans/ 写入 paper_experiment_matrix.json。
-10. configs/ 写入 paper_output_requirements.json。
+10. configs/ 写入 paper_output_requirements.json, 并替换 model_config.draft.json 与 watermark_config.draft.json 中的 *_placeholder 字段。
 ```
 
 如果工作区仍只有草稿 manifest 或空目录, 只能说明真实 pilot 输入位置已经准备好, 不能说明论文实验已经完成。
