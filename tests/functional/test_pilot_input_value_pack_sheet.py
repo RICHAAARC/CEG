@@ -86,6 +86,37 @@ def test_import_value_pack_fill_sheet_blocks_empty_values(tmp_path) -> None:
 
 
 @pytest.mark.quick
+def test_import_value_pack_fill_sheet_blocks_invalid_types_without_rewrite(tmp_path) -> None:
+    """CSV 值可解析但类型错误时, 导入器不应回写 value pack。"""
+    value_pack_path, _ = _prepare_value_pack(tmp_path)
+    fill_sheet = tmp_path / "pilot_input_value_pack_fill_sheet.csv"
+    report_path = tmp_path / "import_report.json"
+    export_pilot_input_value_pack_fill_sheet(value_pack_path=value_pack_path, output_csv_path=fill_sheet)
+    rows = _read_csv_rows(fill_sheet)
+    fieldnames = list(rows[0].keys())
+    for row in rows:
+        row["value_json"] = json.dumps(REAL_VALUES[row["task_id"]], ensure_ascii=False)
+        if row["replacement_key"] == "requires_huggingface_token":
+            row["value_json"] = json.dumps("false")
+    _write_csv_rows(fill_sheet, rows, fieldnames)
+
+    report = import_and_write_pilot_input_value_pack_fill_sheet(
+        value_pack_path=value_pack_path,
+        input_csv_path=fill_sheet,
+        output_value_pack_path=None,
+        report_path=report_path,
+    )
+
+    assert report["overall_decision"] == "fail"
+    assert report["summary"]["blocking_item_count"] == 1
+    assert report["summary"]["updated_entry_count"] == 0
+    assert report["updated_entries"] == []
+    assert report["blocking_items"][0]["validation_errors"] == ["must_be_boolean"]
+    payload = json.loads(value_pack_path.read_text(encoding="utf-8"))
+    assert all("value" not in entry for entry in payload["value_entries"])
+
+
+@pytest.mark.quick
 def test_import_filled_value_pack_sheet_can_pass_status_validation(tmp_path) -> None:
     """CSV 填写真实 JSON 值后, 导入结果应通过 value pack 状态校验。"""
     value_pack_path, _ = _prepare_value_pack(tmp_path)

@@ -12,12 +12,13 @@
 from __future__ import annotations
 
 import csv
+import copy
 import json
 from pathlib import Path
 from typing import Any
 
 from experiments.pilot_input_value_pack import VALUE_PACK_NAME
-from experiments.pilot_input_value_pack_status import TYPE_HINT_BY_REPLACEMENT_KEY
+from experiments.pilot_input_value_pack_status import TYPE_HINT_BY_REPLACEMENT_KEY, _entry_row
 
 
 FILL_SHEET_NAME = "pilot_input_value_pack_fill_sheet.csv"
@@ -114,20 +115,38 @@ def _parse_value_json(raw: str) -> tuple[Any | None, str | None]:
         return None, f"json_decode_error: {exc}"
 
 
+def _status_blocking_item_from_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
+    """对模拟回写后的 value entry 执行状态校验, 返回阻断项。"""
+    row = _entry_row(entry)
+    if row["status"] == "filled":
+        return None
+    return {
+        "task_id": row["task_id"],
+        "replacement_key": row["replacement_key"],
+        "reason": row["status"],
+        "validation_errors": row.get("validation_errors", []),
+    }
+
+
 def import_pilot_input_value_pack_fill_sheet(
     *,
     value_pack_path: str | Path,
     input_csv_path: str | Path,
     output_value_pack_path: str | Path | None = None,
 ) -> dict[str, Any]:
-    """把 CSV 填写表中的 value_json 回写到 value pack。"""
+    """把 CSV 填写表中的 value_json 安全回写到 value pack。
+
+    导入器会先在内存中模拟回写, 再复用 value pack status 的类型和取值校验。
+    只有全部条目都解析成功且校验通过时, 才会写入目标 value pack。
+    """
     value_pack = _read_json(value_pack_path)
+    candidate_value_pack = copy.deepcopy(value_pack)
     rows = _read_sheet_rows(input_csv_path)
     row_by_task_id = {row.get("task_id", ""): row for row in rows}
-    updated_entries = []
+    candidate_updated_entries = []
     blocking_items = []
 
-    for entry in value_pack.get("value_entries", []):
+    for entry in candidate_value_pack.get("value_entries", []):
         task_id = str(entry.get("task_id", ""))
         row = row_by_task_id.get(task_id)
         if row is None:
@@ -138,12 +157,16 @@ def import_pilot_input_value_pack_fill_sheet(
             blocking_items.append({"task_id": task_id, "reason": error})
             continue
         entry["value"] = value
-        updated_entries.append({"task_id": task_id, "replacement_key": entry.get("replacement_key")})
+        if status_blocking := _status_blocking_item_from_entry(entry):
+            blocking_items.append(status_blocking)
+            continue
+        candidate_updated_entries.append({"task_id": task_id, "replacement_key": entry.get("replacement_key")})
 
     decision = "pass" if not blocking_items else "fail"
     target_path = Path(output_value_pack_path) if output_value_pack_path is not None else Path(value_pack_path)
+    updated_entries = candidate_updated_entries if decision == "pass" else []
     if decision == "pass":
-        _write_json(target_path, value_pack)
+        _write_json(target_path, candidate_value_pack)
     return {
         "artifact_name": IMPORT_REPORT_NAME,
         "value_pack_path": str(value_pack_path),
