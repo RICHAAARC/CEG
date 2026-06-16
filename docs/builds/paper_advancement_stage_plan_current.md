@@ -232,6 +232,21 @@ python scripts/build_pilot_input_replacement_checklist.py --preflight-report D:\
 
 该清单把每个 `_placeholder` 字段映射为应写入的正式字段名和内容要求, 例如 `prompt_text_placeholder -> prompt_text`、`model_id_placeholder -> model_id`、`watermark_method_placeholder -> watermark_method`。
 
+为减少同时编辑多个计划文件的风险, 应先生成集中填写的值包草稿:
+
+```text
+python scripts/scaffold_pilot_input_value_pack.py --replacement-checklist D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_plan_replacement_checklist.json --out D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_value_pack.draft.json
+```
+
+填写值包中每一项的 `value` 字段后, 再应用到工作区计划文件:
+
+```text
+python scripts/apply_pilot_input_value_pack.py --workspace D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --value-pack D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_value_pack.draft.json --require-pass
+python scripts/validate_pilot_input_plan_templates.py --workspace D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --require-pass
+```
+
+值包草稿仍含 `value_placeholder` 时, 应用报告必须为 `fail`, 这表示当前仍处于真实输入准备阶段。
+
 ```text
 pilot_input_plan_preflight_report.json
 pilot_input_gap_report.json
