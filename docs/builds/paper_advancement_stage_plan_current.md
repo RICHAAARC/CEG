@@ -198,6 +198,26 @@ attacked images
 
 完成门禁：每个 attacked image 必须记录 `attack_family`、`attack_condition`、`attack_params` 和源 watermarked 图像。
 
+
+### 阶段 P3.5：attack 输出接收门禁
+
+目标：在 attack workflow 或外部 attack backend 写出文件后，确认 attacked 图像、attack manifest 和 attacked image pairs 是否真正可被 CEG detector 与 fixed-FPR 统计消费。
+
+推荐命令：
+
+```text
+python scripts/validate_pilot_attack_outputs.py --output-root {workspace}\image_attacks --out {workspace}\pilot_attack_output_acceptance_report.json --require-pass
+```
+
+该门禁只检查 attack 输出契约和路径可达性，不运行 attack 算法，不运行 CEG detector，也不把 dry-run attack 声明为正式论文结果。
+
+完成门禁：
+
+```text
+pilot_attack_output_acceptance_report.json: overall_decision = pass
+pilot_attack_output_acceptance_report.json: recommended_next_stage = ceg_detection_pilot
+```
+
 ### 阶段 P4：运行 CEG detector 与内部消融
 
 目标：对 clean、watermarked 和 attacked 图像生成统一 detection events。
@@ -309,7 +329,8 @@ S7. 运行 `build_pilot_image_generation_launch_plan.py --require-pass`。
 S8. 只有在 S7 通过后，才执行真实图像生成 backend。
 S9. 真实图像生成 backend 完成后，运行 `validate_pilot_image_generation_outputs.py --require-pass` 接收门禁。
 S10. 图像生成输出接收门禁通过后，再进入 attack pilot。
-S11. attack、detection、baseline、quality metric 和 fixed-FPR 统计依次执行。
+S11. attack workflow 完成后，运行 `validate_pilot_attack_outputs.py --require-pass` 接收门禁。
+S12. attack 输出接收门禁通过后，再运行 detection、baseline、quality metric 和 fixed-FPR 统计。
 ```
 
 ## 7. MyDrive 落盘规则

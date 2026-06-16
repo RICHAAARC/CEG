@@ -43,7 +43,8 @@ real_pilot_input_preparation
 6. 运行 build_pilot_image_generation_launch_plan.py --require-pass。
 7. 只有 launch plan 通过后，才执行真实图像生成 backend。
 8. 图像生成完成后先运行 `validate_pilot_image_generation_outputs.py --require-pass`。
-9. 图像生成输出接收门禁通过后，依次进入 attack、detection、external baseline、quality metric、fixed-FPR 统计和论文结果包构建。
+9. 图像生成输出接收门禁通过后，进入 attack pilot。
+10. attack 输出接收门禁通过后，再进入 detection、external baseline、quality metric、fixed-FPR 统计和论文结果包构建。
 ```
 
 ### 0.3.4 论文结果包推进顺序
@@ -54,6 +55,7 @@ P1: 生成真实图像生成启动计划。
 P2: 运行真实图像生成与水印生成。
 P2.5: 校验图像生成输出接收门禁。
 P3: 执行 attack pilot。
+P3.5: 校验 attack 输出接收门禁。
 P4: 运行 CEG detector 与内部消融。
 P5: 接入 external baseline。
 P6: 接入质量指标。
@@ -569,6 +571,50 @@ dry-run 契约链路已打通，正式真实图像 attack pilot 尚未完成。
 2. attack_family、attack_condition 和 attack_params 完整记录。
 3. detection 阶段能同时消费 clean、watermarked 和 attacked 图像。
 ```
+
+---
+
+
+## 阶段 E2: attack 输出接收门禁
+
+### 目标
+
+在 attack workflow 或外部 attack backend 完成后，检查 attacked image、attack manifest 和 attacked image pairs 是否满足 detection 与 fixed-FPR 统计的最小契约。
+
+### 输入
+
+```text
+image_attacks/
+  image_pairs_attacked.json
+  image_manifests/attacked_image_manifest.json
+  image_manifests/attack_shard_manifest.json
+  attacked_images/*
+```
+
+### 输出
+
+```text
+pilot_attack_output_acceptance_report.json
+```
+
+### 推荐命令
+
+```text
+python scripts/validate_pilot_attack_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/image_attacks --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_attack_output_acceptance_report.json --require-pass
+```
+
+### 完成门禁
+
+```text
+1. attack 必需输出文件全部存在。
+2. attacked_image_manifest.json 可读且包含 attacked_images 列表。
+3. 每条 attacked image 记录包含 attacked_image_path、watermarked_image_path、attack_family、attack_condition 和 attack_parameters 或 attack_params。
+4. 每条 attacked_image_path 指向真实存在的文件。
+5. image_pairs_attacked.json 可读且每条记录能定位 attacked 图像。
+6. attacked_image_count 与 manifest 中记录数一致。
+```
+
+该阶段属于接收门禁，不属于攻击算法运行阶段。它不改变图像内容，只决定是否可以进入 CEG detector pilot。
 
 ---
 
