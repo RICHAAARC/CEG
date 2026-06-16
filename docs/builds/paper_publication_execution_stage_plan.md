@@ -511,7 +511,31 @@ package_validation_decision = pass
 完整 Colab 或 GPU 运行 bundle
 ```
 
-## 23. 当前立即执行建议
+## 23. 阶段 J4: pilot 阶段进度汇总
+
+### 命令
+
+```text
+python scripts/build_pilot_stage_progress_summary.py --workspace {workspace}
+```
+
+### 输出
+
+```text
+pilot_stage_progress_summary.json
+pilot_stage_progress_summary.md
+```
+
+### 用途
+
+```text
+1. 汇总所有阶段门禁的 pass / fail / missing 状态。
+2. 指出首个阻断阶段。
+3. 给出下一步真实执行行动。
+4. 每完成一个阶段后重新生成, 作为论文推进看板。
+```
+
+## 24. 当前立即执行建议
 
 当前立即执行优先级如下:
 
@@ -523,4 +547,4 @@ package_validation_decision = pass
 6. 再进入 fixed-FPR / TPR@FPR 统计。
 7. 最后构建 paper_results_package 并归档到 MyDrive。
 
-其中, 工程侧已补齐 `quality metric 输出接收门禁`、`fixed-FPR 统计输出接收门禁`、`paper_results_package 输出接收门禁` 和 `MyDrive 归档输出接收门禁`。后续真实执行侧必须先补齐真实 pilot 输入, 再依次产出 image、attack、detection、baseline、metric、fixed-FPR、paper_results_package 和 MyDrive archive；只有这些门禁通过后, 才能把结果包作为论文撰写依据。
+其中, 工程侧已补齐从 quality metric 到 MyDrive archive 的接收门禁, 并新增 pilot 阶段进度汇总。后续真实执行侧必须先根据 `pilot_stage_progress_summary.md` 的首个阻断点补齐真实 pilot 输入, 再依次产出 image、attack、detection、baseline、metric、fixed-FPR、paper_results_package 和 MyDrive archive；只有这些门禁通过后, 才能把结果包作为论文撰写依据。

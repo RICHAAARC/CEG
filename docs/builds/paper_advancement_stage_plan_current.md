@@ -53,6 +53,7 @@ D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_0345
 | 11 | fixed-FPR 统计输出接收 | `pilot_fixed_fpr_output_acceptance_report.json` | fail | fixed-FPR / TPR@FPR 论文主表尚未由真实 records 重建。 |
 | 12 | paper results package 输出接收 | `pilot_paper_results_package_acceptance_report.json` | fail | paper_results_package 尚未导出并通过独立接收门禁。 |
 | 13 | MyDrive 归档输出接收 | `pilot_mydrive_archive_acceptance_report.json` | fail | package_snapshots、package_archives 和 package_manifests 尚未形成可复核归档。 |
+| 14 | pilot 阶段进度汇总 | `pilot_stage_progress_summary.json`, `.md` | fail | 汇总所有门禁状态, 指向首个真实执行阻断点。 |
 
 ## 6. 不能声明的内容
 
@@ -414,6 +415,25 @@ pilot_mydrive_archive_acceptance_report.json: recommended_next_stage = paper_wri
 
 该门禁当前已经具备实现、CLI 和测试。当前 MyDrive 归档根目录尚未包含真实 paper_results_package 归档, 因此报告应正确阻断。
 
+### P9: pilot 阶段进度汇总
+
+目标: 把真实 pilot 工作区内所有阶段门禁报告汇总为 JSON 和 Markdown, 直接指出首个阻断阶段和下一步行动。
+
+推荐命令:
+
+```text
+python scripts/build_pilot_stage_progress_summary.py --workspace {workspace}
+```
+
+输出:
+
+```text
+{workspace}/pilot_stage_progress_summary.json
+{workspace}/pilot_stage_progress_summary.md
+```
+
+该汇总不替代任何门禁, 只负责把当前真实执行状态变成可读的推进看板。
+
 ## 8. 当前最短执行顺序
 
 ```text
@@ -440,6 +460,7 @@ S20. fixed-FPR 统计接收门禁通过后, 构建 paper_results_package。
 S21. 运行 validate_pilot_paper_results_package.py --require-pass；正式论文结果包还应启用 --require-evidence 和 --require-image-examples。
 S22. paper_results_package 接收门禁通过后, 归档到 MyDrive。
 S23. 运行 validate_pilot_mydrive_archive.py --require-pass, 确认 package_snapshots、package_archives 和 package_manifests 一致。
+S24. 每完成一个阶段后运行 build_pilot_stage_progress_summary.py, 更新当前阻断点和下一步行动。
 ```
 
 ## 9. 与 CEG-WM 的核心机制对齐要求
@@ -456,4 +477,4 @@ S23. 运行 validate_pilot_mydrive_archive.py --require-pass, 确认 package_sna
 
 ## 10. 当前下一步建议
 
-当前已补齐 `quality metric 输出接收门禁`、`fixed-FPR 统计输出接收门禁`、`paper_results_package 输出接收门禁` 和 `MyDrive 归档输出接收门禁` 的工程接收口径。下一步应填充真实 pilot 输入并依次产出真实 image、attack、detection、baseline、metric 和 fixed-FPR 表格；随后导出并验收 paper_results_package, 再归档到 MyDrive 并运行 `validate_pilot_mydrive_archive.py --require-pass`。
+当前已补齐从 quality metric 到 MyDrive 归档的工程接收口径, 并新增 pilot 阶段进度汇总。下一步应根据 `pilot_stage_progress_summary.md` 指出的首个阻断点, 填充真实 pilot 输入并依次产出真实 image、attack、detection、baseline、metric 和 fixed-FPR 表格；随后导出并验收 paper_results_package, 再归档到 MyDrive。
