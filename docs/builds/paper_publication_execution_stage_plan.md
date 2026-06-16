@@ -1,547 +1,133 @@
-# CEG 论文发表推进阶段计划执行稿
+# CEG 论文发表执行阶段计划
 
-## 0. 文档定位
+## 1. 文档目的
 
-本文档落盘于 `D:/Code/CEG/docs/builds`，用于把当前阶段计划整理为后续工程执行、实验排期和论文结果包验收的统一依据。整理日期为 2026-06-17。
+本文档是面向执行的阶段计划, 与 `paper_advancement_stage_plan_current.md` 配套使用。前者回答“当前处于什么阶段以及下一步是什么”, 本文档回答“每个阶段应输入什么, 输出什么, 用什么门禁判断能否继续”。
 
-本文档只定义推进顺序、门禁和产物契约，不声明当前项目已经完成正式论文实验。当前 `CEG` 已具备较多 dry-run、manifest、结果包和审计能力，但仍需要真实 SD / watermark / attack / detection / external baseline / advanced quality metric 结果，才能形成论文可用结果包。
+整理日期: `2026-06-17`
 
+## 2. 执行原则
 
----
+1. Notebook 只作为调度入口, 不手写正式 records, tables, figures 或 reports。
+2. 正式论文表格和图必须由 records 与 manifests 重建。
+3. 真实运行产物保存到 MyDrive, 不写入 Git 仓库的 `outputs/` 作为正式结果。
+4. dry-run 只验证契约和链路, 不支持论文性能 claim。
+5. attack 是必须流程, 但属于独立阶段, 不能并入图像生成阶段。
+6. external baseline 和高级 metric 若用于正式论文 claim, 必须有 evidence report。
 
-
-## 0.3 2026-06-17 阶段计划整理更新
-
-### 0.3.1 当前阶段判定
-
-当前阶段统一定义为：
-
-```text
-real_pilot_input_preparation
-```
-
-该阶段表示真实 pilot 工作区已经创建，但真实输入值包尚未填写完毕，不能启动真实 SD / watermark 图像生成，也不能进入 attack、detection、baseline 或论文表格统计。
-
-### 0.3.2 当前阻断门禁
-
-| 门禁产物 | 当前结论 | 处理动作 |
-|---|---:|---|
-| `pilot_input_plan_preflight_report.json` | `fail` | 替换所有 prompt / split / seed / model / watermark 占位字段后重跑。 |
-| `pilot_input_plan_replacement_checklist.json` | `fail` | 按 19 个替换任务填写真实值。 |
-| `pilot_input_value_pack_application_report.json` | `fail` | 在值包中补齐真实 `value` 后重新应用。 |
-| `pilot_execution_readiness_report.json` | `fail` | 等 preflight 与值包应用同时通过后重跑。 |
-| `pilot_image_generation_launch_plan_report.json` | `fail` | 等 execution readiness 通过并补齐 launch variables 后重建。 |
-
-### 0.3.3 下一步最短路径
-
-```text
-1. 填写 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500\pilot_input_value_pack.draft.json。
-2. 运行 apply_pilot_input_value_pack.py --require-pass。
-3. 运行 validate_pilot_input_plan_templates.py --require-pass。
-4. 运行 build_pilot_execution_readiness_report.py --require-pass。
-5. 填写 pilot_image_generation_launch_variables.draft.json。
-6. 运行 build_pilot_image_generation_launch_plan.py --require-pass。
-7. 只有 launch plan 通过后，才执行真实图像生成 backend。
-8. 图像生成完成后先运行 `validate_pilot_image_generation_outputs.py --require-pass`。
-9. 图像生成输出接收门禁通过后，进入 attack pilot。
-10. attack 输出接收门禁通过后，进入 detection。
-11. detection 输出接收门禁通过后，进入 external baseline。
-12. external baseline 输出接收门禁通过后，再进入 quality metric、fixed-FPR 统计和论文结果包构建。
-```
-
-### 0.3.4 论文结果包推进顺序
-
-```text
-P0: 补齐真实 pilot 输入。
-P1: 生成真实图像生成启动计划。
-P2: 运行真实图像生成与水印生成。
-P2.5: 校验图像生成输出接收门禁。
-P3: 执行 attack pilot。
-P3.5: 校验 attack 输出接收门禁。
-P4: 运行 CEG detector 与内部消融。
-P4.5: 校验 detection 输出接收门禁。
-P5: 接入 external baseline。
-P5.5: 校验 external baseline 输出接收门禁。
-P6: 接入质量指标。
-P7: 统计 fixed-FPR / TPR@FPR。
-P8: 构建 paper_results_package 并归档到 MyDrive。
-```
-
-### 0.3.5 关键边界
-
-`attack` 是论文流程必须项，但不属于图像生成阶段。图像生成只负责 clean / watermarked 图像；attack 负责从 watermarked 图像派生 attacked 图像；detection 同时消费 clean、watermarked 和 attacked 图像；statistics 基于 detection events 计算 fixed-FPR 和 TPR@FPR。
-
-### 0.3.6 MyDrive 落盘要求
-
-所有运行结果继续按类型保存到：
-
-```text
-D:/content/drive/MyDrive/CEG
-/content/drive/MyDrive/CEG
-```
-
-其中 `pilot_runs/` 保存真实 pilot 工作区，`audit_reports/` 保存审计报告，`change_reports/` 保存工程变更说明，`package_snapshots/`、`package_archives/` 和 `package_manifests/` 保存最终论文结果包。
-
-## 0.1 2026-06-17 当前向论文推进计划快照
-
-### 0.1.1 当前工程判断
-
-当前 `CEG` 不应直接进入正式论文实验阶段。更合理的推进状态是:
-
-```text
-pilot_input_and_external_evidence_gate_completion
-```
-
-该阶段的含义是: 在真实 SD / watermark / attack / CEG detector / external baseline / advanced quality metric 大规模运行前, 先把所有输入、执行证据、统计口径、结果包归档和审计门禁冻结为可复核流程。该判断属于项目特定治理安排, 不是所有论文项目都必须采用的通用工程阶段名。
-
-### 0.1.2 下一阶段主线
-
-下一阶段主线应按以下顺序推进:
-
-```text
-1. rehearsal package 输入覆盖补齐
-2. pilot_input_gap_report 复核
-3. pilot_readiness_checklist 生成
-4. 小规模真实 pilot 输入准备
-5. 真实 CEG detector pilot
-6. 至少一个 external baseline pilot
-7. 真实或离线正式 advanced quality metric 导入
-8. fixed-FPR / TPR@FPR 小样本统计复核
-9. paper_results_package pilot 归档
-10. 正式实验配置冻结
-11. 正式论文实验运行
-```
-
-其中第1步和第2步仍属于工程门禁补齐, 不产生正式论文结论。第3步到第8步属于小规模 pilot, 只能用于验证流程和暴露缺口。第9步和第10步才进入可支撑论文主结果的正式实验路径。
-
-### 0.1.3 当前最短可执行路径
-
-为了最快向论文发表产物推进, 当前最短可执行路径是:
-
-```text
-D0: 补齐 rehearsal package 中的 detection_execution_manifest 和 experiment_matrix。
-D1: 重新生成 rehearsal package 与 pilot_input_gap_report。
-D2: 确认 missing_core_fields 不再包含 detection_execution_manifest / experiment_matrix。
-D3: 明确剩余 gap 是否只来自 dry-run marker、formal claim gap 或真实 backend 未运行。
-D4: 运行 scripts/build_pilot_readiness_checklist.py, 生成真实 pilot 启动清单。
-D5: 准备小规模真实 prompt / split / seed / attack / detector 配置。
-D6: 运行真实或半真实 pilot, 生成 clean / watermarked / attacked 图像和 detection events。
-D7: 接入至少一个 external baseline observation 或 backend 输出。
-D8: 接入 LPIPS / FID / CLIP score 中至少一种正式 metric rows。
-D9: 用 pilot_input_manifest 构建 paper_results_package。
-D10: 将结果包、归档包、审计报告保存到 MyDrive 分类目录。
-D11: 根据 pilot 报告冻结正式实验配置。
-```
-
-### 0.1.4 MyDrive 落盘规则
-
-所有可供复核的运行结果应同步保存到:
-
-```text
-D:/content/drive/MyDrive/CEG
-```
-
-在 Colab 环境中对应路径为:
-
-```text
-/content/drive/MyDrive/CEG
-```
-
-推荐分类目录如下:
-
-```text
-pilot_rehearsals/        保存 rehearsal package 快照
-pilot_runs/              保存真实或半真实 pilot 结果
-package_snapshots/       保存展开后的 paper_results_package
-package_archives/        保存 zip 归档包
-package_manifests/       保存归档索引 manifest
-change_reports/          保存工程变更说明
-schedule_reports/        保存阶段计划与排期快照
-audit_reports/           保存 pytest、harness、readiness、claim、gap 等审计报告
-external_evidence/       保存 external baseline 和 advanced metric 证据报告
-formal_runs/             保存正式论文实验输出
-```
-
-该目录划分的主要考虑在于: 将工程变更、流程 rehearsal、小规模 pilot、正式实验和审计证据分开保存, 避免后续论文撰写时混淆 dry-run 结果与正式实验结果。
-
-### 0.1.5 阶段门禁判定
-
-当前阶段是否可以进入下一阶段, 应依据以下文件判断:
-
-```text
-pilot_input_gap_report.json:
-  判断 pilot 输入是否仍缺少核心字段, 以及是否仍包含 dry-run marker。
-
-pilot_readiness_checklist.json:
-  把 gap 报告转换为真实 pilot 启动前的补齐任务清单。
-
-external_result_evidence_report.json:
-  判断 external baseline 或 advanced metric 是否有足够证据支撑正式声明。
-
-paper_result_evidence_report.json:
-  判断结果包中的表格、图、示例图和报告是否具备可追溯证据。
-
-paper_readiness_report.json:
-  判断 paper_results_package 是否满足 required artifacts。
-
-paper_claim_audit.json:
-  判断论文声明是否只依赖 governed records 和 manifests。
-```
-
-如果 `pilot_input_gap_report.json` 仍为 `rehearsal_or_partial_pilot_only`, 则只能继续作为 rehearsal 或 partial pilot 推进, 不能宣称已经达到 formal pilot 或 paper-ready 状态。
-
-
----
-
-## 0.2 2026-06-17 最新阶段整理
-
-### 0.2.1 当前阶段
-
-当前阶段更新为:
-
-```text
-real_pilot_input_preparation
-```
-
-该阶段表示 `CEG` 已完成 rehearsal 核心字段补齐、pilot readiness checklist 生成、真实 pilot 输入工作区脚手架和输入计划模板生成。下一步不应直接运行正式实验, 而应先检查真实 pilot 输入计划是否仍含 `_placeholder` 字段, 再替换为真实 prompt、split、seed、model 和 watermark 配置。
-
-### 0.2.2 已完成的阶段性产物
-
-```text
-1. rehearsal package 已补齐 detection_execution_manifest 和 experiment_matrix。
-2. pilot_input_gap_report 的 missing_core_fields 已为空。
-3. pilot_readiness_checklist 已生成, 结论为 not_ready_for_formal_pilot。
-4. real_pilot_input_workspace_20260617_034500 已创建。
-5. prompt_plan、split_plan、seed_plan、model_config、watermark_config 草稿模板已创建。
-```
-
-### 0.2.3 当前阻断项
-
-```text
-1. 输入计划模板仍是草稿, 不能直接启动真实 SD / watermark。
-2. 真实 clean / watermarked / attacked 图像尚未产生。
-3. 真实 CEG detection events 尚未产生。
-4. external baseline 尚未形成正式 observation 与 execution evidence。
-5. LPIPS / FID / CLIP score 等高级质量指标尚未形成正式 metric rows。
-6. paper_results_package 仍缺少可支撑正式论文声明的真实 records。
-```
-
-### 0.2.4 下一步执行命令建议
-
-在当前真实 pilot 输入工作区上, 后续应增加并运行输入计划 preflight。建议命令形态如下:
-
-```text
-python scripts/validate_pilot_input_plan_templates.py --workspace D:/content/drive/MyDrive/CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --out D:/content/drive/MyDrive/CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_plan_preflight_report.json
-```
-
-若报告仍为 fail, 应先替换所有 `_placeholder` 字段。只有 preflight 通过后, 才能启动真实 SD / watermark / attack / detection pilot。该门禁已由 `experiments/pilot_input_plan_preflight.py` 和 `scripts/validate_pilot_input_plan_templates.py` 承载; 使用 `--require-pass` 时, fail 报告会返回非 0 退出码, 适合作为真实运行前的硬门禁。 fail 报告应继续通过 `scripts/build_pilot_input_replacement_checklist.py` 转换为 JSON / Markdown 替换清单, 以便逐项填充真实 prompt、split、seed、model 和 watermark 参数。替换清单生成后, 可继续使用 `scripts/scaffold_pilot_input_value_pack.py` 生成集中填写的值包草稿, 并用 `scripts/apply_pilot_input_value_pack.py --require-pass` 将已填写值包应用回工作区计划文件。应用完成后, 应使用 `scripts/build_pilot_execution_readiness_report.py --require-pass` 聚合检查 preflight 与 value pack application, 只有聚合报告为 pass 才能进入真实图像生成 pilot。进入真实图像生成前, 应再用 `scripts/scaffold_pilot_image_generation_launch_variables.py` 和 `scripts/build_pilot_image_generation_launch_plan.py --require-pass` 物化受治理的外部命令计划, 然后才交给 `scripts/run_image_generation_plan.py` 执行。
-
----
-
-## 1. 总目标
-
-最终目标是形成一个可供论文撰写和发表使用的 `paper_results_package`。该结果包必须能够重建论文中的数据表格、统计图、示例水印图像、攻击后图像、质量指标、TPR@FPR 表、外部 baseline 对比表和审计报告。
-
-推荐完整流程如下:
+## 3. 总体流水线
 
 ```text
 prompt plan
--> clean image generation
--> watermarked image generation
--> attack execution
--> CEG detection
--> internal ablation detection
--> external baseline detection
--> quality metric evaluation
--> fixed-FPR threshold calibration
--> TPR@FPR / robustness / quality / ablation statistics
--> paper tables / figures / image examples / reports
--> paper_results_package
--> MyDrive archived result package
+  -> split / seed / model / watermark config
+  -> clean image / watermarked image
+  -> attacked image
+  -> CEG detection events
+  -> external baseline observations
+  -> quality metric rows
+  -> fixed-FPR / TPR@FPR statistics
+  -> paper tables / figures / example images
+  -> paper_results_package
 ```
 
----
-
-## 2. 当前阶段判断
-
-### 2.1 当前可认为已经具备的能力
-
-```text
-1. 论文结果包目录和 manifest 契约已经建立。
-2. dry-run 级 prompt 到图像 manifest 链路已经建立。
-3. dry-run 级 attack manifest 链路已经建立。
-4. CEG detection event producer 和外部 detector command plan 契约已经建立。
-5. external baseline observation 适配和 pilot producer 已建立。
-6. quality metric runner 的轻量 CPU 链路和离线导入入口已建立。
-7. fixed-FPR / TPR@FPR 统计模块已具备雏形。
-8. pilot_input_manifest、materializer、preflight 和 raw builder 已建立。
-9. MyDrive 分类归档能力已建立。
-10. external_result_evidence_report 可作为外部 baseline 和高级 metric 正式声明的前置证据门禁。
-```
-
-### 2.2 当前不能宣称已经具备的能力
-
-```text
-1. 不能宣称已经完成真实 SD 图像生成正式实验。
-2. 不能宣称已经完成真实 watermark backend 正式实验。
-3. 不能宣称已经完成正式 attack 全量实验。
-4. 不能宣称已经完成真实 CEG detector 全量分数。
-5. 不能宣称已经完成真实外部 baseline 全量运行。
-6. 不能宣称已经完成正式 LPIPS / FID / CLIP score 高级指标。
-7. 不能宣称当前 dry-run 数值可支撑论文结论。
-```
-
-### 2.3 当前阶段名称
-
-当前阶段应命名为:
-
-```text
-pilot_input_and_external_evidence_gate_completion
-```
-
-该阶段的核心目标是: 在启动真实 pilot 前，把所有输入产物、外部 baseline 证据、高级质量指标证据和结果包归档链路固化为可审计门禁。
-
----
-
-## 3. 必须坚持的论文产物原则
-
-```text
-1. 所有正式论文表格必须由 governed records 和 manifests 重建。
-2. 所有示例图必须有 image_example_manifest.json 追溯来源。
-3. 所有 attack 结果必须有 attack_family、attack_condition 和 attack_params。
-4. TPR@FPR 的阈值必须只由 calibration clean negative 选择。
-5. test clean negative 只能用于复核 FPR，不能参与阈值选择。
-6. external baseline 可以来自外部仓库、Colab 或离线文件，但进入 CEG 时必须适配为统一 records 或 baseline observations。
-7. external baseline 和高级 metric 若要支撑正式论文声明，必须通过 external_result_evidence_report 证据门禁。
-8. Notebook 只能调度流程，不能手写正式 records、tables、figures 或 reports。
-9. 本地 dry-run 只能证明工程链路，不证明论文性能。
-10. 结果包必须落盘归档到 `D:/content/drive/MyDrive/CEG` 或 `/content/drive/MyDrive/CEG` 的分类目录。
-```
-
----
-
-## 4. 分阶段推进计划
-
-## 阶段 A: 结果包契约冻结
+## 4. 阶段 A: 真实 pilot 输入冻结
 
 ### 目标
 
-冻结论文发表结果包应包含的目录、核心文件、可选文件、审计报告和分类归档规则。
-
-### 必需产物
-
-```text
-paper_results_package/
-  artifacts/
-  latex_tables/
-  rendered_figures/
-  pdf_figures/
-  image_manifests/
-  image_examples/
-  detection_results/
-  baseline_results/
-  metric_results/
-  paper_results_report.md
-  paper_readiness_report.json
-  paper_results_report_manifest.json
-  paper_results_package_manifest.json
-```
-
-### 当前状态
-
-```text
-基本完成，后续只随新增正式产物维护。
-```
-
-### 完成门禁
-
-```text
-1. paper_results_package_manifest.json 能索引所有应归档文件, 包括可选的 paper_result_evidence_report.json 与 external_result_evidence_report.json。
-2. paper_readiness_report.json 能报告缺失 required artifacts。
-3. MyDrive 归档能按 package_snapshots、package_archives、package_manifests 分类保存。
-```
-
----
-
-## 阶段 B: pilot 输入 manifest 门禁
-
-### 目标
-
-用 `pilot_input_manifest.json` 固化一次 pilot 或正式实验所需的全部输入，避免后续手工传递零散路径。
-
-### 推荐输入
-
-```text
-events
-thresholds
-baseline_observations
-baseline_execution_manifest
-metric_rows
-metric_execution_manifest
-detection_execution_manifest
-image_pairs
-attacked_image_manifest
-attack_shard_manifest
-experiment_matrix
-readiness_requirements
-detection_output_root
-```
-
-### 当前状态
-
-```text
-已建立 template、materializer、validator 和 raw builder 接口。
-```
-
-### 下一步
-
-```text
-1. 用真实或半真实 pilot 产物生成 pilot_input_manifest.json。
-2. 运行 scripts/validate_pilot_input_manifest.py。
-3. 若输入分散，先运行 scripts/materialize_pilot_input_manifest.py 生成 canonical 输入目录。
-4. 构建结果包时优先使用 --pilot-input-manifest，而不是手工传入大量路径。
-```
-
-### 完成门禁
-
-```text
-1. manifest 声明的所有路径均能解析。
-2. events、thresholds、baseline observations、metric rows 能通过轻量 schema 校验。
-3. preflight 报告进入 package build manifest。
-```
-
----
-
-## 阶段 C: 外部结果证据门禁
-
-### 目标
-
-对 external baseline 和高级 quality metric 的正式声明增加证据前置检查，避免将 mock、dry-run 或无来源的离线文件包装成正式论文结果。
-
-### 核心产物
-
-```text
-external_result_evidence_report.json
-baseline_execution_manifest.json
-metric_execution_manifest.json
-```
-
-### 当前状态
-
-```text
-已建立 validate_external_result_evidence.py 和 raw builder 的 --check-external-result-evidence / --require-formal-external-result-claim 开关。
-```
-
-### 下一步
-
-```text
-1. 确保 baseline_execution_manifest.json 声明 backend、command、input、output 和 evidence_paths。
-2. 确保 metric_execution_manifest.json 声明 backend、metric families、input、output 和 evidence_paths。
-3. 正式论文声明前启用 --require-formal-external-result-claim。
-4. 将 external_result_evidence_report.json 复制到 paper outputs 根目录, 并随 paper_results_package 一起归档, 便于论文结果包复核。
-```
-
-### 完成门禁
-
-```text
-1. formal_result_claim 为 true 时必须存在可解析 evidence_paths。
-2. external_result_evidence_report.json 必须为 pass, 且 paper_results_package_manifest.json 的 copied_files 必须包含 external_result_evidence_report.json。
-3. 不允许无证据 external baseline 或高级 metric 支撑 supported claims。
-```
-
----
-
-## 阶段 D: 真实图像生成 pilot
-
-### 目标
-
-用真实 SD 或外部生成 backend 产生 clean / watermarked 图像，并形成可追溯 image manifests。
+把所有草稿输入替换为真实实验配置, 并确认不再含有阻断性 placeholder。
 
 ### 输入
 
 ```text
-prompt_plan.json
-model_config.json
-seed_plan.json
-split_plan.json
-watermark_config.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_input_value_pack.draft.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/prompts/prompt_plan.draft.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/prompts/split_plan.draft.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/prompts/seed_plan.draft.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/configs/model_config.draft.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/configs/watermark_config.draft.json
 ```
 
 ### 输出
 
 ```text
-image_generation_manifest.json
-image_pair_manifest.json
-clean images
-watermarked images
+pilot_input_value_pack_application_report.json
+pilot_input_plan_preflight_report.json
+pilot_execution_readiness_report.json
 ```
 
-### 当前状态
+### 通过条件
 
 ```text
-dry-run mock backend 已打通，external backend command plan 已具备，但真实 SD / watermark pilot 尚未完成。
+overall_decision = pass
+无阻断性 placeholder
+真实 prompt / split / seed / model / watermark 配置已冻结
 ```
 
-### 完成门禁
-
-```text
-1. clean / watermarked 图像文件真实存在。
-2. 每张图像可追溯 prompt、seed、model_id、scheduler、watermark method 和 split。
-3. image_pair_manifest.json 能被 attack、detection 和 quality metric 阶段消费。
-```
-
----
-
-
-## 阶段 D2: 图像生成输出接收门禁
+## 5. 阶段 B: 图像生成启动计划
 
 ### 目标
 
-在真实图像生成 backend 结束后，检查输出目录是否满足后续 attack、detection、quality metric 和 paper package 构建的最小契约。
-
-### 输入
-
-```text
-inputs/images/
-  prompt_plan.json
-  image_pairs.json
-  image_manifests/image_generation_manifest.json
-  image_manifests/image_pair_manifest.json
-  clean/*
-  watermarked/*
-```
+生成可交给真实 SD / watermark backend 的命令计划。
 
 ### 输出
 
 ```text
-pilot_image_generation_output_acceptance_report.json
+pilot_image_generation_launch_variables.draft.json
+pilot_image_generation_launch_plan_report.json
 ```
 
-### 推荐命令
+### 通过条件
+
+```text
+command_count > 0
+blocking_items = []
+overall_decision = pass
+```
+
+## 6. 阶段 C: 真实图像与水印图像生成
+
+### 目标
+
+从 prompt 生成 clean 图像, 并生成对应 watermarked 图像。
+
+### 输出目录
+
+```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images/clean/
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images/watermarked/
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images/image_pairs.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images/image_manifests/image_generation_manifest.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images/image_manifests/image_pair_manifest.json
+```
+
+### 说明
+
+这是需要真实 SD 模型或等价图像生成 backend 参与的阶段。接收门禁不负责生成图像, 只负责检查生成后的图像和 manifest 是否可用。
+
+## 7. 阶段 C2: 图像生成输出接收门禁
+
+### 命令
 
 ```text
 python scripts/validate_pilot_image_generation_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_image_generation_output_acceptance_report.json --require-pass
 ```
 
-### 完成门禁
+### 通过条件
 
 ```text
-1. 必需输出文件全部存在。
-2. image_pairs.json 可读且为列表。
-3. 每条 image pair 至少包含 clean 与 watermarked 图像路径。
-4. 所有 clean / watermarked 图像路径真实存在。
-5. manifest 计数与 image_pairs 计数一致。
+clean image 存在
+watermarked image 存在
+image_pairs.json 可读
+image_generation_manifest.json 可读
+image_pair_manifest.json 可读
+manifest 计数与实际 image pair 可对齐
 ```
 
-该阶段属于接收门禁，不属于模型运行阶段。它不运行 SD 模型，不生成图像，不改变图像内容，只决定是否可以进入 attack pilot。
-
----
-
-## 阶段 E: attack pilot
+## 8. 阶段 D: attack pilot
 
 ### 目标
 
-对 watermarked 图像执行最小 attack 集合，产生 attacked 图像和 attack provenance。
+对 watermarked 图像施加最小 attack 集合, 产生 attacked 图像和 provenance。
 
 ### 最小 attack 集合
 
@@ -557,159 +143,87 @@ brightness_contrast
 ### 输出
 
 ```text
-attacked_image_manifest.json
-attack_shard_manifest.json
-attacked images
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/image_attacks/attacked_images/*
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/image_attacks/image_pairs_attacked.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/image_attacks/image_manifests/attacked_image_manifest.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/image_attacks/image_manifests/attack_shard_manifest.json
 ```
 
-### 当前状态
+## 9. 阶段 D2: attack 输出接收门禁
 
-```text
-dry-run 契约链路已打通，正式真实图像 attack pilot 尚未完成。
-```
-
-### 完成门禁
-
-```text
-1. attacked_image_path 均存在。
-2. attack_family、attack_condition 和 attack_params 完整记录。
-3. detection 阶段能同时消费 clean、watermarked 和 attacked 图像。
-```
-
----
-
-
-## 阶段 E2: attack 输出接收门禁
-
-### 目标
-
-在 attack workflow 或外部 attack backend 完成后，检查 attacked image、attack manifest 和 attacked image pairs 是否满足 detection 与 fixed-FPR 统计的最小契约。
-
-### 输入
-
-```text
-image_attacks/
-  image_pairs_attacked.json
-  image_manifests/attacked_image_manifest.json
-  image_manifests/attack_shard_manifest.json
-  attacked_images/*
-```
-
-### 输出
-
-```text
-pilot_attack_output_acceptance_report.json
-```
-
-### 推荐命令
+### 命令
 
 ```text
 python scripts/validate_pilot_attack_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/image_attacks --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_attack_output_acceptance_report.json --require-pass
 ```
 
-### 完成门禁
+### 通过条件
 
 ```text
-1. attack 必需输出文件全部存在。
-2. attacked_image_manifest.json 可读且包含 attacked_images 列表。
-3. 每条 attacked image 记录包含 attacked_image_path、watermarked_image_path、attack_family、attack_condition 和 attack_parameters 或 attack_params。
-4. 每条 attacked_image_path 指向真实存在的文件。
-5. image_pairs_attacked.json 可读且每条记录能定位 attacked 图像。
-6. attacked_image_count 与 manifest 中记录数一致。
+attacked image 存在
+每条记录包含 source watermarked image
+每条记录包含 attack_family, attack_condition, attack_params 或 attack_parameters
+attack manifest 与 attacked image 计数一致或有明确解释
 ```
 
-该阶段属于接收门禁，不属于攻击算法运行阶段。它不改变图像内容，只决定是否可以进入 CEG detector pilot。
-
----
-
-## 阶段 F: CEG detection 与内部消融 pilot
+## 10. 阶段 E: CEG detection 与内部消融
 
 ### 目标
 
-运行真实或半真实 CEG detector backend，产生统一 detection events 和 thresholds。
-
-### 必须覆盖
-
-```text
-CEG Full
-CEG Content-only
-CEG Recover-then-Content
-CEG No-rescue
-CEG No-attestation
-```
+对 clean, watermarked 和 attacked 图像产生统一 detection events。
 
 ### 输出
 
 ```text
-detection_events.json
-detection_thresholds.json
-ceg_detection_execution_manifest.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/ceg_detection/detection_events.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/ceg_detection/detection_thresholds.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/ceg_detection/ceg_detection_execution_manifest.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/ceg_detection/ablation_observations.json
 ```
 
-### 当前状态
+### 记录要求
+
+每条 detection event 至少应能表达:
 
 ```text
-dry-run producer 与 external detector command plan 已具备，真实 detector backend 小样本尚未完成。
+method_name
+split
+sample_role
+score
+higher_is_positive
+is_watermarked
+attack_family
+attack_condition
+source_image
+run_id
+provenance
 ```
 
-### 完成门禁
+## 11. 阶段 E2: detection 输出接收门禁
 
-```text
-1. 每条 detection event 包含 method_name、split、sample_role、score、higher_is_positive。
-2. attacked 样本包含 attack_family 和 attack_condition。
-3. thresholds 与 calibration / test split 关系清晰。
-```
-
----
-
-
-## 阶段 F2: detection 输出接收门禁
-
-### 目标
-
-在 CEG detector 或外部 detector backend 完成后，检查 detection events、thresholds 和执行 manifest 是否满足 fixed-FPR / TPR@FPR 统计与论文结果包构建的最小契约。
-
-### 输入
-
-```text
-ceg_detection/
-  detection_events.json
-  detection_thresholds.json
-  ceg_detection_execution_manifest.json 或 ceg_detection_producer_manifest.json
-```
-
-### 输出
-
-```text
-pilot_detection_output_acceptance_report.json
-```
-
-### 推荐命令
+### 命令
 
 ```text
 python scripts/validate_pilot_detection_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/ceg_detection --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_detection_output_acceptance_report.json --require-pass
 ```
 
-### 完成门禁
+### 通过条件
 
 ```text
-1. detection_events.json 和 detection_thresholds.json 全部存在且可读。
-2. 至少存在一个 detection run manifest: ceg_detection_execution_manifest.json 或 ceg_detection_producer_manifest.json。
-3. 每条 detection event 包含 event_id、method_name、split、sample_role、attack_family、attack_condition 和 is_watermarked。
-4. 每条 detection event 能解析出可比较分数。
-5. fixed-FPR 所需的 calibration clean negative、test clean negative 和 test positive 均存在。
-6. detection_thresholds.json 至少覆盖 detection events 中出现的 method_name。
+detection_events.json 可读
+detection_thresholds.json 可读
+至少存在一个 detection run manifest
+存在 calibration clean negative
+存在 test clean negative
+存在 test positive
+threshold 选择与 test evaluation 分离
 ```
 
-该阶段属于统计前接收门禁，不属于 detector 运行阶段。它不改变分数，只决定是否可以进入 fixed-FPR / TPR@FPR 统计。
-
----
-
-## 阶段 G: external baseline pilot
+## 12. 阶段 F: external baseline pilot
 
 ### 目标
 
-至少接入一个真实 external baseline，并最终扩展到论文计划中的全部 baseline。
+接入外部 baseline, 使论文能够比较 CEG 与外部方法。
 
 ### 目标 baseline
 
@@ -723,125 +237,96 @@ Stable Signature DEE
 ### 输出
 
 ```text
-baseline_observations.json
-baseline_execution_manifest.json
-baseline_comparison_table.csv
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_baselines/baseline_observations.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_baselines/baseline_execution_manifest.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_baselines/external_result_evidence_report.json
 ```
 
-### 当前状态
+## 13. 阶段 F2: external baseline 输出接收门禁
 
-```text
-dry-run / pilot producer 和离线导入入口已建立，真实 baseline backend 或正式离线 observation 尚未完成。
-```
-
-### 完成门禁
-
-```text
-1. 至少一个 baseline 有真实运行证据。
-2. baseline_observations.json 可进入统一统计链路。
-3. baseline_execution_manifest.json 通过 external evidence preflight。
-4. baseline_comparison_table.csv 可由 records 和 manifests 重建。
-```
-
----
-
-
-## 阶段 G2: external baseline 输出接收门禁
-
-### 目标
-
-在 external baseline backend、baseline pilot producer 或离线 baseline observation 导入完成后，检查 baseline observations、execution manifest 和可选 external evidence 是否满足论文对比表与结果包构建的最小契约。
-
-### 输入
-
-```text
-external_baselines/
-  baseline_observations.json
-  baseline_execution_manifest.json
-  external_result_evidence_report.json 可选；正式声明时必需
-```
-
-### 输出
-
-```text
-pilot_baseline_output_acceptance_report.json
-```
-
-### 推荐命令
+### 命令
 
 ```text
 python scripts/validate_pilot_baseline_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_baselines --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_baseline_output_acceptance_report.json --require-pass
 ```
 
-正式论文 baseline 声明应使用：
+正式论文 baseline claim:
 
 ```text
 python scripts/validate_pilot_baseline_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_baselines --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_baseline_output_acceptance_report.json --require-formal-evidence --require-pass
 ```
 
-### 完成门禁
+### 通过条件
 
 ```text
-1. baseline_observations.json 和 baseline_execution_manifest.json 全部存在且可读。
-2. 每条 observation 包含 event_id、baseline_id、score、threshold、higher_is_positive、split、sample_role、attack_family 和 attack_condition。
-3. baseline_id 必须来自 baseline registry。
-4. score 与 threshold 必须为数值。
-5. baseline_execution_manifest.json 中 observation_count 与实际 observation 数一致。
-6. baseline_execution_manifest.json 中 baseline_ids 与 observation 中的 baseline_id 集合一致。
-7. 启用 --require-formal-evidence 时，external_result_evidence_report.json 必须存在且通过。
+baseline_observations.json 可读
+baseline_execution_manifest.json 可读
+baseline_id 来自 baseline registry
+score 与 threshold 为数值
+observation_count 与真实记录一致
+正式 claim 时 external_result_evidence_report.json 必须 pass
 ```
 
-该阶段属于 baseline 结果接收门禁，不属于第三方 baseline 算法运行阶段。它只决定 baseline 结果是否可以进入 baseline comparison table 和 paper_results_package。
-
----
-
-## 阶段 H: quality metric pilot
+## 14. 阶段 G: quality metric pilot
 
 ### 目标
 
-为论文提供图像质量和水印质量指标。
+为论文提供图像质量、感知质量、文本一致性和水印恢复质量指标。
 
-### 指标范围
-
-```text
-PSNR
-SSIM
-LPIPS
-FID
-CLIP score
-bit accuracy
-payload recovery rate
-```
-
-### 当前状态
+### 输出
 
 ```text
-CPU 轻量 MSE、MAE、PSNR、全局 SSIM runner 已具备。LPIPS、FID、CLIP score 需真实 backend 或正式离线导入。
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_metrics/metric_rows.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_metrics/metric_execution_manifest.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_metrics/quality_metric_summary_table.csv
 ```
 
-### 完成门禁
+### 指标分层
 
 ```text
-1. metric_rows.json 可被导入并聚合。
-2. metric_execution_manifest.json 记录执行环境、输入、输出和证据路径。
-3. 高级指标正式声明通过 external evidence preflight。
+轻量 CPU 指标: MSE, MAE, PSNR, global SSIM
+高级感知指标: LPIPS, FID, CLIP score
+水印恢复指标: bit accuracy, payload recovery rate
 ```
 
----
+## 15. 阶段 G2: quality metric 输出接收门禁
 
-## 阶段 I: fixed-FPR / TPR@FPR 统计
+### 命令
+
+```text
+python scripts/validate_pilot_metric_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_metrics --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_metric_output_acceptance_report.json --require-pass
+```
+
+正式论文高级 metric claim:
+
+```text
+python scripts/validate_pilot_metric_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/external_metrics --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_metric_output_acceptance_report.json --require-formal-evidence --require-pass
+```
+
+### 通过条件
+
+```text
+metric_rows.json 可读
+metric_execution_manifest.json 可读
+metric row 能追溯到样本或图像
+metric value 为数值
+metric_count 与真实记录一致
+正式高级 metric claim 时 evidence report 必须 pass
+```
+
+## 16. 阶段 H: fixed-FPR / TPR@FPR 统计
 
 ### 目标
 
-生成论文主表所需的 fixed-FPR 阈值和 TPR@FPR 统计结果。
+生成论文主表所需的固定 FPR 统计结果。
 
-### 正式口径
+### 统计口径
 
 ```text
 calibration clean negative -> threshold_at_fpr
 test clean negative -> test_fpr_at_threshold
-test positive -> clean/watermarked TPR@FPR
-attacked positive -> attack TPR@FPR
+test positive -> TPR@FPR
+attacked positive -> attack TPR@FPR by attack_family and attack_condition
 ```
 
 ### 输出
@@ -850,30 +335,32 @@ attacked positive -> attack TPR@FPR
 fixed_fpr_threshold_table.csv
 tpr_at_fixed_fpr_table.csv
 attack_tpr_at_fixed_fpr_table.csv
-对应 LaTeX 表
+baseline_comparison_table.csv
+statistical_test_report.json
+LaTeX tables
 ```
 
-### 完成门禁
+### 通过条件
 
 ```text
-1. TPR@1%FPR 可复现。
-2. 若样本量足够，TPR@0.1%FPR 可复现。
-3. 阈值选择和测试评估严格分离。
-4. attack TPR 按 attack_family 和 attack_condition 分组。
+TPR@1%FPR 可复现
+如果样本量足够, TPR@0.1%FPR 可复现
+threshold selection 不使用 test split
+attack TPR 按 attack_family 和 attack_condition 分组
+所有表格可由 records 与 manifests 重建
 ```
 
----
-
-## 阶段 J: 论文示例图与图表重建
+## 17. 阶段 I: 论文示例图与图表重建
 
 ### 目标
 
-形成论文撰写可直接引用的图像示例、comparison grid、统计图和 LaTeX 表。
+生成论文撰写可引用的示例水印图像、comparison grid、统计图和 LaTeX 表。
 
 ### 输出
 
 ```text
 image_examples/
+image_example_manifest.json
 rendered_figures/
 pdf_figures/
 latex_tables/
@@ -881,62 +368,48 @@ paper_results_report.md
 paper_claim_audit.json
 ```
 
-### 完成门禁
+### 通过条件
 
 ```text
-1. 示例图文件真实存在。
-2. image_example_manifest.json 追溯 prompt、seed、method、attack 和 detection record。
-3. LaTeX 表和 rendered figures 可由 records 和 manifests 重建。
-4. paper_claim_audit.json 不使用 placeholder 字段支撑正式 claim。
+示例图文件真实存在
+示例图可追溯 prompt, seed, method, attack 和 detection record
+LaTeX 表和 rendered figures 可由 records 与 manifests 重建
+paper_claim_audit.json 不使用 placeholder 字段支撑正式 claim
 ```
 
----
-
-## 阶段 K: Colab pilot 与 MyDrive 归档
+## 18. 阶段 J: MyDrive 结果包归档
 
 ### 目标
 
-在 Colab 或 GPU 环境执行小规模真实 pilot，并把结果包归档到 MyDrive。
-
-### 推荐 pilot 规模
-
-```text
-prompt: 8 到 16
-seed: 1 到 2
-method: CEG + 1 到 2 个 external baseline
-attack: jpeg + resize + brightness_contrast
-split: calibration + test
-```
+形成可交给论文写作和复核的结果包。
 
 ### 输出
 
 ```text
-paper_results_package/
-paper_results_package.zip
-colab_run_bundle.zip
-MyDrive package_snapshots/
-MyDrive package_archives/
-MyDrive package_manifests/
+D:/content/drive/MyDrive/CEG/paper_results_package/
+D:/content/drive/MyDrive/CEG/package_archives/paper_results_package.zip
+D:/content/drive/MyDrive/CEG/package_manifests/paper_results_package_manifest.json
+D:/content/drive/MyDrive/CEG/change_reports/
+D:/content/drive/MyDrive/CEG/audit_reports/
 ```
 
-### 完成门禁
+### 通过条件
 
 ```text
-1. pilot 结果包能从 pilot_input_manifest.json 一键构建。
-2. paper_readiness_report.json 为 pass 或明确列出非正式缺口。
-3. colab_acceptance_report.json 为 pass。
-4. 归档目录位于 `D:/content/drive/MyDrive/CEG` 或 `/content/drive/MyDrive/CEG`。
+paper_results_package_manifest.json 记录所有关键输入和输出
+paper_readiness_report.json = pass 或明确列出非正式缺口
+paper_result_evidence_report.json = pass
+external_result_evidence_report.json = pass
+paper_claim_audit.json = pass
 ```
 
----
-
-## 阶段 L: 正式论文实验
+## 19. 阶段 K: 正式论文实验
 
 ### 目标
 
-运行完整规模实验，生成论文撰写和投稿可用结果包。
+在 pilot 通过后冻结正式实验配置, 执行完整规模实验并生成投稿可用结果包。
 
-### 必须包含
+### 必须覆盖
 
 ```text
 完整 prompt set
@@ -947,120 +420,22 @@ MyDrive package_manifests/
 完整 fixed-FPR / TPR@FPR
 完整 paper figures
 完整 LaTeX tables
-完整 image examples 和 comparison grids
+完整 image examples 与 comparison grids
 完整 paper_results_report.md
 完整 paper_results_package.zip
-完整 colab_run_bundle.zip
+完整 Colab 或 GPU 运行 bundle
 ```
 
-### 完成门禁
+## 20. 当前立即执行建议
 
-```text
-paper_result_evidence_report.json = pass
-external_result_evidence_report.json = pass
-paper_readiness_report.json = pass
-paper_claim_audit.json = pass
-colab_acceptance_report.json = pass
-colab_formal_result_gap_report.json = ready_for_formal_claims
-```
+当前立即执行优先级如下:
 
----
+1. 补齐真实 pilot 输入 value pack。
+2. 使 pilot input preflight 与 execution readiness 通过。
+3. 生成并通过 image generation launch plan。
+4. 执行真实图像和水印图像生成。
+5. 逐级通过 image, attack, detection, baseline, metric 输出接收门禁。
+6. 再进入 fixed-FPR / TPR@FPR 统计。
+7. 最后构建 paper_results_package 并归档到 MyDrive。
 
-## 5. 立即执行顺序
-
-当前最推荐的下一步执行顺序如下:
-
-```text
-1. 选定一组真实或半真实 pilot 输入文件。
-2. 生成 pilot_input_manifest.json；若当前还没有真实输入, 可先运行 scripts/build_pilot_rehearsal_package.py 生成 dry-run rehearsal package 验证整条构建链路。
-3. 运行 pilot input preflight, 并使用 scripts/analyze_pilot_input_gap.py 生成 pilot_input_gap_report.json, 明确当前输入是 rehearsal、partial pilot 还是 ready_for_formal_pilot。
-4. 运行 scripts/build_pilot_readiness_checklist.py, 将 gap 报告转换为下一批真实 pilot 输入补齐清单。
-5. 如果包含外部 baseline 或高级 metric 正式声明，运行 external result evidence preflight；rehearsal 阶段只允许声明 dry_run_contract_rehearsal_not_formal_paper_result。
-6. 将 external_result_evidence_report.json 纳入 paper_outputs 和 paper_results_package 归档, 并在 package manifest 中保留 copied_files 证据。
-7. 用 raw builder 或 provided-results builder 构建 paper_results_package, pilot 阶段可启用 --write-paper-result-evidence-report 生成证据完整性报告。
-8. 归档到 MyDrive 分类目录。
-9. 检查 readiness、claim audit、package manifest、paper_result_evidence_report 和 Colab acceptance。
-10. 根据 pilot_input_gap_report.json 和 pilot_readiness_checklist.json, 再启动真实 SD / watermark / attack / CEG detector / external baseline pilot。
-11. pilot 通过后冻结正式实验配置。
-```
-
----
-
-## 6. 不应优先做的事项
-
-```text
-1. 不应先手工拼接论文表格。
-2. 不应先手工挑选论文示例图并绕过 image_example_manifest.json。
-3. 不应在没有 calibration / test split 的情况下统计 TPR@FPR。
-4. 不应把 dry-run 图像或 mock 分数写成论文实验结论。
-5. 不应在没有 external_result_evidence_report 的情况下声明外部 baseline 或高级 metric 的正式结果。
-6. 不应把 scripts/build_pilot_rehearsal_package.py 生成的 rehearsal package 宣称为正式论文结果包。
-7. 不应在 pilot_input_gap_report.json 仍为 rehearsal_or_partial_pilot_only 时宣称 ready_for_formal_pilot。
-```
-
----
-
-## 7. 与 D:/Code/CEG-WM 的方法机制对齐要求
-
-后续 `CEG` 应继续与 `CEG-WM` 保持以下核心机制一致:
-
-```text
-1. prompt / split / shard / experiment plan 先行。
-2. clean negative calibration 与 test evaluation 分离。
-3. attack 是鲁棒性统计的独立阶段，不并入图像生成阶段。
-4. detection scores 进入统一 records。
-5. external baseline 进入统一 observation 或 event schema。
-6. fixed-FPR threshold table、TPR@FPR table 和 attack TPR table 由 records 重建。
-7. paper package 只归档可追溯 artifacts，不归档无 provenance 的手工结果。
-```
-
----
-
-## 8. 本文档与已有文档关系
-
-```text
-docs/builds/ceg_method_mechanism.md:
-  记录 CEG 项目当前真实方法机制。
-
-docs/builds/ceg_wm_method_alignment_audit.md:
-  记录 CEG 与 CEG-WM 的机制一致性审计。
-
-docs/builds/paper_publication_phase_plan.md:
-  记录较完整的论文发表阶段计划。
-
-docs/builds/paper_publication_result_package_plan.md:
-  记录结果包契约和论文产物边界。
-
-docs/builds/paper_publication_execution_stage_plan.md:
-  本文档，作为当前最直接的执行顺序和阶段门禁索引。
-```
-
----
-
-## 真实 pilot 输入工作区脚手架
-
-在生成 `pilot_readiness_checklist.json` 后, 应运行以下命令创建可填充的真实 pilot 输入工作区:
-
-```text
-python scripts/scaffold_pilot_run_workspace.py --checklist <pilot_readiness_checklist.json> --out <MyDrive>/pilot_runs/<run_id> --run-id <run_id>
-python scripts/scaffold_pilot_input_plan_templates.py --workspace <MyDrive>/pilot_runs/<run_id> --run-id <run_id>
-```
-
-第一条命令只创建目录、`pilot_input_manifest.draft.json`、`pilot_run_workspace_manifest.json` 和 README。第二条命令写出 prompt、split、seed、model 和 watermark 配置草稿。两者都不生成任何正式实验结果。其主要价值是把真实 SD / watermark / attack / detector / external baseline / advanced metric 输出放到统一位置, 便于后续运行 preflight、gap audit 和 paper package builder。
-
-推荐填充顺序如下:
-
-```text
-1. inputs/prompts/ 先生成 prompt_plan.draft.json、split_plan.draft.json 和 seed_plan.draft.json, 再替换其中的 *_placeholder 字段。
-2. inputs/images/clean/ 写入真实 clean 图像。
-3. inputs/images/watermarked/ 写入真实 watermarked 图像。
-4. inputs/image_pairs.json 绑定 prompt、seed、clean 图像和 watermarked 图像。
-5. image_attacks/image_manifests/ 写入 attacked_image_manifest.json 和 attack_shard_manifest.json。
-6. ceg_detection/ 写入 detection_events.json、detection_thresholds.json 和 ceg_detection_execution_manifest.json。
-7. external_baselines/ 写入 baseline_observations.json 和 baseline_execution_manifest.json。
-8. external_metrics/ 写入 metric_rows.json 和 metric_execution_manifest.json。
-9. plans/ 写入 paper_experiment_matrix.json。
-10. configs/ 写入 paper_output_requirements.json, 并替换 model_config.draft.json 与 watermark_config.draft.json 中的 *_placeholder 字段。
-```
-
-如果工作区仍只有草稿 manifest 或空目录, 只能说明真实 pilot 输入位置已经准备好, 不能说明论文实验已经完成。
+其中, 工程侧下一步最值得补齐的是 `quality metric 输出接收门禁`, 因为它能让论文结果包在进入统计阶段前同时具备 detection, baseline 和 metric 三类结果的统一接收口径。
