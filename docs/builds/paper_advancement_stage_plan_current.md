@@ -105,12 +105,16 @@ pilot_execution_readiness_report.json: overall_decision = pass
 推荐命令:
 
 ```text
+python scripts/export_pilot_input_value_pack_fill_sheet.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+python scripts/import_pilot_input_value_pack_fill_sheet.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-pass
 python scripts/build_pilot_input_value_pack_status.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
 ```
 
 输出:
 
 ```text
+pilot_input_value_pack_fill_sheet.csv
+pilot_input_value_pack_fill_sheet_import_report.json
 pilot_input_value_pack_status_report.json
 pilot_input_value_pack_status_report.md
 ```

@@ -1,0 +1,181 @@
+﻿"""导出和导入真实 pilot 输入 value pack 填写表。
+
+该模块解决的问题是: 真实输入值目前分散在 JSON value pack 的多个条目中, 直接编辑 JSON
+容易出错。这里提供 CSV 填写表, 让人工或外部系统只填写 `value_json` 列, 再由导入器
+把值回写到 value pack。导入器只回写用户显式提供的 JSON 值, 不生成或猜测任何真实实验值。
+
+通用工程写法是: 将结构化配置导出为可编辑表格, 再导入回原始配置。项目特定写法是:
+保留 task_id、replacement_key、type_hint 和 expected_content, 并依赖 value pack status
+报告执行后续类型和取值校验。
+"""
+
+from __future__ import annotations
+
+import csv
+import json
+from pathlib import Path
+from typing import Any
+
+from experiments.pilot_input_value_pack import VALUE_PACK_NAME
+from experiments.pilot_input_value_pack_status import TYPE_HINT_BY_REPLACEMENT_KEY
+
+
+FILL_SHEET_NAME = "pilot_input_value_pack_fill_sheet.csv"
+IMPORT_REPORT_NAME = "pilot_input_value_pack_fill_sheet_import_report.json"
+
+CSV_COLUMNS = [
+    "task_id",
+    "relative_path",
+    "json_path",
+    "replacement_key",
+    "type_hint",
+    "expected_content",
+    "value_json",
+]
+
+
+def _read_json(path: str | Path) -> Any:
+    """读取 JSON 文件。"""
+    return json.loads(Path(path).read_text(encoding="utf-8-sig"))
+
+
+def _write_json(path: str | Path, payload: Any) -> None:
+    """写出 JSON 文件。"""
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _value_to_json_cell(entry: dict[str, Any]) -> str:
+    """把已有 value 转成 CSV 单元格中的 JSON 文本。"""
+    if "value" not in entry:
+        return ""
+    return json.dumps(entry["value"], ensure_ascii=False)
+
+
+def export_pilot_input_value_pack_fill_sheet(
+    *,
+    value_pack_path: str | Path,
+    output_csv_path: str | Path,
+) -> dict[str, Any]:
+    """把 value pack 导出为可填写 CSV 表。"""
+    value_pack = _read_json(value_pack_path)
+    output_path = Path(output_csv_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for entry in value_pack.get("value_entries", []):
+        replacement_key = str(entry.get("replacement_key", ""))
+        rows.append(
+            {
+                "task_id": entry.get("task_id", ""),
+                "relative_path": entry.get("relative_path", ""),
+                "json_path": entry.get("json_path", ""),
+                "replacement_key": replacement_key,
+                "type_hint": TYPE_HINT_BY_REPLACEMENT_KEY.get(replacement_key, "真实实验配置值."),
+                "expected_content": entry.get("expected_content", ""),
+                "value_json": _value_to_json_cell(entry),
+            }
+        )
+    with output_path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CSV_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+    return {
+        "artifact_name": FILL_SHEET_NAME,
+        "value_pack_path": str(value_pack_path),
+        "output_csv_path": str(output_path),
+        "overall_decision": "pass",
+        "row_count": len(rows),
+        "instructions": [
+            "只填写 value_json 列, 其他列用于定位和说明.",
+            "字符串必须写成 JSON 字符串, 例如 \"a ceramic teapot\".",
+            "布尔值必须写成 true 或 false, 不要写成 \"true\" 或 \"false\".",
+            "数组必须写成 JSON 数组, 例如 [512, 512].",
+            "填写后运行 import_pilot_input_value_pack_fill_sheet.py, 再运行 build_pilot_input_value_pack_status.py --require-pass.",
+        ],
+    }
+
+
+def _read_sheet_rows(csv_path: str | Path) -> list[dict[str, str]]:
+    """读取 CSV 填写表。"""
+    with Path(csv_path).open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        return [dict(row) for row in reader]
+
+
+def _parse_value_json(raw: str) -> tuple[Any | None, str | None]:
+    """解析 value_json 单元格。空单元格表示该条目未填写。"""
+    text = raw.strip()
+    if text == "":
+        return None, "empty_value_json"
+    try:
+        return json.loads(text), None
+    except json.JSONDecodeError as exc:
+        return None, f"json_decode_error: {exc}"
+
+
+def import_pilot_input_value_pack_fill_sheet(
+    *,
+    value_pack_path: str | Path,
+    input_csv_path: str | Path,
+    output_value_pack_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """把 CSV 填写表中的 value_json 回写到 value pack。"""
+    value_pack = _read_json(value_pack_path)
+    rows = _read_sheet_rows(input_csv_path)
+    row_by_task_id = {row.get("task_id", ""): row for row in rows}
+    updated_entries = []
+    blocking_items = []
+
+    for entry in value_pack.get("value_entries", []):
+        task_id = str(entry.get("task_id", ""))
+        row = row_by_task_id.get(task_id)
+        if row is None:
+            blocking_items.append({"task_id": task_id, "reason": "missing_sheet_row"})
+            continue
+        value, error = _parse_value_json(row.get("value_json", ""))
+        if error is not None:
+            blocking_items.append({"task_id": task_id, "reason": error})
+            continue
+        entry["value"] = value
+        updated_entries.append({"task_id": task_id, "replacement_key": entry.get("replacement_key")})
+
+    decision = "pass" if not blocking_items else "fail"
+    target_path = Path(output_value_pack_path) if output_value_pack_path is not None else Path(value_pack_path)
+    if decision == "pass":
+        _write_json(target_path, value_pack)
+    return {
+        "artifact_name": IMPORT_REPORT_NAME,
+        "value_pack_path": str(value_pack_path),
+        "input_csv_path": str(input_csv_path),
+        "output_value_pack_path": str(target_path),
+        "overall_decision": decision,
+        "recommended_next_stage": (
+            "run_value_pack_status_validation" if decision == "pass" else "fix_value_pack_fill_sheet"
+        ),
+        "updated_entries": updated_entries,
+        "blocking_items": blocking_items,
+        "summary": {
+            "sheet_row_count": len(rows),
+            "value_entry_count": len(value_pack.get("value_entries", [])),
+            "updated_entry_count": len(updated_entries),
+            "blocking_item_count": len(blocking_items),
+        },
+    }
+
+
+def import_and_write_pilot_input_value_pack_fill_sheet(
+    *,
+    value_pack_path: str | Path,
+    input_csv_path: str | Path,
+    output_value_pack_path: str | Path | None,
+    report_path: str | Path,
+) -> dict[str, Any]:
+    """导入 CSV 填写表并写出导入报告。"""
+    report = import_pilot_input_value_pack_fill_sheet(
+        value_pack_path=value_pack_path,
+        input_csv_path=input_csv_path,
+        output_value_pack_path=output_value_pack_path,
+    )
+    _write_json(report_path, report)
+    return report
