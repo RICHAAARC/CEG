@@ -95,6 +95,8 @@ def test_build_pilot_rehearsal_package_cli_writes_package_and_archive(tmp_path) 
     )
 
     rehearsal_manifest = json.loads((output_root / "pilot_rehearsal_manifest.json").read_text(encoding="utf-8"))
+    pilot_input_manifest_path = output_root / "materialized_pilot_inputs" / "pilot_input_manifest.json"
+    pilot_input_manifest = json.loads(pilot_input_manifest_path.read_text(encoding="utf-8"))
     package_manifest = json.loads(
         (
             output_root
@@ -103,8 +105,29 @@ def test_build_pilot_rehearsal_package_cli_writes_package_and_archive(tmp_path) 
             / "paper_results_package_manifest.json"
         ).read_text(encoding="utf-8")
     )
+    gap_report_path = output_root / "pilot_input_gap_report.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/analyze_pilot_input_gap.py",
+            "--manifest",
+            str(pilot_input_manifest_path),
+            "--out",
+            str(gap_report_path),
+        ],
+        cwd=".",
+        check=True,
+    )
+    gap_report = json.loads(gap_report_path.read_text(encoding="utf-8"))
+
     assert rehearsal_manifest["overall_decision"] == "pass"
     assert rehearsal_manifest["rehearsal_scope"] == "dry_run_contract_rehearsal_not_formal_paper_result"
+    assert pilot_input_manifest["detection_execution_manifest"] == "ceg_detection/ceg_detection_execution_manifest.json"
+    assert pilot_input_manifest["experiment_matrix"] == "plans/paper_experiment_matrix.json"
+    assert gap_report["overall_decision"] == "pass"
+    assert "detection_execution_manifest" not in gap_report["missing_core_fields"]
+    assert "experiment_matrix" not in gap_report["missing_core_fields"]
     assert "paper_result_evidence_report.json" in package_manifest["copied_files"]
     assert "external_result_evidence_report.json" in package_manifest["copied_files"]
     assert (drive_root / "package_archives" / "paper_results_package_rehearsal_cli.zip").is_file()

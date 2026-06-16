@@ -6,6 +6,113 @@
 
 本文档只定义推进顺序、门禁和产物契约，不声明当前项目已经完成正式论文实验。当前 `CEG` 已具备较多 dry-run、manifest、结果包和审计能力，但仍需要真实 SD / watermark / attack / detection / external baseline / advanced quality metric 结果，才能形成论文可用结果包。
 
+
+---
+
+## 0.1 2026-06-17 当前向论文推进计划快照
+
+### 0.1.1 当前工程判断
+
+当前 `CEG` 不应直接进入正式论文实验阶段。更合理的推进状态是:
+
+```text
+pilot_input_and_external_evidence_gate_completion
+```
+
+该阶段的含义是: 在真实 SD / watermark / attack / CEG detector / external baseline / advanced quality metric 大规模运行前, 先把所有输入、执行证据、统计口径、结果包归档和审计门禁冻结为可复核流程。该判断属于项目特定治理安排, 不是所有论文项目都必须采用的通用工程阶段名。
+
+### 0.1.2 下一阶段主线
+
+下一阶段主线应按以下顺序推进:
+
+```text
+1. rehearsal package 输入覆盖补齐
+2. pilot_input_gap_report 复核
+3. 小规模真实 pilot 输入准备
+4. 真实 CEG detector pilot
+5. 至少一个 external baseline pilot
+6. 真实或离线正式 advanced quality metric 导入
+7. fixed-FPR / TPR@FPR 小样本统计复核
+8. paper_results_package pilot 归档
+9. 正式实验配置冻结
+10. 正式论文实验运行
+```
+
+其中第1步和第2步仍属于工程门禁补齐, 不产生正式论文结论。第3步到第8步属于小规模 pilot, 只能用于验证流程和暴露缺口。第9步和第10步才进入可支撑论文主结果的正式实验路径。
+
+### 0.1.3 当前最短可执行路径
+
+为了最快向论文发表产物推进, 当前最短可执行路径是:
+
+```text
+D0: 补齐 rehearsal package 中的 detection_execution_manifest 和 experiment_matrix。
+D1: 重新生成 rehearsal package 与 pilot_input_gap_report。
+D2: 确认 missing_core_fields 不再包含 detection_execution_manifest / experiment_matrix。
+D3: 明确剩余 gap 是否只来自 dry-run marker、formal claim gap 或真实 backend 未运行。
+D4: 准备小规模真实 prompt / split / seed / attack / detector 配置。
+D5: 运行真实或半真实 pilot, 生成 clean / watermarked / attacked 图像和 detection events。
+D6: 接入至少一个 external baseline observation 或 backend 输出。
+D7: 接入 LPIPS / FID / CLIP score 中至少一种正式 metric rows。
+D8: 用 pilot_input_manifest 构建 paper_results_package。
+D9: 将结果包、归档包、审计报告保存到 MyDrive 分类目录。
+D10: 根据 pilot 报告冻结正式实验配置。
+```
+
+### 0.1.4 MyDrive 落盘规则
+
+所有可供复核的运行结果应同步保存到:
+
+```text
+D:\content\drive\MyDrive\CEG
+```
+
+在 Colab 环境中对应路径为:
+
+```text
+/content/drive/MyDrive/CEG
+```
+
+推荐分类目录如下:
+
+```text
+pilot_rehearsals/        保存 rehearsal package 快照
+pilot_runs/              保存真实或半真实 pilot 结果
+package_snapshots/       保存展开后的 paper_results_package
+package_archives/        保存 zip 归档包
+package_manifests/       保存归档索引 manifest
+change_reports/          保存工程变更说明
+schedule_reports/        保存阶段计划与排期快照
+audit_reports/           保存 pytest、harness、readiness、claim、gap 等审计报告
+external_evidence/       保存 external baseline 和 advanced metric 证据报告
+formal_runs/             保存正式论文实验输出
+```
+
+该目录划分的主要考虑在于: 将工程变更、流程 rehearsal、小规模 pilot、正式实验和审计证据分开保存, 避免后续论文撰写时混淆 dry-run 结果与正式实验结果。
+
+### 0.1.5 阶段门禁判定
+
+当前阶段是否可以进入下一阶段, 应依据以下文件判断:
+
+```text
+pilot_input_gap_report.json:
+  判断 pilot 输入是否仍缺少核心字段, 以及是否仍包含 dry-run marker。
+
+external_result_evidence_report.json:
+  判断 external baseline 或 advanced metric 是否有足够证据支撑正式声明。
+
+paper_result_evidence_report.json:
+  判断结果包中的表格、图、示例图和报告是否具备可追溯证据。
+
+paper_readiness_report.json:
+  判断 paper_results_package 是否满足 required artifacts。
+
+paper_claim_audit.json:
+  判断论文声明是否只依赖 governed records 和 manifests。
+```
+
+如果 `pilot_input_gap_report.json` 仍为 `rehearsal_or_partial_pilot_only`, 则只能继续作为 rehearsal 或 partial pilot 推进, 不能宣称已经达到 formal pilot 或 paper-ready 状态。
+
+
 ---
 
 ## 1. 总目标

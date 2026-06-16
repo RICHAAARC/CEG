@@ -72,6 +72,8 @@ def main() -> None:
     source_root = output_root / "source_inputs"
     imports_root = output_root / "imports"
     attack_root = output_root / "attack_outputs"
+    detection_root = output_root / "ceg_detection"
+    experiment_matrix_root = output_root / "experiment_matrix"
     materialized_root = output_root / "materialized_pilot_inputs"
     package_root = output_root / "pilot_package"
     manifest_path = output_root / "pilot_rehearsal_manifest.json"
@@ -87,6 +89,8 @@ def main() -> None:
         "output_root": str(output_root),
         "source_inputs_root": str(source_root),
         "materialized_input_root": str(materialized_root),
+        "detection_root": str(detection_root),
+        "experiment_matrix_root": str(experiment_matrix_root),
         "pilot_package_root": str(package_root),
         "drive_root": args.drive_root,
         "dry_run_input_manifest": input_manifest,
@@ -131,6 +135,32 @@ def main() -> None:
     summary["steps"]["run_image_attack_workflow"] = attack_result
     _require_success("run_image_attack_workflow", attack_result, manifest_path, summary)
 
+    detection_command = [
+        sys.executable,
+        str(ROOT / "scripts" / "run_ceg_detection_producer.py"),
+        "--image-pairs",
+        str(source_root / input_manifest["image_pairs_path"]),
+        "--attacked-image-manifest",
+        str(attack_root / "image_manifests" / "attacked_image_manifest.json"),
+        "--out",
+        str(detection_root),
+    ]
+    detection_result = _run_command(detection_command)
+    summary["steps"]["run_ceg_detection_producer"] = detection_result
+    _require_success("run_ceg_detection_producer", detection_result, manifest_path, summary)
+
+    experiment_matrix_command = [
+        sys.executable,
+        str(ROOT / "scripts" / "build_experiment_matrix.py"),
+        "--config",
+        str(ROOT / "configs" / "paper_experiment_matrix.json"),
+        "--out",
+        str(experiment_matrix_root),
+    ]
+    experiment_matrix_result = _run_command(experiment_matrix_command)
+    summary["steps"]["build_experiment_matrix"] = experiment_matrix_result
+    _require_success("build_experiment_matrix", experiment_matrix_result, manifest_path, summary)
+
     raw_builder_command = [
         sys.executable,
         str(ROOT / "scripts" / "build_pilot_package_from_raw_inputs.py"),
@@ -143,9 +173,9 @@ def main() -> None:
         "--profile",
         str(args.profile),
         "--events",
-        str(source_root / input_manifest["events_path"]),
+        str(detection_root / "detection_events.json"),
         "--thresholds",
-        str(source_root / input_manifest["thresholds_path"]),
+        str(detection_root / "detection_thresholds.json"),
         "--baseline-observations",
         str(imports_root / "baseline" / "baseline_observations.json"),
         "--baseline-execution-manifest",
@@ -154,6 +184,10 @@ def main() -> None:
         str(imports_root / "metric" / "metric_rows.json"),
         "--metric-execution-manifest",
         str(imports_root / "metric" / "metric_execution_manifest.json"),
+        "--detection-execution-manifest",
+        str(detection_root / "ceg_detection_producer_manifest.json"),
+        "--experiment-matrix",
+        str(experiment_matrix_root / "experiment_matrix.json"),
         "--image-pairs",
         str(source_root / input_manifest["image_pairs_path"]),
         "--attacked-image-manifest",

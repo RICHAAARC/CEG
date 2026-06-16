@@ -118,7 +118,7 @@ def validate_pilot_input_manifest(path: str | Path) -> dict[str, Any]:
         if not candidate.is_file():
             checks.append({"field": field, "path": str(candidate), "status": "fail", "reason": "file_missing"})
             continue
-        if field in {"image_pairs"}:
+        if field in {"image_pairs", "experiment_matrix"}:
             checks.append(_check_json_list(candidate, field))
         elif field in {
             "baseline_execution_manifest",
@@ -126,7 +126,6 @@ def validate_pilot_input_manifest(path: str | Path) -> dict[str, Any]:
             "detection_execution_manifest",
             "attacked_image_manifest",
             "attack_shard_manifest",
-            "experiment_matrix",
             "readiness_requirements",
         }:
             checks.append(_check_json_dict(candidate, field))
