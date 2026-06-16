@@ -247,6 +247,14 @@ python scripts/validate_pilot_input_plan_templates.py --workspace D:\content\dri
 
 值包草稿仍含 `value_placeholder` 时, 应用报告必须为 `fail`, 这表示当前仍处于真实输入准备阶段。
 
+在尝试启动真实图像生成前, 应再生成聚合就绪报告:
+
+```text
+python scripts/build_pilot_execution_readiness_report.py --workspace D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500 --require-pass
+```
+
+该报告要求 `pilot_input_plan_preflight_report.json` 和 `pilot_input_value_pack_application_report.json` 同时为 `pass`。如果任一报告为 `fail`, 当前仍不能启动真实 SD / watermark。
+
 ```text
 pilot_input_plan_preflight_report.json
 pilot_input_gap_report.json
