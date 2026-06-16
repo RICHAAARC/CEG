@@ -816,7 +816,137 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
         "required_for_paper_outputs": False,
         "purpose": "可下载的 Colab 运行级 zip bundle。",
     },
-)
+ )
+
+
+COLAB_RESULT_QUALITY_METRIC_FIELDS: tuple[str, ...] = ("psnr", "ssim", "lpips", "fid", "clip_score")
+
+
+COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
+    "formal_main_table": ("method_name", "tpr", "clean_fpr"),
+    "operating_point_table": ("method_name", "operating_threshold", "tpr", "fpr"),
+    "quality_metrics_summary": ("method_name", "metric_name", "metric_coverage_rate"),
+    "bit_recovery_metrics": ("method_name", "bit_accuracy", "payload_recovery_rate"),
+    "baseline_comparison_table": ("method_name", "event_count", "tpr", "clean_fpr"),
+    "method_group_comparison_table": ("method_name", "method_group", "comparison_role", "event_count"),
+    "method_pairwise_delta_table": ("reference_method", "method_name", "metric_name", "rate_delta"),
+}
+
+
+def _read_csv_rows_for_result_index(path: Path) -> list[dict[str, Any]]:
+    """读取 CSV 结果表, 仅用于 Colab 结果索引的轻量结构校验。"""
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return [dict(row) for row in csv.DictReader(handle)]
+
+
+def _semantic_check(status: str, reason: str, evidence: Any) -> dict[str, Any]:
+    """构造单个论文结果内容结构检查条目。"""
+    return {"status": status, "reason": reason, "evidence": evidence}
+
+
+def _check_csv_result_semantics(path: Path, required_fields: tuple[str, ...]) -> dict[str, Any]:
+    """检查 CSV 论文结果表是否非空且包含必需字段。"""
+    try:
+        rows = _read_csv_rows_for_result_index(path)
+    except Exception as exc:
+        return _semantic_check("fail", "csv_parse_failed", str(exc))
+    fieldnames = set(rows[0].keys()) if rows else set()
+    missing_fields = [field for field in required_fields if field not in fieldnames]
+    if not rows:
+        return _semantic_check("fail", "csv_rows_empty", {"required_fields": list(required_fields)})
+    if missing_fields:
+        return _semantic_check("fail", "csv_required_fields_missing", {"missing_fields": missing_fields, "fieldnames": sorted(fieldnames)})
+    return _semantic_check("pass", "csv_required_fields_present", {"row_count": len(rows), "required_fields": list(required_fields)})
+
+
+def _check_standard_watermark_metrics_semantics(path: Path) -> dict[str, Any]:
+    """检查标准水印指标 JSON 是否包含方法级指标和质量指标槽位。"""
+    payload = _read_json_object(path)
+    if not isinstance(payload, dict):
+        return _semantic_check("fail", "json_object_missing_or_invalid", str(path))
+    by_method = payload.get("by_method")
+    if not isinstance(by_method, dict) or not by_method:
+        return _semantic_check("fail", "by_method_missing_or_empty", {"artifact_name": payload.get("artifact_name")})
+    missing_quality_metrics: dict[str, list[str]] = {}
+    for method_name, summary in by_method.items():
+        quality_metrics = summary.get("quality_metrics") if isinstance(summary, dict) else None
+        metric_names = set(quality_metrics.keys()) if isinstance(quality_metrics, dict) else set()
+        missing = [field for field in COLAB_RESULT_QUALITY_METRIC_FIELDS if field not in metric_names]
+        if missing:
+            missing_quality_metrics[str(method_name)] = missing
+    if missing_quality_metrics:
+        return _semantic_check("fail", "quality_metric_slots_missing", missing_quality_metrics)
+    return _semantic_check("pass", "standard_watermark_metrics_shape_valid", {"method_count": len(by_method), "quality_metric_fields": list(COLAB_RESULT_QUALITY_METRIC_FIELDS)})
+
+
+def _check_quality_metrics_summary_semantics(path: Path) -> dict[str, Any]:
+    """检查质量指标长表是否覆盖标准图像水印质量指标名称。"""
+    base_check = _check_csv_result_semantics(path, COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS["quality_metrics_summary"])
+    if base_check["status"] != "pass":
+        return base_check
+    rows = _read_csv_rows_for_result_index(path)
+    metric_names = {str(row.get("metric_name")) for row in rows}
+    missing = [field for field in COLAB_RESULT_QUALITY_METRIC_FIELDS if field not in metric_names]
+    if missing:
+        return _semantic_check("fail", "quality_metric_rows_missing", {"missing_metric_names": missing, "metric_names": sorted(metric_names)})
+    return _semantic_check("pass", "quality_metric_rows_cover_standard_fields", {"row_count": len(rows), "quality_metric_fields": list(COLAB_RESULT_QUALITY_METRIC_FIELDS)})
+
+
+def _check_paper_figure_specs_semantics(path: Path) -> dict[str, Any]:
+    """检查论文图表规格 JSON 是否包含可渲染图表条目。"""
+    payload = _read_json_object(path)
+    figures = payload.get("figures") if isinstance(payload, dict) else None
+    if not isinstance(figures, list) or not figures:
+        return _semantic_check("fail", "figure_specs_missing_or_empty", {"artifact_name": payload.get("artifact_name") if isinstance(payload, dict) else None})
+    figure_ids = [item.get("figure_id") for item in figures if isinstance(item, dict)]
+    if not all(figure_ids):
+        return _semantic_check("fail", "figure_id_missing", {"figure_ids": figure_ids})
+    return _semantic_check("pass", "figure_specs_shape_valid", {"figure_count": len(figures), "figure_ids": figure_ids})
+
+
+def _check_manifest_list_semantics(path: Path, list_field: str) -> dict[str, Any]:
+    """检查交付 manifest 是否包含非空文件条目列表。"""
+    payload = _read_json_object(path)
+    items = payload.get(list_field) if isinstance(payload, dict) else None
+    if not isinstance(items, list) or not items:
+        return _semantic_check("fail", "manifest_list_missing_or_empty", {"list_field": list_field, "artifact_name": payload.get("artifact_name") if isinstance(payload, dict) else None})
+    return _semantic_check("pass", "manifest_list_non_empty", {"list_field": list_field, "item_count": len(items)})
+
+
+def _check_paper_results_report_semantics(path: Path) -> dict[str, Any]:
+    """检查 Markdown 论文结果报告是否包含基本章节。"""
+    body = path.read_text(encoding="utf-8-sig")
+    required_markers = ("#", "核心表格", "图表")
+    missing = [marker for marker in required_markers if marker not in body]
+    if missing:
+        return _semantic_check("fail", "report_required_markers_missing", {"missing_markers": missing})
+    return _semantic_check("pass", "report_markers_present", {"byte_count": path.stat().st_size})
+
+
+def _check_colab_result_semantics(result_id: str, path: Path) -> dict[str, Any]:
+    """按 result_id 对关键论文结果文件做轻量内容结构校验。"""
+    if not path.is_file():
+        return {"status": "not_checked", "reason": "file_missing", "checks": []}
+    if result_id == "standard_watermark_metrics":
+        checks = [_check_standard_watermark_metrics_semantics(path)]
+    elif result_id == "quality_metrics_summary":
+        checks = [_check_quality_metrics_summary_semantics(path)]
+    elif result_id == "paper_figure_specs":
+        checks = [_check_paper_figure_specs_semantics(path)]
+    elif result_id in COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS:
+        checks = [_check_csv_result_semantics(path, COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS[result_id])]
+    elif result_id == "rendered_figure_manifest":
+        checks = [_check_manifest_list_semantics(path, "rendered_figures")]
+    elif result_id == "latex_tables_manifest":
+        checks = [_check_manifest_list_semantics(path, "latex_tables")]
+    elif result_id == "pdf_figure_manifest":
+        checks = [_semantic_check("pass", "pdf_manifest_present", {"byte_count": path.stat().st_size})]
+    elif result_id == "paper_results_report":
+        checks = [_check_paper_results_report_semantics(path)]
+    else:
+        return {"status": "not_checked", "reason": "no_semantic_rule", "checks": []}
+    fail_count = sum(1 for item in checks if item.get("status") != "pass")
+    return {"status": "fail" if fail_count else "pass", "reason": "semantic_checks_failed" if fail_count else "semantic_checks_passed", "checks": checks}
 
 
 def build_colab_paper_result_index(workspace_root: str | Path) -> dict[str, Any]:
@@ -844,6 +974,9 @@ def build_colab_paper_result_index(workspace_root: str | Path) -> dict[str, Any]
         if path.is_file():
             entry["byte_count"] = path.stat().st_size
             entry["sha256"] = _file_sha256(path)
+            entry["semantic_check"] = _check_colab_result_semantics(str(spec["result_id"]), path)
+        else:
+            entry["semantic_check"] = {"status": "not_checked", "reason": "file_missing", "checks": []}
         indexed_results.append(entry)
 
     required_missing = [
@@ -878,9 +1011,21 @@ def build_colab_paper_result_index(workspace_root: str | Path) -> dict[str, Any]
     result_group_summary = sorted(groups.values(), key=lambda item: str(item["result_group"]))
     required_result_group_summary = [item for item in result_group_summary if item["required_total"] > 0]
     required_group_failures = [item["result_group"] for item in required_result_group_summary if item["overall_decision"] != "pass"]
+    semantic_checkable_results = [item for item in indexed_results if item.get("semantic_check", {}).get("status") in {"pass", "fail"}]
+    semantic_check_failures = [
+        item["result_id"]
+        for item in indexed_results
+        if item["required_for_paper_outputs"] and item.get("semantic_check", {}).get("status") == "fail"
+    ]
+    semantic_check_summary = {
+        "checkable_total": len(semantic_checkable_results),
+        "pass_count": sum(1 for item in semantic_checkable_results if item.get("semantic_check", {}).get("status") == "pass"),
+        "fail_count": len(semantic_check_failures),
+        "required_failures": semantic_check_failures,
+    }
     manifest = {
         "artifact_name": "colab_paper_result_index.json",
-        "overall_decision": "fail" if (required_missing or required_group_failures) else "pass",
+        "overall_decision": "fail" if (required_missing or required_group_failures or semantic_check_failures) else "pass",
         "drive_output_root": layout["drive_output_root"],
         "workspace_root": layout["workspace_root"],
         "output_layout_manifest_path": str(workspace / "colab_output_layout_manifest.json"),
@@ -890,6 +1035,8 @@ def build_colab_paper_result_index(workspace_root: str | Path) -> dict[str, Any]
         "required_result_group_count": len(required_result_group_summary),
         "required_result_group_pass_count": sum(1 for item in required_result_group_summary if item["overall_decision"] == "pass"),
         "required_result_group_failures": required_group_failures,
+        "semantic_check_summary": semantic_check_summary,
+        "semantic_check_failures": semantic_check_failures,
         "required_missing": required_missing,
         "required_total": sum(1 for item in indexed_results if item["required_for_paper_outputs"]),
         "required_present": sum(1 for item in indexed_results if item["required_for_paper_outputs"] and item["exists"]),
@@ -1002,6 +1149,8 @@ def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str
                 "required_total": result_index.get("required_total"),
                 "required_result_group_failures": result_index.get("required_result_group_failures"),
                 "required_result_group_summary": result_index.get("required_result_group_summary"),
+                "semantic_check_summary": result_index.get("semantic_check_summary"),
+                "semantic_check_failures": result_index.get("semantic_check_failures"),
             },
         )
     )

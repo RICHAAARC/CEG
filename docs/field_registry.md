@@ -354,6 +354,9 @@ Notebook 与 repository module 的跨边界数据
 | required_result_group_pass_count | artifact | none | false | false | false | 论文结果索引中已经通过完整性判定的必需结果组数量。 |
 | required_result_group_failures | artifact | none | false | true | false | 论文结果索引中仍缺少必需结果文件的结果组集合。 |
 | missing_required_results | artifact | none | false | false | false | 单个论文结果组内缺失的必需 result_id 集合。 |
+| semantic_check | artifact | none | false | false | false | 论文结果索引中针对单个关键结果文件的轻量内容结构校验结果。 |
+| semantic_check_summary | artifact | none | false | true | false | 论文结果索引中关键结果文件内容结构校验的汇总计数和必需失败集合。 |
+| semantic_check_failures | artifact | none | false | true | false | 论文结果索引中已经存在但未通过内容结构校验的必需结果 result_id 集合。 |
 | result_index_digest | artifact | none | false | true | false | 论文结果索引条目的稳定摘要。 |
 | colab_output_layout_manifest | artifact | none | false | true | false | Colab 结果类型目录 manifest, 用于审计每类输出在 Drive 根目录下的落盘位置。 |
 | drive_output_root | artifact | none | false | false | false | Colab 结果落盘根目录, Notebook 默认指向 /content/drive/MyDrive/CEG。 |

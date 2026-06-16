@@ -160,9 +160,32 @@ def test_colab_paper_result_index_maps_required_paper_outputs(tmp_path) -> None:
     assert required_group_decisions["baseline_and_ablation"] == "fail"
     assert index["required_result_group_count"] >= 5
     assert index["required_result_group_pass_count"] == 0
+    assert index["semantic_check_summary"]["checkable_total"] == 0
+    assert index["semantic_check_failures"] == []
     assert "watermark_standard_metrics" in index["required_result_group_failures"]
     watermark_group = next(item for item in index["required_result_group_summary"] if item["result_group"] == "watermark_standard_metrics")
     assert {"standard_watermark_metrics", "quality_metrics_summary", "bit_recovery_metrics"}.issubset(set(watermark_group["missing_required_results"]))
+
+
+@pytest.mark.quick
+def test_colab_paper_result_index_rejects_malformed_required_result_content(tmp_path) -> None:
+    """论文结果索引不能只检查文件存在, 还应发现关键结果文件内容结构错误。"""
+    artifact_root = tmp_path / "workspace" / "paper_results_package" / "artifacts"
+    artifact_root.mkdir(parents=True)
+    metrics_path = artifact_root / "standard_watermark_metrics.json"
+    metrics_path.write_text(
+        json.dumps({"artifact_name": "standard_watermark_metrics.json", "by_method": {"ceg": {}}}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    index = build_colab_paper_result_index(tmp_path / "workspace")
+
+    assert index["overall_decision"] == "fail"
+    assert "standard_watermark_metrics" in index["semantic_check_failures"]
+    metrics_entry = next(item for item in index["indexed_results"] if item["result_id"] == "standard_watermark_metrics")
+    assert metrics_entry["exists"] is True
+    assert metrics_entry["semantic_check"]["status"] == "fail"
+    assert metrics_entry["semantic_check"]["checks"][0]["reason"] == "quality_metric_slots_missing"
 
 
 @pytest.mark.quick
@@ -391,6 +414,13 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert result_index["required_result_group_failures"] == []
     assert result_index["required_result_group_pass_count"] == result_index["required_result_group_count"]
     assert all(item["overall_decision"] == "pass" for item in result_index["required_result_group_summary"])
+    assert result_index["semantic_check_failures"] == []
+    assert result_index["semantic_check_summary"]["checkable_total"] > 0
+    assert result_index["semantic_check_summary"]["fail_count"] == 0
+    standard_metrics_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "standard_watermark_metrics")
+    assert standard_metrics_entry["semantic_check"]["status"] == "pass"
+    quality_metrics_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "quality_metrics_summary")
+    assert quality_metrics_entry["semantic_check"]["checks"][0]["reason"] == "quality_metric_rows_cover_standard_fields"
     result_ids = {item["result_id"] for item in result_index["indexed_results"] if item["exists"]}
     assert {"formal_main_table", "standard_watermark_metrics", "baseline_comparison_table", "paper_figure_specs"}.issubset(result_ids)
     archive_manifest = summary["colab_bundle_archive_manifest"]
