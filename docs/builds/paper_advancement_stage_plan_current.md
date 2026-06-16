@@ -154,6 +154,26 @@ inputs\images\watermarked\*
 4. 输出仍然保存到 MyDrive 运行目录，不写入 Git 仓库 `outputs/`。
 ```
 
+
+### 阶段 P2.5：图像生成输出接收门禁
+
+目标：在真实 SD / watermark backend 写出文件后，确认输出目录是否真正可被 attack、detection、quality metric 和 paper package 构建消费。
+
+推荐命令：
+
+```text
+python scripts/validate_pilot_image_generation_outputs.py --output-root {workspace}\inputs\images --out {workspace}\pilot_image_generation_output_acceptance_report.json --require-pass
+```
+
+该门禁只检查文件契约和路径可达性，不运行 SD 模型，不生成图像，也不把 mock 输出声明为正式论文结果。
+
+完成门禁：
+
+```text
+pilot_image_generation_output_acceptance_report.json: overall_decision = pass
+pilot_image_generation_output_acceptance_report.json: recommended_next_stage = image_attack_pilot
+```
+
 ### 阶段 P3：执行 attack pilot
 
 目标：基于 watermarked 图像执行最小 attack 集合，测试鲁棒性。
@@ -287,8 +307,9 @@ S5. 运行 `build_pilot_execution_readiness_report.py --require-pass`。
 S6. 填写 `pilot_image_generation_launch_variables.draft.json`。
 S7. 运行 `build_pilot_image_generation_launch_plan.py --require-pass`。
 S8. 只有在 S7 通过后，才执行真实图像生成 backend。
-S9. 图像生成输出通过接收门禁后，再进入 attack pilot。
-S10. attack、detection、baseline、quality metric 和 fixed-FPR 统计依次执行。
+S9. 真实图像生成 backend 完成后，运行 `validate_pilot_image_generation_outputs.py --require-pass` 接收门禁。
+S10. 图像生成输出接收门禁通过后，再进入 attack pilot。
+S11. attack、detection、baseline、quality metric 和 fixed-FPR 统计依次执行。
 ```
 
 ## 7. MyDrive 落盘规则
