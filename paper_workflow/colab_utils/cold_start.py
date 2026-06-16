@@ -1003,6 +1003,13 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
     },
     {
         "result_group": "external_evidence",
+        "result_id": "ceg_detection_execution_manifest",
+        "relative_path": "ceg_detection/ceg_detection_execution_manifest.json",
+        "required_for_paper_outputs": False,
+        "purpose": "真实 CEG detector backend 或 dry-run detection producer 的执行摘要 manifest。",
+    },
+    {
+        "result_group": "external_evidence",
         "result_id": "external_baseline_observations",
         "relative_path": "external_baselines/baseline_observations.json",
         "required_for_paper_outputs": False,
@@ -1197,6 +1204,8 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
     },
     "external_evidence": {
         "producer_steps": (
+            "scripts/run_detection_plan.py",
+            "scripts/run_ceg_detection_producer.py",
             "scripts/run_baseline_plan.py",
             "scripts/run_baseline_pilot_producer.py",
             "scripts/run_metric_plan.py",
@@ -1249,6 +1258,11 @@ COLAB_RESULT_ID_PRODUCTION_TRACE_OVERRIDES: dict[str, dict[str, tuple[str, ...]]
         "producer_steps": ("scripts/run_metric_plan.py", "scripts/compute_image_quality_metrics.py"),
         "required_inputs": ("metric command plan", "image_pairs.json 或 sample_manifest"),
         "validation_gates": ("paper_result_evidence_report.json advanced_metrics_source_ready",),
+    },
+    "ceg_detection_execution_manifest": {
+        "producer_steps": ("scripts/run_detection_plan.py", "scripts/run_ceg_detection_producer.py"),
+        "required_inputs": ("image_pairs.json", "attacked_image_manifest.json 或 detection command plan"),
+        "validation_gates": ("colab_run_bundle_validation.json",),
     },
     "external_metric_execution_manifest": {
         "producer_steps": ("scripts/run_metric_plan.py", "scripts/compute_image_quality_metrics.py"),
@@ -2517,6 +2531,9 @@ def export_colab_run_bundle(workspace_root: str | Path, bundle_root: str | Path 
         "ceg_detection/detection_events.json",
         "ceg_detection/detection_thresholds.json",
         "ceg_detection/ceg_detection_producer_manifest.json",
+        "ceg_detection/ceg_detection_command_plan_manifest.json",
+        "ceg_detection/ceg_detection_command_results.json",
+        "ceg_detection/ceg_detection_execution_manifest.json",
         "threshold_calibration/thresholds.json",
         "threshold_calibration/threshold_calibration_report.json",
         "basic_image_metrics/metric_execution_manifest.json",
@@ -2525,6 +2542,7 @@ def export_colab_run_bundle(workspace_root: str | Path, bundle_root: str | Path 
         "provided_results/baseline_observations.json",
         "provided_results/metric_rows.json",
         "plans/image_generation_command_plan.json",
+        "plans/detection_command_plan.json",
         "plans/baseline_command_plan.json",
         "plans/metric_command_plan.json",
         "external_image_generation/image_generation_command_plan_manifest.json",

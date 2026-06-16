@@ -1,0 +1,20 @@
+{
+  "templates": [
+    {
+      "detector_id": "ceg_external_detector",
+      "command_template": [
+        "python",
+        "{detector_root}/run_ceg_detector.py",
+        "--image-pairs",
+        "{image_pairs_path}",
+        "--attacked-image-manifest",
+        "{attacked_image_manifest_path}",
+        "--output-root",
+        "{output_root}/ceg_external_detector"
+      ],
+      "output_path_template": "{output_root}/ceg_external_detector",
+      "working_directory_template": "{detector_root}",
+      "timeout_seconds": 7200
+    }
+  ]
+}

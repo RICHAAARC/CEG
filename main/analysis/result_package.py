@@ -33,6 +33,7 @@ SOURCE_MANIFEST_FILES = (
     "image_manifests/image_generation_manifest.json",
     "image_manifests/image_pair_manifest.json",
     "image_examples/image_example_manifest.json",
+    "detection_results/ceg_detection_execution_manifest.json",
     "baseline_results/baseline_execution_manifest.json",
     "metric_results/metric_execution_manifest.json",
 )
@@ -133,6 +134,14 @@ def _baseline_result_files(output_root: Path) -> list[str]:
     return [relative for relative in candidates if (output_root / relative).is_file()]
 
 
+def _detection_result_files(output_root: Path) -> list[str]:
+    """收集可选 CEG detection 执行 manifest。"""
+    candidates = [
+        "detection_results/ceg_detection_execution_manifest.json",
+    ]
+    return [relative for relative in candidates if (output_root / relative).is_file()]
+
+
 def _metric_result_files(output_root: Path) -> list[str]:
     """收集可选图像质量 metric rows 和执行 manifest。"""
     candidates = [
@@ -153,6 +162,7 @@ def collect_paper_result_files(output_root: str | Path) -> list[str]:
         *_pdf_files(root),
         *_image_manifest_files(root),
         *_image_example_files(root),
+        *_detection_result_files(root),
         *_baseline_result_files(root),
         *_metric_result_files(root),
     ]

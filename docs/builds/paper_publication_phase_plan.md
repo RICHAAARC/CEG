@@ -284,7 +284,7 @@ attack_tpr_at_fixed_fpr_table.csv
 阶段 1: 结果包契约, 基本完成, 后续随新增产物维护。
 阶段 2: prompt 到图像样本 manifest, dry-run 已打通, external backend plan 已具备。
 阶段 3: attack workflow, dry-run 契约链路已打通。
-阶段 4: CEG detection 与内部 ablation 统一记录, dry-run 契约链路已打通。
+阶段 4: CEG detection 与内部 ablation 统一记录, dry-run producer 与外部 detector command plan 契约已打通。
 阶段 5: 外部 baseline 接入, dry-run / pilot producer 已打通, 后续推进真实 baseline。
 阶段 6: fixed-FPR / TPR@FPR 正式统计, 已有雏形, 等待真实 detection 与 baseline records。
 阶段 7: 图像质量指标与论文示例图, 轻量 quality runner provenance 已打通, 高级指标真实 backend 待补齐。
@@ -315,7 +315,7 @@ attack_tpr_at_fixed_fpr_table.csv
 
 ```text
 基本完成, 后续随新增产物持续维护。
-fixed-FPR 表、image examples、attack manifests、image generation manifests、CEG detection manifests 已进入推进范围。
+fixed-FPR 表、image examples、attack manifests、image generation manifests、CEG detection manifests 与 detection execution manifest 已进入推进范围。
 external baseline execution manifest 与 quality metric runner provenance 已进入 package validation 覆盖, 后续仍需真实高级指标 backend。
 ```
 
@@ -490,10 +490,11 @@ method_pairwise_delta_table.csv
 ### 当前状态
 
 ```text
-已完成 dry-run 契约链路。
+已完成 dry-run producer 与外部 detector command plan 契约链路。
 轻量 CEG detection producer 已具备 image_pairs / attacked_image_manifest -> detection_events.json / detection_thresholds.json / ceg_detection_producer_manifest.json 的契约链路。
-该 producer 已通过本地测试、harness audit 与 completion audit, 只用于 dry-run 和正式 detector 接口验证, 不代表正式检测模型分数。
-下一步应让 external baseline pilot 直接消费 detection_events.json, 形成 baseline_observations.json 与 baseline_execution_manifest.json。
+外部 CEG detector command plan 已具备 detection_plan.json -> detection_events.json / detection_thresholds.json / ceg_detection_execution_manifest.json 的契约链路。
+这些 producer / plan 只用于 dry-run、真实 detector backend 接口验证和 provenance 归档, 不代表正式检测模型分数。
+下一步应接入真实 CEG detector backend 小样本运行, 并让后续 external baseline、quality metrics 和 fixed-FPR 统计消费该 detection 输出。
 ```
 
 ### 完成标准
@@ -759,11 +760,12 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 
 ```text
 1. 真实 CEG detector backend pilot。
-2. 真实 SD / watermark backend pilot。
-3. 至少一个外部 baseline 的真实小样本运行。
-4. 真实 LPIPS / FID / CLIP score 小样本运行。
-5. Colab pilot 小样本正式运行。
-6. 正式实验配置冻结和资源排期。
+2. 将真实 detector 输出接入 baseline pilot / fixed-FPR / result package 全链路。
+3. 真实 SD / watermark backend pilot。
+4. 至少一个外部 baseline 的真实小样本运行。
+5. 真实 LPIPS / FID / CLIP score 小样本运行。
+6. Colab pilot 小样本正式运行。
+7. 正式实验配置冻结和资源排期。
 ```
 
 ### 6.3 不应优先做的事项

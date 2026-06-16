@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from experiments.baseline_command_adapter import BaselineCommandSpec
+from experiments.detection_plan import DetectionCommandSpec
 from experiments.image_generation_plan import ImageGenerationCommandSpec
 from main.methods.baselines import get_baseline_spec
 
@@ -44,7 +45,14 @@ def load_command_templates(path: str | Path, *, template_role: str) -> list[Comm
     """读取命令模板并归一化字段。"""
     specs: list[CommandTemplateSpec] = []
     for index, row in enumerate(_load_template_rows(Path(path))):
-        template_id = str(row.get("baseline_id") or row.get("metric_name") or row.get("backend_id") or row.get("template_id") or "").strip()
+        template_id = str(
+            row.get("baseline_id")
+            or row.get("metric_name")
+            or row.get("backend_id")
+            or row.get("detector_id")
+            or row.get("template_id")
+            or ""
+        ).strip()
         if not template_id:
             raise ValueError(f"command template row {index} missing template id")
         command_template = row.get("command_template")
@@ -124,6 +132,23 @@ def materialize_image_generation_command_plan(template_path: str | Path, variabl
         rows.append(
             ImageGenerationCommandSpec(
                 backend_id=spec.template_id,
+                command=tuple(row["command"]),
+                output_root=str(row["output_path"]),
+                working_directory=str(row["working_directory"]) if row.get("working_directory") else None,
+                timeout_seconds=int(row["timeout_seconds"]),
+            )
+        )
+    return rows
+
+
+def materialize_detection_command_plan(template_path: str | Path, variables: dict[str, Any]) -> list[DetectionCommandSpec]:
+    """把 detector 命令模板物化为外部 detection runner 可消费的计划。"""
+    rows: list[DetectionCommandSpec] = []
+    for spec in load_command_templates(template_path, template_role="external_detection"):
+        row = materialize_command_template(spec, {"detector_id": spec.template_id, **variables})
+        rows.append(
+            DetectionCommandSpec(
+                detector_id=spec.template_id,
                 command=tuple(row["command"]),
                 output_root=str(row["output_path"]),
                 working_directory=str(row["working_directory"]) if row.get("working_directory") else None,
