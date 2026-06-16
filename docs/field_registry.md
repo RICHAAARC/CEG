@@ -524,3 +524,5 @@ Notebook 与 repository module 的跨边界数据
 | write_paper_result_evidence_report | protocol | none | false | true | false | pilot package 构建入口是否在导出 paper_results_package 前生成 paper_result_evidence_report.json 并随包归档. |
 | allow_dry_run_paper_result_evidence | protocol | none | false | false | false | pilot 证据报告生成时是否允许 dry-run 标记存在, 仅用于调试或非正式 pilot 结果包. |
 | require_paper_result_evidence_pass | protocol | none | false | true | false | pilot package 构建入口是否要求 paper_result_evidence_report.json 整体通过, 用于正式声明前阻断不完整结果包. |
+| pilot_rehearsal_manifest | artifact | none | false | true | false | 本地 dry-run pilot rehearsal 一键构建入口写出的总控 manifest, 记录输入生成、导入、attack、raw builder、证据报告和归档步骤. |
+| rehearsal_scope | protocol | none | false | false | false | pilot rehearsal manifest 中明确本次运行只验证工程契约和归档链路, 不代表正式论文实验结果的范围说明. |

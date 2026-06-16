@@ -71,3 +71,40 @@ def test_build_pilot_package_from_provided_results_archives_to_drive(tmp_path) -
     assert package_validation["overall_decision"] == "pass"
     assert archive_manifest["package_validation_decision"] == "pass"
     assert (drive_root / "package_archives" / "paper_results_package_pilot_cli.zip").is_file()
+
+
+@pytest.mark.quick
+def test_build_pilot_rehearsal_package_cli_writes_package_and_archive(tmp_path) -> None:
+    """pilot rehearsal CLI 应能一键验证输入物化、证据报告、结果包和 Drive 归档链路。"""
+    output_root = tmp_path / "pilot_rehearsal"
+    drive_root = tmp_path / "drive" / "CEG"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/build_pilot_rehearsal_package.py",
+            "--out",
+            str(output_root),
+            "--drive-root",
+            str(drive_root),
+            "--run-id",
+            "rehearsal_cli",
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    rehearsal_manifest = json.loads((output_root / "pilot_rehearsal_manifest.json").read_text(encoding="utf-8"))
+    package_manifest = json.loads(
+        (
+            output_root
+            / "pilot_package"
+            / "paper_results_package"
+            / "paper_results_package_manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert rehearsal_manifest["overall_decision"] == "pass"
+    assert rehearsal_manifest["rehearsal_scope"] == "dry_run_contract_rehearsal_not_formal_paper_result"
+    assert "paper_result_evidence_report.json" in package_manifest["copied_files"]
+    assert "external_result_evidence_report.json" in package_manifest["copied_files"]
+    assert (drive_root / "package_archives" / "paper_results_package_rehearsal_cli.zip").is_file()
