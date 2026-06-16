@@ -43,6 +43,8 @@ def main() -> None:
         str(input_root / manifest["baseline_observations_path"]),
         "--metric-rows",
         str(input_root / manifest["metric_rows_path"]),
+        "--image-pairs",
+        str(input_root / manifest["image_pairs_path"]),
         "--profile",
         args.profile,
         "--out",

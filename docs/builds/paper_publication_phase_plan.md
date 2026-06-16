@@ -356,6 +356,14 @@ external_backend:
   Colab / GPU 使用, 调用真实 SD 与 watermark backend, 并回收 manifest。
 ```
 
+### 当前状态
+
+```text
+进行中。
+本地 mock backend 已具备 prompt_plan -> clean / watermarked PPM 图像 -> image_pairs.json -> image_generation_manifest.json / image_pair_manifest.json 的轻量链路。
+该能力已接入 dry-run 输入生成器, 用于验证 prompt provenance 和图像 manifest 契约, 但不代表正式 SD 图像生成。
+```
+
 ### 完成标准
 
 ```text

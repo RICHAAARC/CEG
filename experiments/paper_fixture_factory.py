@@ -13,6 +13,7 @@ from typing import Any
 from main.methods.baselines import list_baseline_specs
 from main.methods.ceg.ablations import CEG_ABLATIONS
 from main.core.digest import build_stable_digest
+from experiments.image_generation_backend import build_prompt_plan_from_events, write_mock_image_generation_from_prompt_plan
 
 SAMPLE_BLUEPRINTS = (
     {
@@ -194,7 +195,11 @@ def _write_ppm(path: Path, red: int, green: int, blue: int) -> None:
 
 
 def write_paper_dry_run_inputs(output_root: str | Path, *, repetitions: int = 1) -> dict[str, Any]:
-    """写出 dry-run 输入文件并返回 manifest。"""
+    """写出 dry-run 输入文件并返回 manifest。
+
+    图像相关输入由 mock image generation backend 从 prompt plan 派生。这样 dry-run 既保留
+    原有 events / baseline / metric 输入, 又能验证 prompt -> image manifests 的论文流程边界。
+    """
     output_path = Path(output_root)
     output_path.mkdir(parents=True, exist_ok=True)
     bundle = build_paper_dry_run_inputs(repetitions=repetitions)
@@ -203,40 +208,15 @@ def write_paper_dry_run_inputs(output_root: str | Path, *, repetitions: int = 1)
         "baseline_observations_path": "baseline_observations.json",
         "metric_rows_path": "metric_rows.json",
         "thresholds_path": "thresholds.json",
+        "prompt_plan_path": "prompt_plan.json",
         "image_pairs_path": "image_pairs.json",
+        "mock_image_generation_backend_manifest_path": "mock_image_generation_backend_manifest.json",
+        "image_generation_manifest_path": "image_manifests/image_generation_manifest.json",
+        "image_pair_manifest_path": "image_manifests/image_pair_manifest.json",
     }
-    image_pairs = []
-    for index, event in enumerate(bundle["events"], start=1):
-        event_id = str(event["event_id"])
-        clean_path = output_path / "images" / "clean" / f"{event_id}.ppm"
-        watermarked_path = output_path / "images" / "watermarked" / f"{event_id}.ppm"
-        attacked_path = output_path / "images" / "attacked" / f"{event_id}.ppm"
-        _write_ppm(clean_path, 10 + index, 20 + index, 30 + index)
-        _write_ppm(watermarked_path, 12 + index, 21 + index, 29 + index)
-        _write_ppm(attacked_path, 13 + index, 20 + index, 28 + index)
-        image_pairs.append(
-            {
-                "image_id": event_id,
-                "event_id": event_id,
-                "prompt_id": f"dry_run_prompt_{index:03d}",
-                "prompt_text": "dry-run synthetic prompt for pipeline validation",
-                "seed": index,
-                "model_id": "dry_run_ppm_fixture",
-                "scheduler": "not_applicable",
-                "num_inference_steps": 0,
-                "guidance_scale": 0.0,
-                "method_name": "ceg",
-                "split": str(event.get("split", "test")),
-                "sample_role": str(event.get("sample_role", "unknown_role")),
-                "attack_family": str(event.get("attack_family", "clean")),
-                "attack_condition": str(event.get("attack_condition", "clean_none")),
-                "clean_image_path": str(clean_path),
-                "watermarked_image_path": str(watermarked_path),
-                "attacked_image_path": str(attacked_path),
-                "reference_path": str(clean_path),
-                "watermarked_path": str(watermarked_path),
-            }
-        )
+    prompt_rows = build_prompt_plan_from_events(bundle["events"])
+    image_generation_manifest = write_mock_image_generation_from_prompt_plan(prompt_rows, output_path)
+    image_pairs = json.loads((output_path / file_map["image_pairs_path"]).read_text(encoding="utf-8"))
     (output_path / file_map["events_path"]).write_text(
         json.dumps(bundle["events"], ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -253,11 +233,14 @@ def write_paper_dry_run_inputs(output_root: str | Path, *, repetitions: int = 1)
         json.dumps(bundle["thresholds"], ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    (output_path / file_map["image_pairs_path"]).write_text(
-        json.dumps(image_pairs, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    manifest = {**bundle["manifest"], **file_map, "image_pair_count": len(image_pairs)}
+    manifest = {
+        **bundle["manifest"],
+        **file_map,
+        "prompt_count": len(prompt_rows),
+        "image_pair_count": len(image_pairs),
+        "image_generation_backend": image_generation_manifest["backend_id"],
+        "image_generation_backend_role": image_generation_manifest["backend_role"],
+    }
     (output_path / "paper_dry_run_inputs_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

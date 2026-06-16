@@ -23,6 +23,11 @@ def test_paper_dry_run_inputs_cover_methods_roles_and_baselines(tmp_path) -> Non
     assert {"tree_ring", "gaussian_shading", "shallow_diffuse", "stable_signature_dee"} <= baseline_ids
     assert manifest["event_count"] == len(bundle["events"])
     assert (tmp_path / "events.json").exists()
+    assert (tmp_path / "prompt_plan.json").exists()
+    assert (tmp_path / "mock_image_generation_backend_manifest.json").exists()
+    assert (tmp_path / "image_manifests" / "image_generation_manifest.json").exists()
+    assert (tmp_path / "image_manifests" / "image_pair_manifest.json").exists()
+    assert manifest["image_generation_backend_role"] == "mock_backend"
     assert (tmp_path / "paper_dry_run_inputs_manifest.json").exists()
 
 
@@ -48,5 +53,7 @@ def test_paper_readiness_dry_run_cli_builds_complete_outputs(tmp_path) -> None:
     assert paper_summary["paper_readiness_decision"] == "pass"
     assert readiness_report["overall_decision"] == "pass"
     assert (output_root / "paper_outputs" / "artifacts" / "standard_watermark_metrics.json").exists()
+    assert (output_root / "paper_outputs" / "image_manifests" / "image_generation_manifest.json").exists()
+    assert (output_root / "paper_outputs" / "image_manifests" / "image_pair_manifest.json").exists()
     assert (output_root / "paper_outputs" / "rendered_figures" / "paper_figures_report.html").exists()
     assert (output_root / "paper_outputs" / "pdf_figures" / "paper_figures_preview.pdf").read_bytes().startswith(b"%PDF")

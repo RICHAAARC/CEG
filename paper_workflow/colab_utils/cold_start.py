@@ -108,6 +108,7 @@ def build_colab_output_layout_manifest(workspace_root: str | Path) -> dict[str, 
         ("external_metrics", "external_metrics_root", "LPIPS、FID、CLIP score 等高级指标命令计划和执行结果。"),
         ("command_plans", "plans_root", "由模板物化出的外部命令计划。"),
         ("basic_image_metrics", "basic_image_metrics_root", "轻量 PSNR / SSIM 图像质量指标。"),
+        ("image_attacks", "image_attacks_root", "攻击后图像、attack manifest 和 attack shard manifest。"),
         ("threshold_calibration", "threshold_calibration_root", "从 calibration 样本校准出的阈值和校准报告。"),
         ("acceptance", "acceptance_root", "最终验收 CLI 的结构化报告。"),
         ("archives", "archives_root", "可下载 zip 和 sidecar manifest。"),
@@ -215,6 +216,16 @@ def build_colab_formal_input_contract(workspace_root: str | Path) -> dict[str, A
             "required_when": "USE_DRY_RUN_INPUTS=False and CALIBRATE_THRESHOLDS=False",
             "consumed_by": ["scripts/build_paper_outputs.py", "scripts/build_protocol_events_from_sample_manifest.py"],
             "can_generate_from": "sample_manifest calibration split via scripts/calibrate_thresholds_from_sample_manifest.py",
+        },
+        {
+            "role": "prompt_plan",
+            "recommended_relative_path": "inputs/prompt_plan.json",
+            "accepted_formats": ["json", "jsonl", "csv"],
+            "required_fields": ["prompt_id", "prompt_text", "seed"],
+            "optional_fields": ["event_id", "image_id", "model_id", "scheduler", "num_inference_steps", "guidance_scale", "split", "sample_role"],
+            "required_when": "需要从 prompt 生成 clean / watermarked image manifests 时",
+            "consumed_by": ["scripts/generate_mock_image_generation.py", "external SD / watermark backend"],
+            "can_generate_from": "dry-run events via experiments.image_generation_backend.build_prompt_plan_from_events",
         },
         {
             "role": "sample_manifest",
@@ -2452,6 +2463,10 @@ def export_colab_run_bundle(workspace_root: str | Path, bundle_root: str | Path 
         "acceptance/paper_result_evidence_cli.json",
         "inputs/paper_dry_run_inputs_manifest.json",
         "inputs/sample_event_build_manifest.json",
+        "inputs/prompt_plan.json",
+        "inputs/mock_image_generation_backend_manifest.json",
+        "inputs/image_manifests/image_generation_manifest.json",
+        "inputs/image_manifests/image_pair_manifest.json",
         "inputs/image_pairs.json",
         "image_attacks/image_manifests/attacked_image_manifest.json",
         "image_attacks/image_manifests/attack_shard_manifest.json",
@@ -3087,6 +3102,12 @@ def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
         preflight_outputs.append(str(Path(str(command_plan["threshold_root"])) / "threshold_calibration_report.json"))
     if command_plan.get("prepare_command"):
         preflight_outputs.append(str(Path(str(command_plan["inputs_root"])) / "events.json"))
+        if command_plan.get("use_dry_run_inputs"):
+            inputs_root = Path(str(command_plan["inputs_root"]))
+            preflight_outputs.append(str(inputs_root / "prompt_plan.json"))
+            preflight_outputs.append(str(inputs_root / "mock_image_generation_backend_manifest.json"))
+            preflight_outputs.append(str(inputs_root / "image_manifests" / "image_generation_manifest.json"))
+            preflight_outputs.append(str(inputs_root / "image_manifests" / "image_pair_manifest.json"))
         if not command_plan.get("use_dry_run_inputs"):
             preflight_outputs.append(str(Path(str(command_plan["inputs_root"])) / "sample_event_build_manifest.json"))
     if command_plan.get("basic_metric_command"):
@@ -3115,7 +3136,19 @@ def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
     if command_plan.get("threshold_calibration_command"):
         generated_paths.add(str(Path(str(command_plan["threshold_root"])) / "thresholds.json"))
     if command_plan.get("use_dry_run_inputs"):
-        generated_paths.update(str(Path(str(command_plan["inputs_root"])) / name) for name in ("events.json", "thresholds.json", "baseline_observations.json", "metric_rows.json"))
+        generated_paths.update(
+            str(Path(str(command_plan["inputs_root"])) / name)
+            for name in (
+                "events.json",
+                "thresholds.json",
+                "baseline_observations.json",
+                "metric_rows.json",
+                "prompt_plan.json",
+                "mock_image_generation_backend_manifest.json",
+                "image_manifests/image_generation_manifest.json",
+                "image_manifests/image_pair_manifest.json",
+            )
+        )
     if command_plan.get("run_external_plans"):
         external_steps = command_plan.get("external_plan_steps", {})
         for key in ("baseline_observations_path", "metric_rows_path"):
