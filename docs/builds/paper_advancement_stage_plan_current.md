@@ -50,6 +50,7 @@ D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_0345
 | 8 | detection 输出接收 | `pilot_detection_output_acceptance_report.json` | fail | detection events / thresholds 尚未满足 fixed-FPR 统计契约。 |
 | 9 | baseline 输出接收 | `pilot_baseline_output_acceptance_report.json` | fail | external baseline observations 尚未满足论文对比契约。 |
 | 10 | quality metric 输出接收 | `pilot_metric_output_acceptance_report.json` | fail | metric rows 与 execution manifest 尚未满足论文质量指标契约。 |
+| 11 | fixed-FPR 统计输出接收 | `pilot_fixed_fpr_output_acceptance_report.json` | fail | fixed-FPR / TPR@FPR 论文主表尚未由真实 records 重建。 |
 
 ## 6. 不能声明的内容
 
@@ -317,6 +318,31 @@ baseline_comparison_table.csv
 statistical_test_report.json
 ```
 
+### P7.5: fixed-FPR / TPR@FPR 统计输出接收门禁
+
+目标: 验证 fixed-FPR threshold 表、TPR@FPR 表、attack TPR 表和 baseline comparison 表是否满足论文主表与结果包构建的最小契约。
+
+推荐命令:
+
+```text
+python scripts/validate_pilot_fixed_fpr_outputs.py --output-root {workspace}/paper_outputs/artifacts --out {workspace}/pilot_fixed_fpr_output_acceptance_report.json --require-pass
+```
+
+正式论文统计检验声明应使用:
+
+```text
+python scripts/validate_pilot_fixed_fpr_outputs.py --output-root {workspace}/paper_outputs/artifacts --out {workspace}/pilot_fixed_fpr_output_acceptance_report.json --require-statistical-report --require-pass
+```
+
+完成门禁:
+
+```text
+pilot_fixed_fpr_output_acceptance_report.json: overall_decision = pass
+pilot_fixed_fpr_output_acceptance_report.json: recommended_next_stage = paper_result_package_pilot
+```
+
+该门禁当前已经具备实现、CLI 和测试。当前 MyDrive 工作区报告为 `fail`, 原因是 `paper_outputs/artifacts` 下尚未由真实 records 重建 fixed-FPR / TPR@FPR 统计表。
+
 ### P8: 构建论文结果包
 
 目标: 形成可供论文撰写和发表使用的结果包。
@@ -357,7 +383,8 @@ S15. baseline 完成后, 运行 validate_pilot_baseline_outputs.py --require-pas
 S16. baseline 接收门禁通过后, 运行 quality metric。
 S17. metric 完成后, 运行 validate_pilot_metric_outputs.py --require-pass。
 S18. metric 接收门禁通过后, 运行 fixed-FPR / TPR@FPR 统计。
-S19. 统计通过后, 构建 paper_results_package 并归档到 MyDrive。
+S19. 统计完成后, 运行 validate_pilot_fixed_fpr_outputs.py --require-pass。
+S20. fixed-FPR 统计接收门禁通过后, 构建 paper_results_package 并归档到 MyDrive。
 ```
 
 ## 9. 与 CEG-WM 的核心机制对齐要求
@@ -374,4 +401,4 @@ S19. 统计通过后, 构建 paper_results_package 并归档到 MyDrive。
 
 ## 10. 当前下一步建议
 
-当前已补齐 `quality metric 输出接收门禁` 的工程接收口径。下一步应填充真实 pilot 输入并依次产出真实 image, attack, detection, baseline 和 metric 结果；其中 metric 阶段需要写出 `external_metrics/metric_rows.json` 与 `external_metrics/metric_execution_manifest.json`, 再运行 `validate_pilot_metric_outputs.py --require-pass`。
+当前已补齐 `quality metric 输出接收门禁` 和 `fixed-FPR 统计输出接收门禁` 的工程接收口径。下一步应填充真实 pilot 输入并依次产出真实 image, attack, detection, baseline 和 metric 结果；随后用真实 records 重建 fixed-FPR / TPR@FPR 表格, 再运行 `validate_pilot_fixed_fpr_outputs.py --require-pass`。

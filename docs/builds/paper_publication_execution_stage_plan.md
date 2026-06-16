@@ -350,7 +350,36 @@ attack TPR 按 attack_family 和 attack_condition 分组
 所有表格可由 records 与 manifests 重建
 ```
 
-## 17. 阶段 I: 论文示例图与图表重建
+## 17. 阶段 H2: fixed-FPR / TPR@FPR 统计输出接收门禁
+
+### 命令
+
+```text
+python scripts/validate_pilot_fixed_fpr_outputs.py --output-root {workspace}/paper_outputs/artifacts --out {workspace}/pilot_fixed_fpr_output_acceptance_report.json --require-pass
+```
+
+正式论文统计检验声明应使用:
+
+```text
+python scripts/validate_pilot_fixed_fpr_outputs.py --output-root {workspace}/paper_outputs/artifacts --out {workspace}/pilot_fixed_fpr_output_acceptance_report.json --require-statistical-report --require-pass
+```
+
+### 通过条件
+
+```text
+fixed_fpr_threshold_table.csv 存在且字段完整
+tpr_at_fixed_fpr_table.csv 存在且字段完整
+attack_tpr_at_fixed_fpr_table.csv 存在且字段完整
+baseline_comparison_table.csv 存在且覆盖 TPR 表方法
+所有 rate 字段位于 0 到 1 之间
+所有 count 字段为非负整数
+threshold 来源必须是 calibration_clean_negative
+threshold 表、TPR 表和 attack TPR 表的 method / target_fpr 对齐
+```
+
+当前该命令已经实现。若 `paper_outputs/artifacts` 目录下缺少上述统计表, 门禁会失败并建议先运行 fixed-FPR 统计和论文产物重建。
+
+## 18. 阶段 I: 论文示例图与图表重建
 
 ### 目标
 
@@ -377,7 +406,7 @@ LaTeX 表和 rendered figures 可由 records 与 manifests 重建
 paper_claim_audit.json 不使用 placeholder 字段支撑正式 claim
 ```
 
-## 18. 阶段 J: MyDrive 结果包归档
+## 19. 阶段 J: MyDrive 结果包归档
 
 ### 目标
 
@@ -403,7 +432,7 @@ external_result_evidence_report.json = pass
 paper_claim_audit.json = pass
 ```
 
-## 19. 阶段 K: 正式论文实验
+## 20. 阶段 K: 正式论文实验
 
 ### 目标
 
@@ -426,7 +455,7 @@ paper_claim_audit.json = pass
 完整 Colab 或 GPU 运行 bundle
 ```
 
-## 20. 当前立即执行建议
+## 21. 当前立即执行建议
 
 当前立即执行优先级如下:
 
@@ -438,4 +467,4 @@ paper_claim_audit.json = pass
 6. 再进入 fixed-FPR / TPR@FPR 统计。
 7. 最后构建 paper_results_package 并归档到 MyDrive。
 
-其中, 工程侧已补齐 `quality metric 输出接收门禁`。后续真实执行侧必须先补齐真实 pilot 输入, 再依次产出 image, attack, detection, baseline 和 metric 结果；只有这些接收门禁通过后, 才应进入 fixed-FPR / TPR@FPR 统计和 paper_results_package 构建。
+其中, 工程侧已补齐 `quality metric 输出接收门禁` 和 `fixed-FPR 统计输出接收门禁`。后续真实执行侧必须先补齐真实 pilot 输入, 再依次产出 image, attack, detection, baseline 和 metric 结果；只有这些接收门禁和 fixed-FPR 统计接收门禁通过后, 才应进入 paper_results_package 构建。
