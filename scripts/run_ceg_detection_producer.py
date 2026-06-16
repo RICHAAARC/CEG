@@ -1,0 +1,64 @@
+﻿"""从 image_pairs 和 attack manifest 生成 CEG detection 协议事件。"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from experiments.ceg_detection_producer import write_detection_inputs_from_image_manifests
+
+
+def _load_rows(path: Path) -> list[dict[str, object]]:
+    """读取 JSON / JSONL / CSV 行文件。"""
+    if path.suffix == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        if not isinstance(payload, list):
+            raise TypeError("row JSON must contain a list")
+        return [dict(row) for row in payload]
+    if path.suffix == ".jsonl":
+        return [json.loads(line) for line in path.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+    if path.suffix == ".csv":
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            return [dict(row) for row in csv.DictReader(handle)]
+    raise ValueError(f"unsupported row extension: {path.suffix}")
+
+
+def _load_manifest(path: str | None) -> dict[str, object] | None:
+    """读取可选 attack manifest。"""
+    if path is None:
+        return None
+    payload = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, dict):
+        raise TypeError("attacked image manifest must contain an object")
+    return dict(payload)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """构造命令行参数解析器。"""
+    parser = argparse.ArgumentParser(description="生成 CEG detection dry-run 协议事件。")
+    parser.add_argument("--image-pairs", required=True, help="image_pairs.json / jsonl / csv 路径。")
+    parser.add_argument("--attacked-image-manifest", default=None, help="可选 attacked_image_manifest.json 路径。")
+    parser.add_argument("--out", required=True, help="detection 输入输出目录。")
+    return parser
+
+
+def main() -> None:
+    """CLI 入口。"""
+    args = build_parser().parse_args()
+    manifest = write_detection_inputs_from_image_manifests(
+        _load_rows(Path(args.image_pairs)),
+        args.out,
+        attacked_image_manifest=_load_manifest(args.attacked_image_manifest),
+    )
+    print(json.dumps(manifest, ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    main()

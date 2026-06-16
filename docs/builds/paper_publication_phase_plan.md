@@ -465,6 +465,14 @@ method_group_comparison_table.csv
 method_pairwise_delta_table.csv
 ```
 
+### 当前状态
+
+```text
+进行中。
+轻量 CEG detection producer 已具备 image_pairs / attacked_image_manifest -> detection_events.json / detection_thresholds.json / ceg_detection_producer_manifest.json 的契约链路。
+该 producer 只用于 dry-run 和正式 detector 接口验证, 不代表正式检测模型分数。
+```
+
 ### 完成标准
 
 ```text
