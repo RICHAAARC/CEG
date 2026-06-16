@@ -206,3 +206,71 @@ def test_materialize_pilot_input_manifest_cli_can_feed_package_builder(tmp_path)
     assert build_manifest["overall_decision"] == "pass"
     assert build_manifest["pilot_input_manifest_validation"]["overall_decision"] == "pass"
     assert (output_root / "paper_results_package" / "paper_results_package_manifest.json").is_file()
+
+
+@pytest.mark.quick
+def test_build_pilot_package_from_raw_inputs_cli_materializes_builds_and_archives(tmp_path) -> None:
+    """分散输入一键入口应完成物化、结果包构建和 Drive 分类归档."""
+    source_root = tmp_path / "source_inputs"
+    input_manifest = write_paper_dry_run_inputs(source_root)
+    attack_root = tmp_path / "attack_outputs"
+    materialized_root = tmp_path / "materialized_pilot_inputs"
+    output_root = tmp_path / "pilot_package"
+    drive_root = tmp_path / "drive" / "CEG"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_image_attack_workflow.py",
+            "--image-pairs",
+            str(source_root / input_manifest["image_pairs_path"]),
+            "--out",
+            str(attack_root),
+            "--attack-families",
+            "brightness_contrast",
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/build_pilot_package_from_raw_inputs.py",
+            "--materialized-input-root",
+            str(materialized_root),
+            "--out",
+            str(output_root),
+            "--run-id",
+            "raw_inputs_cli",
+            "--events",
+            str(source_root / input_manifest["events_path"]),
+            "--thresholds",
+            str(source_root / input_manifest["thresholds_path"]),
+            "--baseline-observations",
+            str(source_root / input_manifest["baseline_observations_path"]),
+            "--metric-rows",
+            str(source_root / input_manifest["metric_rows_path"]),
+            "--image-pairs",
+            str(source_root / input_manifest["image_pairs_path"]),
+            "--attacked-image-manifest",
+            str(attack_root / "image_manifests" / "attacked_image_manifest.json"),
+            "--attack-shard-manifest",
+            str(attack_root / "image_manifests" / "attack_shard_manifest.json"),
+            "--readiness-requirements",
+            "configs/paper_output_requirements.json",
+            "--require-paper-readiness",
+            "--drive-root",
+            str(drive_root),
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    raw_manifest = json.loads((output_root / "pilot_raw_input_package_build_manifest.json").read_text(encoding="utf-8"))
+    build_manifest = json.loads((output_root / "pilot_package_build_manifest.json").read_text(encoding="utf-8"))
+    assert raw_manifest["overall_decision"] == "pass"
+    assert raw_manifest["materialization"]["overall_decision"] == "pass"
+    assert build_manifest["overall_decision"] == "pass"
+    assert (materialized_root / "pilot_input_manifest.json").is_file()
+    assert (drive_root / "package_archives" / "paper_results_package_raw_inputs_cli.zip").is_file()

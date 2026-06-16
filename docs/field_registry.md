@@ -504,3 +504,8 @@ Notebook 与 repository module 的跨边界数据
 | missing_required_inputs | artifact | none | false | true | false | pilot 输入物化阶段缺失的必需输入字段集合, 当前至少包括 events 和 thresholds. |
 | pilot_input_validation_decision | artifact | none | false | true | false | pilot 输入物化后立即执行 preflight 得到的整体校验结论. |
 | materialization_digest | artifact | none | false | true | false | pilot 输入物化 manifest 对 manifest 内容、复制结果和校验结论生成的稳定摘要. |
+
+| pilot_raw_input_package_build_manifest | artifact | none | false | true | false | 从分散 pilot 输入一键完成输入物化、结果包构建和可选 Drive 归档后写出的总控 manifest. |
+| raw_input_package_build_decision | artifact | none | false | true | false | 分散输入一键构建入口的整体结论, 覆盖 materialize、preflight、build、export 和 archive 阶段. |
+| materialized_input_root | artifact | none | false | false | false | 分散输入一键构建入口传给 materializer 的 canonical pilot 输入目录. |
+| pilot_package_root | artifact | none | false | false | false | 分散输入一键构建入口生成 paper_outputs 和 paper_results_package 的构建根目录. |
