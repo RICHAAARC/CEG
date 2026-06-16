@@ -659,10 +659,38 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
     },
     {
         "result_group": "core_governed_tables",
+        "result_id": "formal_final_decision_metrics",
+        "relative_path": "paper_results_package/artifacts/formal_final_decision_metrics.json",
+        "required_for_paper_outputs": True,
+        "purpose": "正式 final decision 指标 JSON, 作为主结果表和 claim audit 的事实来源。",
+    },
+    {
+        "result_group": "core_governed_tables",
+        "result_id": "content_score_distribution_audit",
+        "relative_path": "paper_results_package/artifacts/content_score_distribution_audit.json",
+        "required_for_paper_outputs": True,
+        "purpose": "内容分数分布审计, 用于解释阈值附近样本和分数退化风险。",
+    },
+    {
+        "result_group": "core_governed_tables",
+        "result_id": "content_threshold_degeneracy_report",
+        "relative_path": "paper_results_package/artifacts/content_threshold_degeneracy_report.json",
+        "required_for_paper_outputs": True,
+        "purpose": "内容阈值退化报告, 用于阻断不可解释或退化的正式阈值结果。",
+    },
+    {
+        "result_group": "core_governed_tables",
         "result_id": "operating_point_table",
         "relative_path": "paper_results_package/artifacts/operating_point_table.csv",
         "required_for_paper_outputs": True,
         "purpose": "论文 operating point 表, 记录阈值和运行点。",
+    },
+    {
+        "result_group": "core_governed_tables",
+        "result_id": "rescue_metrics_summary",
+        "relative_path": "paper_results_package/artifacts/rescue_metrics_summary.csv",
+        "required_for_paper_outputs": True,
+        "purpose": "几何恢复 rescue 指标汇总, 用于说明恢复链对主方法的贡献。",
     },
     {
         "result_group": "watermark_standard_metrics",
@@ -684,6 +712,34 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
         "relative_path": "paper_results_package/artifacts/bit_recovery_metrics.csv",
         "required_for_paper_outputs": True,
         "purpose": "水印 bit recovery 相关指标。",
+    },
+    {
+        "result_group": "watermark_standard_metrics",
+        "result_id": "attack_family_metrics",
+        "relative_path": "paper_results_package/artifacts/attack_family_metrics.csv",
+        "required_for_paper_outputs": True,
+        "purpose": "按攻击族划分的检测和 bit recovery 指标。",
+    },
+    {
+        "result_group": "watermark_standard_metrics",
+        "result_id": "rate_confidence_intervals",
+        "relative_path": "paper_results_package/artifacts/rate_confidence_intervals.csv",
+        "required_for_paper_outputs": True,
+        "purpose": "TPR、FPR、bit recovery 等比例指标的置信区间表。",
+    },
+    {
+        "result_group": "watermark_standard_metrics",
+        "result_id": "detection_roc_curve",
+        "relative_path": "paper_results_package/artifacts/detection_roc_curve.csv",
+        "required_for_paper_outputs": True,
+        "purpose": "检测 ROC 曲线数据, 供论文图和 LaTeX 表复核。",
+    },
+    {
+        "result_group": "watermark_standard_metrics",
+        "result_id": "score_histogram_table",
+        "relative_path": "paper_results_package/artifacts/score_histogram_table.csv",
+        "required_for_paper_outputs": True,
+        "purpose": "检测分数直方图数据, 供分数分布图复核。",
     },
     {
         "result_group": "baseline_and_ablation",
@@ -740,6 +796,90 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
         "relative_path": "paper_results_package/latex_tables/latex_tables_manifest.json",
         "required_for_paper_outputs": True,
         "purpose": "LaTeX 表格导出 manifest。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_formal_main_table",
+        "relative_path": "paper_results_package/latex_tables/formal_main_table.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "论文主结果表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_rescue_metrics_summary",
+        "relative_path": "paper_results_package/latex_tables/rescue_metrics_summary.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "rescue 指标汇总表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_baseline_comparison_table",
+        "relative_path": "paper_results_package/latex_tables/baseline_comparison_table.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "baseline 对比表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_method_group_comparison_table",
+        "relative_path": "paper_results_package/latex_tables/method_group_comparison_table.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "方法组和消融对比表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_quality_metrics_summary",
+        "relative_path": "paper_results_package/latex_tables/quality_metrics_summary.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "质量指标表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_bit_recovery_metrics",
+        "relative_path": "paper_results_package/latex_tables/bit_recovery_metrics.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "bit recovery 指标表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_attack_family_metrics",
+        "relative_path": "paper_results_package/latex_tables/attack_family_metrics.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "攻击族鲁棒性指标表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_rate_confidence_intervals",
+        "relative_path": "paper_results_package/latex_tables/rate_confidence_intervals.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "比例指标置信区间表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_method_pairwise_delta_table",
+        "relative_path": "paper_results_package/latex_tables/method_pairwise_delta_table.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "方法成对差值表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_detection_roc_curve",
+        "relative_path": "paper_results_package/latex_tables/detection_roc_curve.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "检测 ROC 曲线数据表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_score_histogram_table",
+        "relative_path": "paper_results_package/latex_tables/score_histogram_table.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "分数直方图数据表的 LaTeX 导出。",
+    },
+    {
+        "result_group": "paper_reports",
+        "result_id": "latex_operating_point_table",
+        "relative_path": "paper_results_package/latex_tables/operating_point_table.tex",
+        "required_for_paper_outputs": True,
+        "purpose": "operating point 表的 LaTeX 导出。",
     },
     {
         "result_group": "paper_reports",
@@ -1076,9 +1216,14 @@ COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     "operating_point_table": ("method_name", "operating_threshold", "tpr", "fpr"),
     "quality_metrics_summary": ("method_name", "metric_name", "metric_coverage_rate"),
     "bit_recovery_metrics": ("method_name", "bit_accuracy", "payload_recovery_rate"),
+    "attack_family_metrics": ("method_name", "attack_family", "tpr", "bit_accuracy"),
+    "rate_confidence_intervals": ("method_name", "metric_name", "rate_value", "ci_lower", "ci_upper"),
+    "rescue_metrics_summary": ("method_name", "rescue_gain", "positive_by_geo_rescue_count"),
     "baseline_comparison_table": ("method_name", "event_count", "tpr", "clean_fpr"),
     "method_group_comparison_table": ("method_name", "method_group", "comparison_role", "event_count"),
     "method_pairwise_delta_table": ("reference_method", "method_name", "metric_name", "rate_delta"),
+    "detection_roc_curve": ("method_name", "threshold_label", "tpr", "fpr"),
+    "score_histogram_table": ("method_name", "label_name", "score_bin_lower", "score_bin_count"),
 }
 
 
@@ -1304,6 +1449,31 @@ def _check_paper_figure_specs_semantics(path: Path) -> dict[str, Any]:
     return _semantic_check("pass", "figure_specs_shape_valid", {"figure_count": len(figures), "figure_ids": figure_ids})
 
 
+def _check_json_object_result_semantics(path: Path) -> dict[str, Any]:
+    """检查 JSON 结果文件是否是非空对象。
+
+    该检查适用于正式指标和审计报告类产物。它不解释具体统计含义, 只保证 Colab 索引中的
+    必需 JSON 不是空文件、数组或无法复核的碎片内容。
+    """
+    payload = _read_json_object(path)
+    if not isinstance(payload, dict) or not payload:
+        return _semantic_check("fail", "json_object_missing_or_empty", {"path": str(path)})
+    return _semantic_check("pass", "json_object_non_empty", {"top_level_keys": sorted(str(key) for key in payload.keys())})
+
+
+def _check_latex_table_semantics(path: Path) -> dict[str, Any]:
+    """检查 LaTeX 表格导出是否包含基本 tabular 结构。
+
+    这是面向论文交付的轻量结构检查, 不重新排版 PDF, 只确认每个必需 `.tex` 表不是空占位文件。
+    """
+    body = path.read_text(encoding="utf-8-sig")
+    required_markers = ("\\begin{tabular}", "\\end{tabular}")
+    missing = [marker for marker in required_markers if marker not in body]
+    if missing:
+        return _semantic_check("fail", "latex_table_markers_missing", {"missing_markers": missing, "byte_count": path.stat().st_size})
+    return _semantic_check("pass", "latex_table_tabular_present", {"byte_count": path.stat().st_size})
+
+
 def _check_manifest_list_semantics(path: Path, list_field: str) -> dict[str, Any]:
     """检查交付 manifest 是否包含非空文件条目列表。"""
     payload = _read_json_object(path)
@@ -1341,10 +1511,18 @@ def _check_colab_result_semantics(result_id: str, path: Path) -> dict[str, Any]:
         checks = [_check_paper_figure_specs_semantics(path)]
     elif result_id in COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS:
         checks = [_check_csv_result_semantics(path, COLAB_RESULT_SEMANTIC_REQUIRED_FIELDS[result_id])]
+    elif result_id in {
+        "formal_final_decision_metrics",
+        "content_score_distribution_audit",
+        "content_threshold_degeneracy_report",
+    }:
+        checks = [_check_json_object_result_semantics(path)]
     elif result_id == "rendered_figure_manifest":
         checks = [_check_manifest_list_semantics(path, "rendered_figures")]
     elif result_id == "latex_tables_manifest":
         checks = [_check_manifest_list_semantics(path, "latex_tables")]
+    elif result_id.startswith("latex_"):
+        checks = [_check_latex_table_semantics(path)]
     elif result_id == "pdf_figure_manifest":
         checks = [_semantic_check("pass", "pdf_manifest_present", {"byte_count": path.stat().st_size})]
     elif result_id == "paper_results_report":

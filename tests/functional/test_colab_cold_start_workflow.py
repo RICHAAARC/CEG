@@ -151,8 +151,16 @@ def test_colab_paper_result_index_maps_required_paper_outputs(tmp_path) -> None:
     result_ids = {item["result_id"] for item in index["indexed_results"]}
     assert {
         "formal_main_table",
+        "formal_final_decision_metrics",
+        "content_score_distribution_audit",
+        "content_threshold_degeneracy_report",
+        "rescue_metrics_summary",
         "standard_watermark_metrics",
         "quality_metrics_summary",
+        "attack_family_metrics",
+        "rate_confidence_intervals",
+        "detection_roc_curve",
+        "score_histogram_table",
         "baseline_comparison_table",
         "method_group_comparison_table",
         "method_pairwise_delta_table",
@@ -165,6 +173,18 @@ def test_colab_paper_result_index_maps_required_paper_outputs(tmp_path) -> None:
     }.issubset(result_ids)
     result_groups = {item["result_group"] for item in index["indexed_results"]}
     assert {"watermark_standard_metrics", "baseline_and_ablation", "figures", "paper_reports"}.issubset(result_groups)
+    requirements = json.loads(open("configs/paper_output_requirements.json", encoding="utf-8").read())
+    indexed_paths = {item["relative_path"] for item in index["indexed_results"]}
+    required_artifact_paths = {
+        f"paper_results_package/artifacts/{artifact_name}"
+        for artifact_name in requirements["required_artifacts"]
+    }
+    required_latex_paths = {
+        f"paper_results_package/latex_tables/{table_name}"
+        for table_name in requirements["required_latex_tables"]
+    }
+    assert required_artifact_paths.issubset(indexed_paths)
+    assert required_latex_paths.issubset(indexed_paths)
     required_group_decisions = {item["result_group"]: item["overall_decision"] for item in index["required_result_group_summary"]}
     assert required_group_decisions["watermark_standard_metrics"] == "fail"
     assert required_group_decisions["baseline_and_ablation"] == "fail"
