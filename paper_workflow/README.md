@@ -7,7 +7,7 @@
 `paper_workflow/colab_ceg_cold_start.ipynb` 用于本地没有 GPU 的场景。推荐流程如下:
 
 1. 在 Google Colab 中打开该 Notebook。
-2. 在配置区填写 `REPO_URL` 或把项目上传到 `/content/CEG`。
+2. 在配置区填写 `REPO_URL` 或把项目上传到 `/content/CEG`。`REPO_BRANCH` 默认留空, 表示使用远端默认分支; 只有需要固定复现实验所在分支时才填写, 避免 `main` / `master` 分支名不一致导致冷启动 clone 失败。
 3. 结果默认落盘到 Google Drive 的 `/content/drive/MyDrive/CEG`, 该目录会按结果类型划分 `inputs/`、`experiment_matrix/`、`paper_outputs/`、`paper_results_package/`、`colab_run_bundle/`、`provided_results/`、`external_baselines/`、`external_metrics/`、`acceptance/` 和 `archives/`。
 4. 若只验证端到端链路, 保持 `USE_DRY_RUN_INPUTS = True`。
 5. 若运行真实实验结果, 将 `USE_DRY_RUN_INPUTS = False`。可以直接填写 `EVENTS_PATH` 和 `THRESHOLDS_PATH`; 也可以填写 `SAMPLE_MANIFEST_PATH` 和 `THRESHOLDS_PATH`, 由仓库脚本生成协议事件。

@@ -24,6 +24,10 @@ def test_colab_notebook_is_parseable_and_delegates_to_helpers() -> None:
     assert notebook["nbformat"] == 4
     assert "run_colab_paper_outputs_from_notebook" in source
     assert "write_colab_formal_run_checklist_from_notebook" in source
+    assert 'REPO_BRANCH = ""' in source
+    assert "if REPO_BRANCH:" in source
+    assert 'clone_command.extend(["--branch", REPO_BRANCH])' in source
+    assert '"git", "clone", "--branch", REPO_BRANCH' not in source
     assert "colab_formal_run_checklist.json" in source
     assert "build_paper_outputs.py" not in source
     assert "paper_claim_audit.json" in source
