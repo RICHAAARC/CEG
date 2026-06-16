@@ -460,7 +460,35 @@ LaTeX、rendered figures 和 PDF figure manifest 均存在
 
 当前该命令已经实现。若 `paper_results_package` 尚未导出或缺少核心论文产物, 门禁会失败并建议先重新运行结果包导出。
 
-## 21. 阶段 K: 正式论文实验
+## 21. 阶段 J3: MyDrive 归档输出接收门禁
+
+### 命令
+
+```text
+python scripts/validate_pilot_mydrive_archive.py --drive-root D:/content/drive/MyDrive/CEG --out {workspace}/pilot_mydrive_archive_acceptance_report.json --require-pass
+```
+
+指定 run_id 时使用:
+
+```text
+python scripts/validate_pilot_mydrive_archive.py --drive-root D:/content/drive/MyDrive/CEG --run-id <run_id> --out {workspace}/pilot_mydrive_archive_acceptance_report.json --require-pass
+```
+
+### 通过条件
+
+```text
+package_manifests/paper_results_package_archive_manifest_<run_id>.json 存在且可读
+package_snapshots/<run_id>/paper_results_package 存在且 package validation pass
+package_archives/paper_results_package_<run_id>.zip 存在且可读
+zip 内文件列表与 archive manifest archived_files 一致
+目录快照文件列表与 archive manifest copied_files 一致
+archive_sha256 与实际 zip 摘要一致
+package_validation_decision = pass
+```
+
+当前该命令已经实现。若 MyDrive 尚未归档真实 `paper_results_package`, 门禁会失败并建议先运行 `archive_paper_results_to_drive.py`。
+
+## 22. 阶段 K: 正式论文实验
 
 ### 目标
 
@@ -483,7 +511,7 @@ LaTeX、rendered figures 和 PDF figure manifest 均存在
 完整 Colab 或 GPU 运行 bundle
 ```
 
-## 22. 当前立即执行建议
+## 23. 当前立即执行建议
 
 当前立即执行优先级如下:
 
@@ -495,4 +523,4 @@ LaTeX、rendered figures 和 PDF figure manifest 均存在
 6. 再进入 fixed-FPR / TPR@FPR 统计。
 7. 最后构建 paper_results_package 并归档到 MyDrive。
 
-其中, 工程侧已补齐 `quality metric 输出接收门禁`、`fixed-FPR 统计输出接收门禁` 和 `paper_results_package 输出接收门禁`。后续真实执行侧必须先补齐真实 pilot 输入, 再依次产出 image、attack、detection、baseline、metric 和 fixed-FPR 结果；只有这些接收门禁与结果包接收门禁通过后, 才应进入 MyDrive 归档。
+其中, 工程侧已补齐 `quality metric 输出接收门禁`、`fixed-FPR 统计输出接收门禁`、`paper_results_package 输出接收门禁` 和 `MyDrive 归档输出接收门禁`。后续真实执行侧必须先补齐真实 pilot 输入, 再依次产出 image、attack、detection、baseline、metric、fixed-FPR、paper_results_package 和 MyDrive archive；只有这些门禁通过后, 才能把结果包作为论文撰写依据。
