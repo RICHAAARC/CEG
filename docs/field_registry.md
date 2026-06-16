@@ -360,6 +360,14 @@ Notebook 与 repository module 的跨边界数据
 | semantic_check | artifact | none | false | false | false | 论文结果索引中针对单个关键结果文件的轻量内容结构校验结果。 |
 | semantic_check_summary | artifact | none | false | true | false | 论文结果索引中关键结果文件内容结构校验的汇总计数和必需失败集合。 |
 | semantic_check_failures | artifact | none | false | true | false | 论文结果索引中已经存在但未通过内容结构校验的必需结果 result_id 集合。 |
+| production_trace | artifact | none | false | false | false | 论文结果索引中单个结果文件的生产追踪, 说明该文件由哪些仓库步骤生成、依赖哪些输入并由哪些门禁验收。 |
+| production_trace_summary | artifact | none | false | true | false | 论文结果索引中生产追踪覆盖率汇总, 用于发现仍缺少生产步骤或验收门禁的 result_id。 |
+| producer_steps | artifact | none | false | false | false | production_trace 中列出的结果生成脚本、模块函数或 Colab helper 步骤。 |
+| required_inputs | artifact | none | false | false | false | production_trace 中列出的生成该结果所需上游输入、模板或外部证据来源。 |
+| validation_gates | artifact | none | false | false | false | production_trace 中列出的结果进入论文链路前必须通过的校验、证据或验收门禁。 |
+| traceable_total | artifact | none | false | false | false | production_trace_summary 中已具备生产步骤和验收门禁追踪的结果条目数量。 |
+| missing_trace_count | artifact | none | false | true | false | production_trace_summary 中缺少生产步骤或验收门禁追踪的结果条目数量。 |
+| missing_trace_result_ids | artifact | none | false | true | false | production_trace_summary 中缺少生产追踪的 result_id 集合。 |
 | colab_paper_result_index_semantic_checks_passed | artifact | none | false | true | false | Colab bundle 验收中检查论文结果索引整体通过、必需结果组无失败且语义校验失败数为 0 的门禁项。 |
 | result_index_digest | artifact | none | false | true | false | 论文结果索引条目的稳定摘要。 |
 | colab_output_layout_manifest | artifact | none | false | true | false | Colab 结果类型目录 manifest, 用于审计每类输出在 Drive 根目录下的落盘位置。 |

@@ -819,6 +819,215 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
  )
 
 
+COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
+    "core_governed_tables": {
+        "producer_steps": (
+            "scripts/build_paper_outputs.py",
+            "main.analysis.rebuild_artifacts.rebuild_paper_artifacts",
+            "scripts/export_paper_results_package.py",
+        ),
+        "required_inputs": (
+            "event_records.json 或 sample_manifest + thresholds 生成的正式事件记录",
+            "thresholds.json 或 calibrate_thresholds_from_sample_manifest.py 生成的阈值文件",
+            "configs/paper_experiment_matrix.json 生成的实验矩阵",
+        ),
+        "validation_gates": (
+            "scripts/validate_paper_outputs.py",
+            "paper_readiness_report.json",
+            "paper_result_evidence_report.json",
+            "colab_paper_result_index semantic_check",
+        ),
+    },
+    "watermark_standard_metrics": {
+        "producer_steps": (
+            "scripts/build_paper_outputs.py",
+            "main.analysis.standard_metrics.aggregate_standard_watermark_metrics",
+            "scripts/compute_image_quality_metrics.py 或 scripts/run_metric_plan.py",
+            "scripts/export_paper_results_package.py",
+        ),
+        "required_inputs": (
+            "governed event records",
+            "metric_rows.json 或 provided_results/metric_rows.json",
+            "image_pairs.json 或 sample_manifest 派生的 image pairs",
+        ),
+        "validation_gates": (
+            "paper_readiness_report.json",
+            "paper_result_evidence_report.json advanced_metrics_source_ready",
+            "colab_paper_result_index semantic_check",
+            "colab_paper_result_index semantic_check_summary",
+        ),
+    },
+    "baseline_and_ablation": {
+        "producer_steps": (
+            "scripts/build_paper_outputs.py",
+            "main.analysis.aggregation.build_baseline_comparison_table",
+            "scripts/run_baseline_plan.py 或 copy_provided_result_files",
+            "scripts/export_paper_results_package.py",
+        ),
+        "required_inputs": (
+            "governed event records",
+            "baseline_observations.json 或 provided_results/baseline_observations.json",
+            "内部 CEG ablation / baseline 方法配置",
+        ),
+        "validation_gates": (
+            "paper_experiment_coverage_report.json",
+            "paper_readiness_report.json",
+            "paper_result_evidence_report.json baseline_source_ready",
+            "colab_paper_result_index semantic_check",
+        ),
+    },
+    "figures": {
+        "producer_steps": (
+            "scripts/build_paper_outputs.py",
+            "main.analysis.figure_specs.build_paper_figure_specs",
+            "main.analysis.render_figures.write_rendered_figures",
+            "main.analysis.pdf_figures.write_pdf_figure_preview",
+            "scripts/export_paper_results_package.py",
+        ),
+        "required_inputs": (
+            "paper_results_package/artifacts/*.csv",
+            "paper_results_package/artifacts/standard_watermark_metrics.json",
+            "paper_results_package/artifacts/paper_figure_specs.json",
+        ),
+        "validation_gates": (
+            "paper_readiness_report.json rendered_figure_outputs_present",
+            "paper_readiness_report.json pdf_figure_outputs_present",
+            "colab_paper_result_index semantic_check",
+        ),
+    },
+    "paper_reports": {
+        "producer_steps": (
+            "scripts/export_latex_tables.py",
+            "scripts/export_paper_results_report.py",
+            "scripts/validate_paper_outputs.py",
+            "scripts/export_paper_results_package.py",
+        ),
+        "required_inputs": (
+            "paper_results_package/artifacts/*.csv",
+            "paper_results_package/artifacts/paper_claim_audit.json",
+            "paper_results_package/paper_readiness_report.json",
+            "paper_results_package/rendered_figures/rendered_paper_figures_manifest.json",
+        ),
+        "validation_gates": (
+            "paper_readiness_report.json latex_table_outputs_present",
+            "paper_readiness_report.json paper_results_report_present",
+            "paper_result_evidence_report.json strict claims and readiness checks",
+            "colab_paper_result_index semantic_check",
+        ),
+    },
+    "external_evidence": {
+        "producer_steps": (
+            "scripts/run_baseline_plan.py",
+            "scripts/run_metric_plan.py",
+            "copy_provided_result_files",
+        ),
+        "required_inputs": (
+            "configs/baseline_command_templates.json",
+            "configs/external_metric_command_templates.json",
+            "用户提供的 baseline / metric 文件或第三方命令输出",
+        ),
+        "validation_gates": (
+            "provided_result_files_manifest.json 摘要校验",
+            "paper_result_evidence_report.json external source checks",
+            "run_colab_acceptance_checks.py",
+        ),
+    },
+    "colab_delivery": {
+        "producer_steps": (
+            "paper_workflow.colab_utils.cold_start.run_colab_cold_start_pipeline",
+            "paper_workflow.colab_utils.cold_start.create_colab_bundle_archive",
+            "scripts/validate_colab_run_bundle.py",
+        ),
+        "required_inputs": (
+            "colab_command_plan.json",
+            "colab_formal_run_checklist.json",
+            "paper_results_package/",
+            "paper_result_evidence_report.json",
+        ),
+        "validation_gates": (
+            "colab_run_bundle_validation.json",
+            "run_colab_acceptance_checks.py",
+            "colab_paper_result_index_semantic_checks_passed",
+        ),
+    },
+}
+
+
+COLAB_RESULT_ID_PRODUCTION_TRACE_OVERRIDES: dict[str, dict[str, tuple[str, ...]]] = {
+    "external_baseline_observations": {
+        "producer_steps": ("scripts/run_baseline_plan.py",),
+        "required_inputs": ("baseline command plan", "governed event records"),
+        "validation_gates": ("paper_result_evidence_report.json baseline_source_ready",),
+    },
+    "external_metric_rows": {
+        "producer_steps": ("scripts/run_metric_plan.py", "scripts/compute_image_quality_metrics.py"),
+        "required_inputs": ("metric command plan", "image_pairs.json 或 sample_manifest"),
+        "validation_gates": ("paper_result_evidence_report.json advanced_metrics_source_ready",),
+    },
+    "provided_result_files_manifest": {
+        "producer_steps": ("copy_provided_result_files",),
+        "required_inputs": ("用户提供的 baseline_observations.json", "用户提供的 metric_rows.json"),
+        "validation_gates": ("provided_result_files_manifest.json sha256 摘要", "paper_result_evidence_report.json provided_file source checks"),
+    },
+    "paper_results_package_manifest": {
+        "producer_steps": ("scripts/export_paper_results_package.py", "main.analysis.result_package.export_paper_results_package"),
+        "required_inputs": ("paper_outputs/", "paper_readiness_report.json"),
+        "validation_gates": ("paper_results_package_validation.json", "colab_run_bundle_validation.json"),
+    },
+    "colab_formal_input_contract": {
+        "producer_steps": ("write_colab_formal_input_contract",),
+        "required_inputs": ("Colab formal run configuration",),
+        "validation_gates": ("colab_formal_run_checklist.json", "colab_formal_result_gap_report.json"),
+    },
+    "formal_input_templates_manifest": {
+        "producer_steps": ("write_colab_formal_input_templates",),
+        "required_inputs": ("Colab formal input contract",),
+        "validation_gates": ("formal_input_templates_manifest.json template_digest",),
+    },
+    "colab_formal_runbook": {
+        "producer_steps": ("write_colab_formal_runbook",),
+        "required_inputs": ("colab_formal_run_checklist.json", "colab_paper_result_index.json", "colab_formal_result_gap_report.json"),
+        "validation_gates": ("colab_formal_runbook_contains_acceptance_guidance",),
+    },
+    "colab_bundle_archive": {
+        "producer_steps": ("create_colab_bundle_archive",),
+        "required_inputs": ("colab_run_bundle/", "colab_run_bundle_manifest.json", "colab_run_bundle_validation.json"),
+        "validation_gates": ("archive sha256", "offline_acceptance_command", "run_colab_acceptance_checks.py"),
+    },
+}
+
+
+def _merge_trace_values(*value_groups: tuple[str, ...]) -> list[str]:
+    """合并生产追踪字段, 保持顺序并去重, 便于结果索引稳定复现。"""
+    merged: list[str] = []
+    for values in value_groups:
+        for value in values:
+            if value not in merged:
+                merged.append(value)
+    return merged
+
+
+
+def _build_colab_result_production_trace(spec: dict[str, Any]) -> dict[str, Any]:
+    """根据结果组和 result_id 构造“如何生产与如何验收”的可审计追踪信息。"""
+    group_trace = COLAB_RESULT_GROUP_PRODUCTION_TRACES.get(str(spec["result_group"]), {})
+    override = COLAB_RESULT_ID_PRODUCTION_TRACE_OVERRIDES.get(str(spec["result_id"]), {})
+    return {
+        "producer_steps": _merge_trace_values(
+            tuple(group_trace.get("producer_steps", ())),
+            tuple(override.get("producer_steps", ())),
+        ),
+        "required_inputs": _merge_trace_values(
+            tuple(group_trace.get("required_inputs", ())),
+            tuple(override.get("required_inputs", ())),
+        ),
+        "validation_gates": _merge_trace_values(
+            tuple(group_trace.get("validation_gates", ())),
+            tuple(override.get("validation_gates", ())),
+        ),
+    }
+
+
 COLAB_RESULT_QUALITY_METRIC_FIELDS: tuple[str, ...] = ("psnr", "ssim", "lpips", "fid", "clip_score")
 
 
@@ -970,6 +1179,7 @@ def build_colab_paper_result_index(workspace_root: str | Path) -> dict[str, Any]
             "exists": path.is_file(),
             "required_for_paper_outputs": bool(spec["required_for_paper_outputs"]),
             "purpose": spec["purpose"],
+            "production_trace": _build_colab_result_production_trace(spec),
         }
         if path.is_file():
             entry["byte_count"] = path.stat().st_size
@@ -1023,6 +1233,17 @@ def build_colab_paper_result_index(workspace_root: str | Path) -> dict[str, Any]
         "fail_count": len(semantic_check_failures),
         "required_failures": semantic_check_failures,
     }
+    missing_trace_result_ids = [
+        str(item["result_id"])
+        for item in indexed_results
+        if not item.get("production_trace", {}).get("producer_steps")
+        or not item.get("production_trace", {}).get("validation_gates")
+    ]
+    production_trace_summary = {
+        "traceable_total": len(indexed_results) - len(missing_trace_result_ids),
+        "missing_trace_count": len(missing_trace_result_ids),
+        "missing_trace_result_ids": missing_trace_result_ids,
+    }
     manifest = {
         "artifact_name": "colab_paper_result_index.json",
         "overall_decision": "fail" if (required_missing or required_group_failures or semantic_check_failures) else "pass",
@@ -1037,6 +1258,7 @@ def build_colab_paper_result_index(workspace_root: str | Path) -> dict[str, Any]
         "required_result_group_failures": required_group_failures,
         "semantic_check_summary": semantic_check_summary,
         "semantic_check_failures": semantic_check_failures,
+        "production_trace_summary": production_trace_summary,
         "required_missing": required_missing,
         "required_total": sum(1 for item in indexed_results if item["required_for_paper_outputs"]),
         "required_present": sum(1 for item in indexed_results if item["required_for_paper_outputs"] and item["exists"]),

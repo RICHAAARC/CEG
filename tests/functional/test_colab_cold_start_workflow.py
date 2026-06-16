@@ -168,6 +168,19 @@ def test_colab_paper_result_index_maps_required_paper_outputs(tmp_path) -> None:
     assert "watermark_standard_metrics" in index["required_result_group_failures"]
     watermark_group = next(item for item in index["required_result_group_summary"] if item["result_group"] == "watermark_standard_metrics")
     assert {"standard_watermark_metrics", "quality_metrics_summary", "bit_recovery_metrics"}.issubset(set(watermark_group["missing_required_results"]))
+    assert index["production_trace_summary"]["missing_trace_count"] == 0
+    entry_by_id = {item["result_id"]: item for item in index["indexed_results"]}
+    standard_trace = entry_by_id["standard_watermark_metrics"]["production_trace"]
+    assert "scripts/build_paper_outputs.py" in standard_trace["producer_steps"]
+    assert "colab_paper_result_index semantic_check" in standard_trace["validation_gates"]
+    baseline_trace = entry_by_id["baseline_comparison_table"]["production_trace"]
+    assert "scripts/run_baseline_plan.py 或 copy_provided_result_files" in baseline_trace["producer_steps"]
+    assert "paper_result_evidence_report.json baseline_source_ready" in baseline_trace["validation_gates"]
+    figure_trace = entry_by_id["paper_figure_specs"]["production_trace"]
+    assert "main.analysis.figure_specs.build_paper_figure_specs" in figure_trace["producer_steps"]
+    archive_trace = entry_by_id["colab_bundle_archive"]["production_trace"]
+    assert "create_colab_bundle_archive" in archive_trace["producer_steps"]
+    assert "run_colab_acceptance_checks.py" in archive_trace["validation_gates"]
 
 
 @pytest.mark.quick
@@ -421,6 +434,8 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert result_index["semantic_check_failures"] == []
     assert result_index["semantic_check_summary"]["checkable_total"] > 0
     assert result_index["semantic_check_summary"]["fail_count"] == 0
+    assert result_index["production_trace_summary"]["missing_trace_count"] == 0
+    assert result_index["production_trace_summary"]["traceable_total"] == len(result_index["indexed_results"])
     assert summary["colab_paper_result_semantic_check_summary"] == result_index["semantic_check_summary"]
     assert summary["colab_paper_result_semantic_check_failures"] == []
     assert summary["colab_paper_result_required_group_failures"] == []
@@ -428,6 +443,8 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     assert bundled_summary["colab_paper_result_semantic_check_failures"] == []
     standard_metrics_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "standard_watermark_metrics")
     assert standard_metrics_entry["semantic_check"]["status"] == "pass"
+    assert "scripts/build_paper_outputs.py" in standard_metrics_entry["production_trace"]["producer_steps"]
+    assert "colab_paper_result_index semantic_check" in standard_metrics_entry["production_trace"]["validation_gates"]
     quality_metrics_entry = next(item for item in result_index["indexed_results"] if item["result_id"] == "quality_metrics_summary")
     assert quality_metrics_entry["semantic_check"]["checks"][0]["reason"] == "quality_metric_rows_cover_standard_fields"
     result_ids = {item["result_id"] for item in result_index["indexed_results"] if item["exists"]}
