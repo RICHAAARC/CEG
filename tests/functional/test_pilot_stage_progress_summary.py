@@ -35,13 +35,14 @@ def test_stage_progress_summary_marks_first_missing_stage(tmp_path) -> None:
     summary = build_pilot_stage_progress_summary(tmp_path)
 
     assert summary["overall_decision"] == "fail"
-    assert summary["current_stage"] == "p0_input_preflight"
+    assert summary["current_stage"] == "p0_input_freeze"
     assert summary["summary"]["missing_count"] >= 1
 
 
 @pytest.mark.quick
 def test_stage_progress_summary_finds_first_failed_stage_after_passes(tmp_path) -> None:
     """前置门禁通过后, 第一个 fail 阶段应成为推荐行动入口。"""
+    _write_report(tmp_path / "pilot_p0_input_freeze_report.json", "pass", "input_preflight", 0)
     _write_report(tmp_path / "pilot_input_plan_preflight_report.json", "pass", "value_pack_status", 0)
     _write_report(tmp_path / "pilot_input_value_pack_status_report.json", "pass", "apply_value_pack", 0)
     _write_report(tmp_path / "pilot_input_value_pack_application_report.json", "fail", "fill_values", 3)

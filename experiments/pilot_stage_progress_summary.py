@@ -32,6 +32,13 @@ class StageSpec:
 
 STAGE_SPECS = (
     StageSpec(
+        "p0_input_freeze",
+        "真实 pilot P0 输入冻结聚合门禁",
+        "pilot_p0_input_freeze_report.json",
+        "image_generation_launch_plan",
+        "先打开填写指南并补齐 CSV 中的 value_json, 再运行 build_pilot_p0_input_freeze_report.py --require-pass。",
+    ),
+    StageSpec(
         "p0_input_preflight",
         "真实 pilot 输入模板预检",
         "pilot_input_plan_preflight_report.json",
@@ -152,6 +159,8 @@ def _blocking_issue_count(payload: Any) -> int:
             return int(summary["blocking_issue_count"])
         if isinstance(summary.get("blocking_item_count"), int):
             return int(summary["blocking_item_count"])
+        if isinstance(summary.get("fail_count"), int) or isinstance(summary.get("skipped_count"), int):
+            return int(summary.get("fail_count", 0)) + int(summary.get("skipped_count", 0))
     issues = payload.get("blocking_issues")
     return len(issues) if isinstance(issues, list) else 0
 

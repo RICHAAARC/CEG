@@ -20,6 +20,7 @@ from experiments.pilot_input_value_pack_sheet import (
     import_and_write_pilot_input_value_pack_fill_sheet,
 )
 from experiments.pilot_input_value_pack_status import build_pilot_input_value_pack_status
+from experiments.pilot_p0_input_freeze import write_pilot_p0_input_freeze_report
 from tests.functional.test_pilot_input_value_pack import REAL_VALUES
 
 
@@ -210,3 +211,61 @@ def test_value_pack_fill_sheet_cli_roundtrip(tmp_path) -> None:
 
     assert completed.returncode == 1
     assert report_path.is_file()
+
+
+@pytest.mark.quick
+def test_p0_input_freeze_report_blocks_unfilled_sheet_without_apply(tmp_path) -> None:
+    """P0 聚合门禁在 CSV 未填写时应安全失败, 且不应用 value pack。"""
+    value_pack_path, _ = _prepare_value_pack(tmp_path)
+    fill_sheet = tmp_path / "pilot_input_value_pack_fill_sheet.csv"
+    report_json = tmp_path / "pilot_p0_input_freeze_report.json"
+    report_md = tmp_path / "pilot_p0_input_freeze_report.md"
+    export_pilot_input_value_pack_fill_sheet(value_pack_path=value_pack_path, output_csv_path=fill_sheet)
+
+    report = write_pilot_p0_input_freeze_report(
+        workspace_root=tmp_path,
+        value_pack_path=value_pack_path,
+        fill_sheet_path=fill_sheet,
+        output_json_path=report_json,
+        output_markdown_path=report_md,
+    )
+
+    payload = json.loads(value_pack_path.read_text(encoding="utf-8"))
+    assert report["overall_decision"] == "fail"
+    assert report["first_blocking_gate"]["gate_id"] == "p0_csv_import"
+    assert report["summary"]["pass_count"] == 0
+    assert report["summary"]["skipped_count"] == 3
+    assert all("value" not in entry for entry in payload["value_entries"])
+    assert report_json.is_file()
+    assert report_md.is_file()
+
+
+@pytest.mark.quick
+def test_p0_input_freeze_report_passes_after_filled_sheet(tmp_path) -> None:
+    """CSV 填写完整后, P0 聚合门禁应完成导入、应用、预检和执行就绪检查。"""
+    value_pack_path, _ = _prepare_value_pack(tmp_path)
+    fill_sheet = tmp_path / "pilot_input_value_pack_fill_sheet.csv"
+    report_json = tmp_path / "pilot_p0_input_freeze_report.json"
+    report_md = tmp_path / "pilot_p0_input_freeze_report.md"
+    export_pilot_input_value_pack_fill_sheet(value_pack_path=value_pack_path, output_csv_path=fill_sheet)
+    rows = _read_csv_rows(fill_sheet)
+    fieldnames = list(rows[0].keys())
+    for row in rows:
+        row["value_json"] = json.dumps(REAL_VALUES[row["task_id"]], ensure_ascii=False)
+    _write_csv_rows(fill_sheet, rows, fieldnames)
+
+    report = write_pilot_p0_input_freeze_report(
+        workspace_root=tmp_path,
+        value_pack_path=value_pack_path,
+        fill_sheet_path=fill_sheet,
+        output_json_path=report_json,
+        output_markdown_path=report_md,
+    )
+
+    assert report["overall_decision"] == "pass"
+    assert report["first_blocking_gate"] is None
+    assert report["summary"]["pass_count"] == 5
+    assert report["summary"]["skipped_count"] == 0
+    assert (tmp_path / "pilot_input_value_pack_application_report.json").is_file()
+    assert (tmp_path / "pilot_input_plan_preflight_report.json").is_file()
+    assert (tmp_path / "pilot_execution_readiness_report.json").is_file()
