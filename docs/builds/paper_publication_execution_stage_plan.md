@@ -63,6 +63,34 @@ overall_decision = pass
 真实 prompt / split / seed / model / watermark 配置已冻结
 ```
 
+## 4.5. 阶段 A2: value pack 填写状态汇总
+
+### 目标
+
+把真实 pilot 输入 value pack 中尚未填写或仍为占位内容的条目整理为可执行清单, 防止后续把未冻结输入误用为正式实验配置。
+
+### 命令
+
+```text
+python scripts/build_pilot_input_value_pack_status.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+```
+
+### 输出
+
+```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_input_value_pack_status_report.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_input_value_pack_status_report.md
+```
+
+### 通过条件
+
+```text
+overall_decision = pass
+missing_count = 0
+placeholder_count = 0
+recommended_next_stage = apply_pilot_input_value_pack
+```
+
 ## 5. 阶段 B: 图像生成启动计划
 
 ### 目标
@@ -539,12 +567,13 @@ pilot_stage_progress_summary.md
 
 当前立即执行优先级如下:
 
-1. 补齐真实 pilot 输入 value pack。
-2. 使 pilot input preflight 与 execution readiness 通过。
-3. 生成并通过 image generation launch plan。
-4. 执行真实图像和水印图像生成。
-5. 逐级通过 image, attack, detection, baseline, metric 输出接收门禁。
-6. 再进入 fixed-FPR / TPR@FPR 统计。
-7. 最后构建 paper_results_package 并归档到 MyDrive。
+1. 运行 value pack 填写状态汇总, 明确仍缺哪些真实输入值。
+2. 补齐真实 pilot 输入 value pack。
+3. 使 pilot input preflight 与 execution readiness 通过。
+4. 生成并通过 image generation launch plan。
+5. 执行真实图像和水印图像生成。
+6. 逐级通过 image, attack, detection, baseline, metric 输出接收门禁。
+7. 再进入 fixed-FPR / TPR@FPR 统计。
+8. 最后构建 paper_results_package 并归档到 MyDrive。
 
 其中, 工程侧已补齐从 quality metric 到 MyDrive archive 的接收门禁, 并新增 pilot 阶段进度汇总。后续真实执行侧必须先根据 `pilot_stage_progress_summary.md` 的首个阻断点补齐真实 pilot 输入, 再依次产出 image、attack、detection、baseline、metric、fixed-FPR、paper_results_package 和 MyDrive archive；只有这些门禁通过后, 才能把结果包作为论文撰写依据。

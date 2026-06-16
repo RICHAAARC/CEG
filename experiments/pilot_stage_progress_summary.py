@@ -39,6 +39,13 @@ STAGE_SPECS = (
         "补齐 prompt / split / seed / model / watermark 中的真实值, 然后重新运行输入模板预检。",
     ),
     StageSpec(
+        "p0_value_pack_status",
+        "真实 pilot value pack 填写状态",
+        "pilot_input_value_pack_status_report.json",
+        "apply_value_pack",
+        "逐项填写 pilot_input_value_pack.draft.json 中缺失的真实 value, 直到 value pack 状态报告通过。",
+    ),
+    StageSpec(
         "p0_value_pack",
         "真实 pilot value pack 应用",
         "pilot_input_value_pack_application_report.json",
@@ -140,8 +147,11 @@ def _blocking_issue_count(payload: Any) -> int:
     if not isinstance(payload, dict):
         return 0
     summary = payload.get("summary")
-    if isinstance(summary, dict) and isinstance(summary.get("blocking_issue_count"), int):
-        return int(summary["blocking_issue_count"])
+    if isinstance(summary, dict):
+        if isinstance(summary.get("blocking_issue_count"), int):
+            return int(summary["blocking_issue_count"])
+        if isinstance(summary.get("blocking_item_count"), int):
+            return int(summary["blocking_item_count"])
     issues = payload.get("blocking_issues")
     return len(issues) if isinstance(issues, list) else 0
 

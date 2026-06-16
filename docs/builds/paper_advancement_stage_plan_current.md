@@ -53,7 +53,8 @@ D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_0345
 | 11 | fixed-FPR 统计输出接收 | `pilot_fixed_fpr_output_acceptance_report.json` | fail | fixed-FPR / TPR@FPR 论文主表尚未由真实 records 重建。 |
 | 12 | paper results package 输出接收 | `pilot_paper_results_package_acceptance_report.json` | fail | paper_results_package 尚未导出并通过独立接收门禁。 |
 | 13 | MyDrive 归档输出接收 | `pilot_mydrive_archive_acceptance_report.json` | fail | package_snapshots、package_archives 和 package_manifests 尚未形成可复核归档。 |
-| 14 | pilot 阶段进度汇总 | `pilot_stage_progress_summary.json`, `.md` | fail | 汇总所有门禁状态, 指向首个真实执行阻断点。 |
+| 14 | value pack 填写状态汇总 | `pilot_input_value_pack_status_report.json`, `.md` | fail | 汇总仍未填写的真实输入 value 条目。 |
+| 15 | pilot 阶段进度汇总 | `pilot_stage_progress_summary.json`, `.md` | fail | 汇总所有门禁状态, 指向首个真实执行阻断点。 |
 
 ## 6. 不能声明的内容
 
@@ -96,6 +97,32 @@ pilot_input_plan_preflight_report.json: overall_decision = pass
 pilot_input_value_pack_application_report.json: overall_decision = pass
 pilot_execution_readiness_report.json: overall_decision = pass
 ```
+
+### P0.5: value pack 填写状态汇总
+
+目标: 在不伪造真实实验值的前提下, 把 `pilot_input_value_pack.draft.json` 中仍未填写的 `value` 条目整理为 JSON 和 Markdown, 便于逐项补齐真实 prompt、split、seed、model 和 watermark 配置。
+
+推荐命令:
+
+```text
+python scripts/build_pilot_input_value_pack_status.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+```
+
+输出:
+
+```text
+pilot_input_value_pack_status_report.json
+pilot_input_value_pack_status_report.md
+```
+
+完成门禁:
+
+```text
+pilot_input_value_pack_status_report.json: overall_decision = pass
+pilot_input_value_pack_status_report.json: recommended_next_stage = apply_pilot_input_value_pack
+```
+
+说明: 该报告不替代 value pack 应用门禁, 只用于把当前最前置阻断点拆成可填写的真实输入清单。
 
 ### P1: 生成真实图像生成启动计划
 
@@ -438,29 +465,30 @@ python scripts/build_pilot_stage_progress_summary.py --workspace {workspace}
 
 ```text
 S1. 打开 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_input_plan_replacement_checklist.md, 逐项确认需要填写的真实值。
-S2. 在 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_input_value_pack.draft.json 中填写每项 value。
-S3. 运行 apply_pilot_input_value_pack.py --require-pass。
-S4. 运行 validate_pilot_input_plan_templates.py --require-pass。
-S5. 运行 build_pilot_execution_readiness_report.py --require-pass。
-S6. 填写 pilot_image_generation_launch_variables.draft.json。
-S7. 运行 build_pilot_image_generation_launch_plan.py --require-pass。
-S8. S7 通过后, 执行真实图像生成 backend。
-S9. 图像生成完成后, 运行 validate_pilot_image_generation_outputs.py --require-pass。
-S10. 图像接收门禁通过后, 执行 attack pilot。
-S11. attack 完成后, 运行 validate_pilot_attack_outputs.py --require-pass。
-S12. attack 接收门禁通过后, 运行 CEG detection。
-S13. detection 完成后, 运行 validate_pilot_detection_outputs.py --require-pass。
-S14. detection 接收门禁通过后, 运行 external baseline。
-S15. baseline 完成后, 运行 validate_pilot_baseline_outputs.py --require-pass。
-S16. baseline 接收门禁通过后, 运行 quality metric。
-S17. metric 完成后, 运行 validate_pilot_metric_outputs.py --require-pass。
-S18. metric 接收门禁通过后, 运行 fixed-FPR / TPR@FPR 统计。
-S19. 统计完成后, 运行 validate_pilot_fixed_fpr_outputs.py --require-pass。
-S20. fixed-FPR 统计接收门禁通过后, 构建 paper_results_package。
-S21. 运行 validate_pilot_paper_results_package.py --require-pass；正式论文结果包还应启用 --require-evidence 和 --require-image-examples。
-S22. paper_results_package 接收门禁通过后, 归档到 MyDrive。
-S23. 运行 validate_pilot_mydrive_archive.py --require-pass, 确认 package_snapshots、package_archives 和 package_manifests 一致。
-S24. 每完成一个阶段后运行 build_pilot_stage_progress_summary.py, 更新当前阻断点和下一步行动。
+S2. 运行 build_pilot_input_value_pack_status.py, 生成 value pack 填写状态报告。
+S3. 在 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_input_value_pack.draft.json 中填写每项 value。
+S4. value pack 状态报告通过后, 运行 apply_pilot_input_value_pack.py --require-pass。
+S5. 运行 validate_pilot_input_plan_templates.py --require-pass。
+S6. 运行 build_pilot_execution_readiness_report.py --require-pass。
+S7. 填写 pilot_image_generation_launch_variables.draft.json。
+S8. 运行 build_pilot_image_generation_launch_plan.py --require-pass。
+S9. S8 通过后, 执行真实图像生成 backend。
+S10. 图像生成完成后, 运行 validate_pilot_image_generation_outputs.py --require-pass。
+S11. 图像接收门禁通过后, 执行 attack pilot。
+S12. attack 完成后, 运行 validate_pilot_attack_outputs.py --require-pass。
+S13. attack 接收门禁通过后, 运行 CEG detection。
+S14. detection 完成后, 运行 validate_pilot_detection_outputs.py --require-pass。
+S15. detection 接收门禁通过后, 运行 external baseline。
+S16. baseline 完成后, 运行 validate_pilot_baseline_outputs.py --require-pass。
+S17. baseline 接收门禁通过后, 运行 quality metric。
+S18. metric 完成后, 运行 validate_pilot_metric_outputs.py --require-pass。
+S19. metric 接收门禁通过后, 运行 fixed-FPR / TPR@FPR 统计。
+S20. 统计完成后, 运行 validate_pilot_fixed_fpr_outputs.py --require-pass。
+S21. fixed-FPR 统计接收门禁通过后, 构建 paper_results_package。
+S22. 运行 validate_pilot_paper_results_package.py --require-pass；正式论文结果包还应启用 --require-evidence 和 --require-image-examples。
+S23. paper_results_package 接收门禁通过后, 归档到 MyDrive。
+S24. 运行 validate_pilot_mydrive_archive.py --require-pass, 确认 package_snapshots、package_archives 和 package_manifests 一致。
+S25. 每完成一个阶段后运行 build_pilot_stage_progress_summary.py, 更新当前阻断点和下一步行动。
 ```
 
 ## 9. 与 CEG-WM 的核心机制对齐要求
