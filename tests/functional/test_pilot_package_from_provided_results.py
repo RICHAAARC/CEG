@@ -40,6 +40,9 @@ def test_build_pilot_package_from_provided_results_archives_to_drive(tmp_path) -
             str(drive_root),
             "--run-id",
             "pilot_cli",
+            "--write-paper-result-evidence-report",
+            "--allow-dry-run-paper-result-evidence",
+            "--allow-missing-experiment-coverage",
         ],
         cwd=".",
         check=True,
@@ -49,6 +52,12 @@ def test_build_pilot_package_from_provided_results_archives_to_drive(tmp_path) -
     package_validation = json.loads(
         (output_root / "paper_results_package" / "paper_results_package_validation.json").read_text(encoding="utf-8")
     )
+    package_manifest = json.loads(
+        (output_root / "paper_results_package" / "paper_results_package_manifest.json").read_text(encoding="utf-8")
+    )
+    evidence_report = json.loads(
+        (output_root / "paper_results_package" / "paper_result_evidence_report.json").read_text(encoding="utf-8")
+    )
     archive_manifest = json.loads(
         (drive_root / "package_manifests" / "paper_results_package_archive_manifest_pilot_cli.json").read_text(
             encoding="utf-8"
@@ -56,6 +65,9 @@ def test_build_pilot_package_from_provided_results_archives_to_drive(tmp_path) -
     )
 
     assert manifest["overall_decision"] == "pass"
+    assert manifest["paper_result_evidence_report_path"].endswith("paper_result_evidence_report.json")
+    assert "paper_result_evidence_report.json" in package_manifest["copied_files"]
+    assert evidence_report["artifact_name"] == "paper_result_evidence_report.json"
     assert package_validation["overall_decision"] == "pass"
     assert archive_manifest["package_validation_decision"] == "pass"
     assert (drive_root / "package_archives" / "paper_results_package_pilot_cli.zip").is_file()

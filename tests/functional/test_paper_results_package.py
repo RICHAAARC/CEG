@@ -51,6 +51,19 @@ def test_export_paper_results_package_collects_all_governed_outputs(tmp_path) ->
         + "\n",
         encoding="utf-8",
     )
+    (output_root / "paper_result_evidence_report.json").write_text(
+        json.dumps(
+            {
+                "artifact_name": "paper_result_evidence_report.json",
+                "overall_decision": "pass",
+                "target_kind": "paper_output_directory",
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     manifest = export_paper_results_package(output_root, package_root)
     validation = validate_paper_results_package(package_root)
@@ -60,7 +73,9 @@ def test_export_paper_results_package_collects_all_governed_outputs(tmp_path) ->
     assert manifest["claim_audit_decision"] == "pass"
     assert "artifacts/paper_claim_audit.json" in manifest["copied_files"]
     assert "paper_results_report.md" in manifest["copied_files"]
+    assert "paper_result_evidence_report.json" in manifest["copied_files"]
     assert "external_result_evidence_report.json" in manifest["copied_files"]
+    assert (package_root / "paper_result_evidence_report.json").is_file()
     assert (package_root / "external_result_evidence_report.json").is_file()
     assert any(path.startswith("rendered_figures/figures/") and path.endswith(".svg") for path in manifest["copied_files"])
     assert "pdf_figures/paper_figures_preview.pdf" in manifest["copied_files"]

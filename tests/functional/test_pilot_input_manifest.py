@@ -262,6 +262,9 @@ def test_build_pilot_package_from_raw_inputs_cli_materializes_builds_and_archive
             "--require-paper-readiness",
             "--drive-root",
             str(drive_root),
+            "--write-paper-result-evidence-report",
+            "--allow-dry-run-paper-result-evidence",
+            "--allow-missing-experiment-coverage",
         ],
         cwd=".",
         check=True,
@@ -271,8 +274,14 @@ def test_build_pilot_package_from_raw_inputs_cli_materializes_builds_and_archive
     build_manifest = json.loads((output_root / "pilot_package_build_manifest.json").read_text(encoding="utf-8"))
     assert raw_manifest["overall_decision"] == "pass"
     assert raw_manifest["materialization"]["overall_decision"] == "pass"
+    assert raw_manifest["build_result"]["return_code"] == 0
     assert build_manifest["overall_decision"] == "pass"
+    assert build_manifest["paper_result_evidence_report_path"].endswith("paper_result_evidence_report.json")
     assert (materialized_root / "pilot_input_manifest.json").is_file()
+    package_manifest = json.loads(
+        (output_root / "paper_results_package" / "paper_results_package_manifest.json").read_text(encoding="utf-8")
+    )
+    assert "paper_result_evidence_report.json" in package_manifest["copied_files"]
     assert (drive_root / "package_archives" / "paper_results_package_raw_inputs_cli.zip").is_file()
 
 

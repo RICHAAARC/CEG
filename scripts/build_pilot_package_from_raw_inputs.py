@@ -75,6 +75,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="要求外部 baseline 与高级 metric manifest 声明 formal_result_claim 并提供 evidence_paths.",
     )
+    parser.add_argument("--write-paper-result-evidence-report", action="store_true", help="在导出结果包前写出 paper_result_evidence_report.json 并随包归档.")
+    parser.add_argument("--allow-dry-run-paper-result-evidence", action="store_true", help="生成 paper_result_evidence_report.json 时允许 dry-run 标记, 仅用于 pilot 或链路调试.")
+    parser.add_argument("--allow-missing-experiment-coverage", action="store_true", help="生成 paper_result_evidence_report.json 时允许缺少 experiment coverage pass, 仅用于 pilot 或链路调试.")
+    parser.add_argument("--require-paper-result-evidence-pass", action="store_true", help="要求生成的 paper_result_evidence_report.json 为 pass, 否则阻断构建.")
+    parser.add_argument("--minimum-quality-metric-coverage", type=float, default=1.0, help="paper_result_evidence_report.json 要求的标准质量指标最低覆盖率.")
     return parser
 
 
@@ -165,6 +170,15 @@ def main() -> None:
                 str(output_root / "external_result_evidence_report.json"),
             ]
         )
+    if args.write_paper_result_evidence_report:
+        build_command.append("--write-paper-result-evidence-report")
+    if args.allow_dry_run_paper_result_evidence:
+        build_command.append("--allow-dry-run-paper-result-evidence")
+    if args.allow_missing_experiment_coverage:
+        build_command.append("--allow-missing-experiment-coverage")
+    if args.require_paper_result_evidence_pass:
+        build_command.append("--require-paper-result-evidence-pass")
+    build_command.extend(["--minimum-quality-metric-coverage", str(args.minimum_quality_metric_coverage)])
     _append_optional(build_command, "--drive-root", args.drive_root)
     _append_optional(build_command, "--run-id", args.run_id)
     if args.allow_invalid_archive_package:

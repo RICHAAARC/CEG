@@ -521,3 +521,6 @@ Notebook 与 repository module 的跨边界数据
 | require_formal_external_result_claim | protocol | none | false | true | false | raw pilot 输入一键构建入口是否要求外部 baseline 与高级 metric manifest 均声明 formal_result_claim 并提供 evidence_paths. |
 | external_result_evidence_digest | artifact | none | false | true | false | raw pilot 输入一键构建总控 manifest 中记录的外部结果证据预检报告稳定摘要. |
 | external_result_evidence_report_path | artifact | none | false | true | false | pilot package 构建 manifest 中记录的外部结果证据预检报告复制后路径, 用于确认该报告已经进入 paper outputs 并可随 paper_results_package 归档. |
+| write_paper_result_evidence_report | protocol | none | false | true | false | pilot package 构建入口是否在导出 paper_results_package 前生成 paper_result_evidence_report.json 并随包归档. |
+| allow_dry_run_paper_result_evidence | protocol | none | false | false | false | pilot 证据报告生成时是否允许 dry-run 标记存在, 仅用于调试或非正式 pilot 结果包. |
+| require_paper_result_evidence_pass | protocol | none | false | true | false | pilot package 构建入口是否要求 paper_result_evidence_report.json 整体通过, 用于正式声明前阻断不完整结果包. |

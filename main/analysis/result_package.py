@@ -151,9 +151,10 @@ def _metric_result_files(output_root: Path) -> list[str]:
     return [relative for relative in candidates if (output_root / relative).is_file()]
 
 
-def _external_result_evidence_files(output_root: Path) -> list[str]:
-    """收集可选的外部结果证据预检报告, 用于随论文结果包保留 formal claim provenance."""
+def _evidence_report_files(output_root: Path) -> list[str]:
+    """收集可选证据审计报告, 用于随论文结果包保留 formal claim provenance."""
     candidates = [
+        "paper_result_evidence_report.json",
         "external_result_evidence_report.json",
     ]
     return [relative for relative in candidates if (output_root / relative).is_file()]
@@ -173,7 +174,7 @@ def collect_paper_result_files(output_root: str | Path) -> list[str]:
         *_detection_result_files(root),
         *_baseline_result_files(root),
         *_metric_result_files(root),
-        *_external_result_evidence_files(root),
+        *_evidence_report_files(root),
     ]
     return sorted(dict.fromkeys(str(path).replace("\\", "/") for path in candidates))
 

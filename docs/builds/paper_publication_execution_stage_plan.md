@@ -126,7 +126,7 @@ paper_results_package/
 ### 完成门禁
 
 ```text
-1. paper_results_package_manifest.json 能索引所有应归档文件。
+1. paper_results_package_manifest.json 能索引所有应归档文件, 包括可选的 paper_result_evidence_report.json 与 external_result_evidence_report.json。
 2. paper_readiness_report.json 能报告缺失 required artifacts。
 3. MyDrive 归档能按 package_snapshots、package_archives、package_manifests 分类保存。
 ```
@@ -564,9 +564,9 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 3. 运行 pilot input preflight。
 4. 如果包含外部 baseline 或高级 metric 正式声明，运行 external result evidence preflight。
 5. 将 external_result_evidence_report.json 纳入 paper_outputs 和 paper_results_package 归档, 并在 package manifest 中保留 copied_files 证据。
-6. 用 raw builder 或 provided-results builder 构建 paper_results_package。
+6. 用 raw builder 或 provided-results builder 构建 paper_results_package, pilot 阶段可启用 --write-paper-result-evidence-report 生成证据完整性报告。
 7. 归档到 MyDrive 分类目录。
-8. 检查 readiness、claim audit、package manifest 和 Colab acceptance。
+8. 检查 readiness、claim audit、package manifest、paper_result_evidence_report 和 Colab acceptance。
 9. 再启动真实 SD / watermark / attack / CEG detector / external baseline pilot。
 10. pilot 通过后冻结正式实验配置。
 ```

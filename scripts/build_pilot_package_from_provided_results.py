@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from main.core.digest import build_stable_digest
+from main.analysis.paper_result_evidence import validate_paper_result_evidence
 from experiments.pilot_input_manifest import load_pilot_input_manifest, validate_pilot_input_manifest
 
 
@@ -92,6 +93,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--run-id", default=None, help="可选归档运行标识.")
     parser.add_argument("--allow-invalid-archive-package", action="store_true")
     parser.add_argument("--external-result-evidence-report", default=None, help="可选 external_result_evidence_report.json, 会复制到 paper outputs 并随结果包归档.")
+    parser.add_argument("--write-paper-result-evidence-report", action="store_true", help="在导出结果包前针对 paper outputs 写出 paper_result_evidence_report.json 并随包归档.")
+    parser.add_argument("--allow-dry-run-paper-result-evidence", action="store_true", help="生成 paper_result_evidence_report.json 时允许 dry-run 标记, 仅用于 pilot 或链路调试.")
+    parser.add_argument("--allow-missing-experiment-coverage", action="store_true", help="生成 paper_result_evidence_report.json 时允许缺少 experiment coverage pass, 仅用于 pilot 或链路调试.")
+    parser.add_argument("--require-paper-result-evidence-pass", action="store_true", help="要求生成的 paper_result_evidence_report.json 为 pass, 否则阻断构建.")
+    parser.add_argument("--minimum-quality-metric-coverage", type=float, default=1.0, help="paper_result_evidence_report.json 要求的标准质量指标最低覆盖率.")
     return parser
 
 
@@ -216,6 +222,39 @@ def main() -> None:
         shutil.copy2(source_report, target_report)
         external_result_evidence_report_path = str(target_report)
 
+    paper_result_evidence_report = None
+    paper_result_evidence_report_path = None
+    if args.write_paper_result_evidence_report:
+        paper_result_evidence_report = validate_paper_result_evidence(
+            paper_outputs_root,
+            allow_dry_run=args.allow_dry_run_paper_result_evidence,
+            require_experiment_coverage=not args.allow_missing_experiment_coverage,
+            minimum_quality_metric_coverage=args.minimum_quality_metric_coverage,
+        )
+        paper_result_evidence_report_path = str(paper_outputs_root / "paper_result_evidence_report.json")
+        (paper_outputs_root / "paper_result_evidence_report.json").write_text(
+            json.dumps(paper_result_evidence_report, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        if paper_result_evidence_report["overall_decision"] != "pass" and args.require_paper_result_evidence_pass:
+            summary = {
+                "artifact_name": "pilot_package_build_manifest.json",
+                "overall_decision": "fail",
+                "failed_step": "paper_result_evidence_preflight",
+                "pilot_input_manifest": str(pilot_input_manifest_path) if pilot_input_manifest_path else None,
+                "pilot_input_manifest_validation": pilot_input_report,
+                "build_result": build_result,
+                "external_result_evidence_report_path": external_result_evidence_report_path,
+                "paper_result_evidence_report_path": paper_result_evidence_report_path,
+                "paper_result_evidence_report": paper_result_evidence_report,
+            }
+            (output_root / "pilot_package_build_manifest.json").write_text(
+                json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            print(json.dumps(summary, ensure_ascii=False, indent=2))
+            raise SystemExit(1)
+
     export_command = [
         sys.executable,
         str(ROOT / "scripts" / "export_paper_results_package.py"),
@@ -236,6 +275,8 @@ def main() -> None:
             "pilot_input_manifest_validation": pilot_input_report,
             "build_result": build_result,
             "external_result_evidence_report_path": external_result_evidence_report_path,
+            "paper_result_evidence_report_path": paper_result_evidence_report_path,
+            "paper_result_evidence_report": paper_result_evidence_report,
             "export_result": export_result,
         }
         (output_root / "pilot_package_build_manifest.json").write_text(
@@ -268,6 +309,8 @@ def main() -> None:
                 "pilot_input_manifest_validation": pilot_input_report,
                 "build_result": build_result,
                 "external_result_evidence_report_path": external_result_evidence_report_path,
+                "paper_result_evidence_report_path": paper_result_evidence_report_path,
+                "paper_result_evidence_report": paper_result_evidence_report,
                 "export_result": export_result,
                 "archive_result": archive_result,
             }
@@ -289,6 +332,8 @@ def main() -> None:
         "pilot_input_manifest_validation": pilot_input_report,
         "build_result": build_result,
         "external_result_evidence_report_path": external_result_evidence_report_path,
+        "paper_result_evidence_report_path": paper_result_evidence_report_path,
+        "paper_result_evidence_report": paper_result_evidence_report,
         "export_result": export_result,
         "archive_result": archive_result,
         "execution_digest": build_stable_digest(
