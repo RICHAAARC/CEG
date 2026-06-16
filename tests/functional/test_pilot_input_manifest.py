@@ -10,6 +10,7 @@ import pytest
 
 from experiments.paper_fixture_factory import write_paper_dry_run_inputs
 from experiments.pilot_input_manifest import validate_pilot_input_manifest
+from experiments.pilot_input_materializer import materialize_pilot_input_bundle
 
 
 def _write_pilot_input_manifest(input_root):
@@ -100,3 +101,108 @@ def test_build_pilot_package_from_pilot_input_manifest(tmp_path) -> None:
     assert build_manifest["pilot_input_manifest_validation"]["overall_decision"] == "pass"
     assert preflight_report["overall_decision"] == "pass"
     assert (drive_root / "package_archives" / "paper_results_package_pilot_manifest_cli.zip").is_file()
+
+
+@pytest.mark.quick
+def test_materialize_pilot_input_bundle_writes_canonical_manifest(tmp_path) -> None:
+    """物化器应把已提供产物复制到 canonical 输入目录并生成可预检的 manifest."""
+    source_root = tmp_path / "source_inputs"
+    input_manifest = write_paper_dry_run_inputs(source_root)
+    materialized_root = tmp_path / "materialized_pilot_inputs"
+
+    materialization = materialize_pilot_input_bundle(
+        materialized_root,
+        events=source_root / input_manifest["events_path"],
+        thresholds=source_root / input_manifest["thresholds_path"],
+        baseline_observations=source_root / input_manifest["baseline_observations_path"],
+        metric_rows=source_root / input_manifest["metric_rows_path"],
+        image_pairs=source_root / input_manifest["image_pairs_path"],
+        readiness_requirements="configs/paper_output_requirements.json",
+        run_id="materialized_fixture",
+    )
+
+    pilot_manifest = json.loads((materialized_root / "pilot_input_manifest.json").read_text(encoding="utf-8"))
+    validation = json.loads((materialized_root / "pilot_input_manifest_validation.json").read_text(encoding="utf-8"))
+    assert materialization["overall_decision"] == "pass"
+    assert pilot_manifest["events"] == "ceg_detection/detection_events.json"
+    assert pilot_manifest["thresholds"] == "ceg_detection/detection_thresholds.json"
+    assert pilot_manifest["baseline_observations"] == "external_baselines/baseline_observations.json"
+    assert pilot_manifest["metric_rows"] == "external_metrics/metric_rows.json"
+    assert pilot_manifest["image_pairs"] == "inputs/image_pairs.json"
+    assert validation["overall_decision"] == "pass"
+    assert (materialized_root / "ceg_detection" / "detection_events.json").is_file()
+    assert (materialized_root / "configs" / "paper_output_requirements.json").is_file()
+
+
+@pytest.mark.quick
+def test_materialize_pilot_input_manifest_cli_can_feed_package_builder(tmp_path) -> None:
+    """物化 CLI 生成的 manifest 应可直接交给一键结果包构建脚本."""
+    source_root = tmp_path / "source_inputs"
+    input_manifest = write_paper_dry_run_inputs(source_root)
+    attack_root = tmp_path / "attack_outputs"
+    materialized_root = tmp_path / "materialized_pilot_inputs"
+    output_root = tmp_path / "pilot_package"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_image_attack_workflow.py",
+            "--image-pairs",
+            str(source_root / input_manifest["image_pairs_path"]),
+            "--out",
+            str(attack_root),
+            "--attack-families",
+            "brightness_contrast",
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/materialize_pilot_input_manifest.py",
+            "--out",
+            str(materialized_root),
+            "--run-id",
+            "materialized_cli",
+            "--events",
+            str(source_root / input_manifest["events_path"]),
+            "--thresholds",
+            str(source_root / input_manifest["thresholds_path"]),
+            "--baseline-observations",
+            str(source_root / input_manifest["baseline_observations_path"]),
+            "--metric-rows",
+            str(source_root / input_manifest["metric_rows_path"]),
+            "--image-pairs",
+            str(source_root / input_manifest["image_pairs_path"]),
+            "--attacked-image-manifest",
+            str(attack_root / "image_manifests" / "attacked_image_manifest.json"),
+            "--attack-shard-manifest",
+            str(attack_root / "image_manifests" / "attack_shard_manifest.json"),
+            "--readiness-requirements",
+            "configs/paper_output_requirements.json",
+            "--require-pass",
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/build_pilot_package_from_provided_results.py",
+            "--pilot-input-manifest",
+            str(materialized_root / "pilot_input_manifest.json"),
+            "--out",
+            str(output_root),
+            "--require-paper-readiness",
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    build_manifest = json.loads((output_root / "pilot_package_build_manifest.json").read_text(encoding="utf-8"))
+    assert build_manifest["overall_decision"] == "pass"
+    assert build_manifest["pilot_input_manifest_validation"]["overall_decision"] == "pass"
+    assert (output_root / "paper_results_package" / "paper_results_package_manifest.json").is_file()

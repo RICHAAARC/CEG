@@ -497,3 +497,10 @@ Notebook 与 repository module 的跨边界数据
 | pilot_input_preflight | artifact | none | false | true | false | pilot package 构建 manifest 中记录的输入预检步骤与证据集合. |
 | pilot_input_preflight_decision | artifact | none | false | true | false | pilot 输入 preflight 的整体结论, 用于阻断缺失必需输入或 schema 不可解析的结果包构建. |
 | resolved_inputs | artifact | none | false | false | false | pilot 输入 manifest 校验报告中按 manifest 所在目录解析后的输入路径映射. |
+
+| pilot_input_materialization_manifest | artifact | none | false | true | false | 将用户已提供 pilot 产物复制到 canonical 输入目录后写出的物化 manifest, 记录源文件、目标文件和 preflight 结论. |
+| materialized_pilot_input_root | artifact | none | false | false | false | 保存物化后 pilot_input_manifest.json 及其 canonical 输入子目录的根目录. |
+| copied_inputs | artifact | none | false | false | false | pilot 输入物化 manifest 中记录的输入字段到复制结果的映射, 包含 source_path、destination_path 和状态. |
+| missing_required_inputs | artifact | none | false | true | false | pilot 输入物化阶段缺失的必需输入字段集合, 当前至少包括 events 和 thresholds. |
+| pilot_input_validation_decision | artifact | none | false | true | false | pilot 输入物化后立即执行 preflight 得到的整体校验结论. |
+| materialization_digest | artifact | none | false | true | false | pilot 输入物化 manifest 对 manifest 内容、复制结果和校验结论生成的稳定摘要. |

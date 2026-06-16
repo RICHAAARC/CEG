@@ -592,7 +592,7 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 建议下一步优先完成 pilot 输入门禁, 因为它决定后续真实图像实验、真实检测结果、外部 baseline 和高级指标是否能被稳定纳入论文结果包。
 
 ```text
-1. 复制 configs/pilot_input_manifest_template.json, 形成某次 pilot 的 pilot_input_manifest.json。
+1. 复制 configs/pilot_input_manifest_template.json, 或使用 scripts/materialize_pilot_input_manifest.py 从已提供产物自动生成某次 pilot 的 pilot_input_manifest.json。
 2. 在该 manifest 中声明 events、thresholds、baseline observations、metric rows、image pairs、attack manifests、experiment matrix 和 readiness requirements。
 3. 运行 pilot input preflight, 确认所有输入文件存在、路径可解析、schema 可解析。
 4. 使用已支持 --pilot-input-manifest 的 scripts/build_pilot_package_from_provided_results.py, 避免手工传入一长串路径。
