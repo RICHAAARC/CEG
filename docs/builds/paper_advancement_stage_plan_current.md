@@ -47,6 +47,7 @@ p0_input_freeze
 pilot_input_value_pack_status_report.json: fail
 pilot_input_value_pack_fill_sheet_import_report.json: fail
 pilot_p0_input_freeze_report.json: fail
+pilot_p0_input_freeze_dry_run_report.json: fail
 pilot_stage_progress_summary.json: fail
 ```
 
@@ -164,6 +165,7 @@ P0 的目标是把当前所有占位输入替换为真实实验配置, 并让输
 ```text
 python scripts/export_pilot_input_value_pack_fill_sheet.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
 python scripts/export_pilot_input_value_pack_fill_sheet_guidance.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+python scripts/build_pilot_p0_input_freeze_report.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --dry-run --require-pass
 python scripts/build_pilot_p0_input_freeze_report.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-pass
 ```
 
@@ -474,19 +476,20 @@ python scripts/validate_pilot_mydrive_archive.py --drive-root D:/content/drive/M
 S1. 打开 pilot_input_value_pack_fill_sheet_guidance.md, 理解每个 value_json 的类型要求。
 S2. 打开 pilot_input_value_pack_fill_sheet.csv。
 S3. 填写 19 个 value_json, 确保均为合法 JSON 值。
-S4. 运行 build_pilot_p0_input_freeze_report.py --require-pass。
-S5. 确认 pilot_p0_input_freeze_report.json、pilot_input_value_pack_status_report.json、pilot_input_plan_preflight_report.json 和 pilot_execution_readiness_report.json 均通过。
-S6. 运行 build_pilot_image_generation_launch_plan.py --require-pass。
-S7. 执行真实 SD / watermark backend。
-S8. 验收 image generation outputs。
-S9. 执行 attack pilot 并验收。
-S10. 执行 CEG detection 并验收。
-S11. 接入 external baseline 并验收。
-S12. 接入 quality metric 并验收。
-S13. 运行 fixed-FPR / TPR@FPR 统计并验收。
-S14. 构建 paper_results_package 并验收。
-S15. 归档到 MyDrive 并验收。
-S16. 每完成一个阶段后运行 build_pilot_stage_progress_summary.py 更新阶段看板。
+S4. 先运行 build_pilot_p0_input_freeze_report.py --dry-run --require-pass, 确认填写值在隔离副本中可通过。
+S5. 再运行 build_pilot_p0_input_freeze_report.py --require-pass, 正式回写 value pack 并应用输入模板。
+S6. 确认 pilot_p0_input_freeze_report.json、pilot_input_value_pack_status_report.json、pilot_input_plan_preflight_report.json 和 pilot_execution_readiness_report.json 均通过。
+S7. 运行 build_pilot_image_generation_launch_plan.py --require-pass。
+S8. 执行真实 SD / watermark backend。
+S9. 验收 image generation outputs。
+S10. 执行 attack pilot 并验收。
+S11. 执行 CEG detection 并验收。
+S12. 接入 external baseline 并验收。
+S13. 接入 quality metric 并验收。
+S14. 运行 fixed-FPR / TPR@FPR 统计并验收。
+S15. 构建 paper_results_package 并验收。
+S16. 归档到 MyDrive 并验收。
+S17. 每完成一个阶段后运行 build_pilot_stage_progress_summary.py 更新阶段看板。
 ```
 
 ## 18. 下一步明确结论
@@ -506,6 +509,7 @@ D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_0345
 填写完成后优先运行:
 
 ```text
+python scripts/build_pilot_p0_input_freeze_report.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --dry-run --require-pass
 python scripts/build_pilot_p0_input_freeze_report.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-pass
 ```
 

@@ -28,6 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--fill-sheet", default=None, help="CSV 填写表路径。默认使用工作区内填写表。")
     parser.add_argument("--out-json", default=None, help="JSON 报告输出路径。默认写入工作区。")
     parser.add_argument("--out-md", default=None, help="Markdown 报告输出路径。默认写入工作区。")
+    parser.add_argument("--dry-run", action="store_true", help="在隔离副本中执行 P0 门禁, 不改写真实 value pack 和输入模板。")
     parser.add_argument("--require-pass", action="store_true", help="聚合门禁未通过时返回非零退出码。")
     return parser
 
@@ -44,6 +45,7 @@ def main() -> None:
         workspace_root=workspace,
         value_pack_path=value_pack,
         fill_sheet_path=fill_sheet,
+        dry_run=args.dry_run,
         output_json_path=out_json,
         output_markdown_path=out_md,
     )

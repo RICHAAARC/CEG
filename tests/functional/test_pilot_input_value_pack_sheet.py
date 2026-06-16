@@ -269,3 +269,36 @@ def test_p0_input_freeze_report_passes_after_filled_sheet(tmp_path) -> None:
     assert (tmp_path / "pilot_input_value_pack_application_report.json").is_file()
     assert (tmp_path / "pilot_input_plan_preflight_report.json").is_file()
     assert (tmp_path / "pilot_execution_readiness_report.json").is_file()
+
+
+@pytest.mark.quick
+def test_p0_input_freeze_dry_run_passes_without_rewriting_real_workspace(tmp_path) -> None:
+    """dry-run 应在隔离副本中完成 P0 校验, 不改写真正的 value pack。"""
+    value_pack_path, _ = _prepare_value_pack(tmp_path)
+    fill_sheet = tmp_path / "pilot_input_value_pack_fill_sheet.csv"
+    report_json = tmp_path / "pilot_p0_input_freeze_report.json"
+    report_md = tmp_path / "pilot_p0_input_freeze_report.md"
+    export_pilot_input_value_pack_fill_sheet(value_pack_path=value_pack_path, output_csv_path=fill_sheet)
+    rows = _read_csv_rows(fill_sheet)
+    fieldnames = list(rows[0].keys())
+    for row in rows:
+        row["value_json"] = json.dumps(REAL_VALUES[row["task_id"]], ensure_ascii=False)
+    _write_csv_rows(fill_sheet, rows, fieldnames)
+
+    report = write_pilot_p0_input_freeze_report(
+        workspace_root=tmp_path,
+        value_pack_path=value_pack_path,
+        fill_sheet_path=fill_sheet,
+        dry_run=True,
+        output_json_path=report_json,
+        output_markdown_path=report_md,
+    )
+
+    real_payload = json.loads(value_pack_path.read_text(encoding="utf-8"))
+    dry_value_pack = tmp_path / "pilot_p0_input_freeze_dry_run_workspace" / value_pack_path.name
+    dry_payload = json.loads(dry_value_pack.read_text(encoding="utf-8"))
+    assert report["overall_decision"] == "pass"
+    assert report["dry_run"] is True
+    assert report["execution_workspace_root"] != report["workspace_root"]
+    assert all("value" not in entry for entry in real_payload["value_entries"])
+    assert all("value" in entry for entry in dry_payload["value_entries"])

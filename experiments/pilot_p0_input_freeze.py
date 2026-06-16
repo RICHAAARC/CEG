@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,7 @@ from experiments.pilot_input_value_pack_status import (
 
 P0_INPUT_FREEZE_REPORT_NAME = "pilot_p0_input_freeze_report.json"
 P0_INPUT_FREEZE_MARKDOWN_NAME = "pilot_p0_input_freeze_report.md"
+P0_INPUT_FREEZE_DRY_RUN_WORKSPACE_NAME = "pilot_p0_input_freeze_dry_run_workspace"
 
 
 def _write_json(path: str | Path, payload: Any) -> None:
@@ -89,11 +91,40 @@ def _first_blocking_gate(gates: list[dict[str, Any]]) -> dict[str, Any] | None:
     return None
 
 
+def _copy_if_exists(source: Path, destination: Path) -> None:
+    """在 dry-run 工作区中复制文件或目录, 缺失文件交给后续门禁报告处理。"""
+    if not source.exists():
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.is_dir():
+        shutil.copytree(source, destination, dirs_exist_ok=True)
+    else:
+        shutil.copy2(source, destination)
+
+
+def _prepare_dry_run_workspace(*, workspace: Path, value_pack: Path, fill_sheet: Path) -> tuple[Path, Path, Path]:
+    """准备 P0 dry-run 隔离工作区, 避免校验过程改写真实输入文件。"""
+    dry_workspace = workspace / P0_INPUT_FREEZE_DRY_RUN_WORKSPACE_NAME
+    if dry_workspace.exists():
+        shutil.rmtree(dry_workspace)
+    dry_workspace.mkdir(parents=True, exist_ok=True)
+
+    _copy_if_exists(workspace / "inputs" / "prompts", dry_workspace / "inputs" / "prompts")
+    _copy_if_exists(workspace / "configs", dry_workspace / "configs")
+
+    dry_value_pack = dry_workspace / value_pack.name
+    dry_fill_sheet = dry_workspace / fill_sheet.name
+    _copy_if_exists(value_pack, dry_value_pack)
+    _copy_if_exists(fill_sheet, dry_fill_sheet)
+    return dry_workspace, dry_value_pack, dry_fill_sheet
+
+
 def run_pilot_p0_input_freeze(
     *,
     workspace_root: str | Path,
     value_pack_path: str | Path | None = None,
     fill_sheet_path: str | Path | None = None,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
     """运行 P0 输入冻结聚合门禁并写出所有子报告。
 
@@ -107,23 +138,32 @@ def run_pilot_p0_input_freeze(
     workspace = Path(workspace_root)
     value_pack = Path(value_pack_path) if value_pack_path is not None else workspace / VALUE_PACK_NAME
     fill_sheet = Path(fill_sheet_path) if fill_sheet_path is not None else workspace / FILL_SHEET_NAME
+    execution_workspace = workspace
+    execution_value_pack = value_pack
+    execution_fill_sheet = fill_sheet
+    if dry_run:
+        execution_workspace, execution_value_pack, execution_fill_sheet = _prepare_dry_run_workspace(
+            workspace=workspace,
+            value_pack=value_pack,
+            fill_sheet=fill_sheet,
+        )
 
-    import_report_path = workspace / IMPORT_REPORT_NAME
-    status_report_path = workspace / STATUS_REPORT_NAME
-    status_markdown_path = workspace / STATUS_MARKDOWN_NAME
-    application_report_path = workspace / VALUE_PACK_APPLICATION_REPORT_NAME
-    preflight_report_path = workspace / PREFLIGHT_REPORT_NAME
-    readiness_report_path = workspace / EXECUTION_READINESS_REPORT_NAME
+    import_report_path = execution_workspace / IMPORT_REPORT_NAME
+    status_report_path = execution_workspace / STATUS_REPORT_NAME
+    status_markdown_path = execution_workspace / STATUS_MARKDOWN_NAME
+    application_report_path = execution_workspace / VALUE_PACK_APPLICATION_REPORT_NAME
+    preflight_report_path = execution_workspace / PREFLIGHT_REPORT_NAME
+    readiness_report_path = execution_workspace / EXECUTION_READINESS_REPORT_NAME
 
     import_report = import_and_write_pilot_input_value_pack_fill_sheet(
-        value_pack_path=value_pack,
-        input_csv_path=fill_sheet,
+        value_pack_path=execution_value_pack,
+        input_csv_path=execution_fill_sheet,
         output_value_pack_path=None,
         report_path=import_report_path,
     )
     status_report = write_pilot_input_value_pack_status(
-        workspace_root=workspace,
-        value_pack_path=value_pack,
+        workspace_root=execution_workspace,
+        value_pack_path=execution_value_pack,
         output_json_path=status_report_path,
         output_markdown_path=status_markdown_path,
     )
@@ -146,8 +186,8 @@ def run_pilot_p0_input_freeze(
     can_apply = import_report.get("overall_decision") == "pass" and status_report.get("overall_decision") == "pass"
     if can_apply:
         application_report = apply_and_write_pilot_input_value_pack(
-            workspace_root=workspace,
-            value_pack_path=value_pack,
+            workspace_root=execution_workspace,
+            value_pack_path=execution_value_pack,
             report_path=application_report_path,
         )
     else:
@@ -165,7 +205,7 @@ def run_pilot_p0_input_freeze(
     can_preflight = application_report is not None and application_report.get("overall_decision") == "pass"
     if can_preflight:
         preflight_report = write_pilot_input_plan_preflight_report(
-            workspace_root=workspace,
+            workspace_root=execution_workspace,
             output_path=preflight_report_path,
         )
     else:
@@ -183,7 +223,7 @@ def run_pilot_p0_input_freeze(
     can_readiness = preflight_report is not None and preflight_report.get("overall_decision") == "pass"
     if can_readiness:
         readiness_report = write_pilot_execution_readiness_report(
-            workspace_root=workspace,
+            workspace_root=execution_workspace,
             output_path=readiness_report_path,
         )
     else:
@@ -203,8 +243,10 @@ def run_pilot_p0_input_freeze(
     return {
         "artifact_name": P0_INPUT_FREEZE_REPORT_NAME,
         "workspace_root": str(workspace),
+        "execution_workspace_root": str(execution_workspace),
         "value_pack_path": str(value_pack),
         "fill_sheet_path": str(fill_sheet),
+        "dry_run": dry_run,
         "overall_decision": decision,
         "recommended_next_stage": "image_generation_launch_plan" if decision == "pass" else "fix_p0_input_freeze",
         "first_blocking_gate": first_blocking,
@@ -224,6 +266,8 @@ def render_pilot_p0_input_freeze_markdown(report: dict[str, Any]) -> str:
         "# pilot P0 输入冻结聚合门禁报告",
         "",
         f"- 工作区: `{report['workspace_root']}`",
+        f"- 执行工作区: `{report.get('execution_workspace_root', report['workspace_root'])}`",
+        f"- dry-run: `{report.get('dry_run', False)}`",
         f"- value pack: `{report['value_pack_path']}`",
         f"- CSV 填写表: `{report['fill_sheet_path']}`",
         f"- 总体结论: `{report['overall_decision']}`",
@@ -270,6 +314,7 @@ def write_pilot_p0_input_freeze_report(
     workspace_root: str | Path,
     value_pack_path: str | Path | None,
     fill_sheet_path: str | Path | None,
+    dry_run: bool = False,
     output_json_path: str | Path,
     output_markdown_path: str | Path,
 ) -> dict[str, Any]:
@@ -278,6 +323,7 @@ def write_pilot_p0_input_freeze_report(
         workspace_root=workspace_root,
         value_pack_path=value_pack_path,
         fill_sheet_path=fill_sheet_path,
+        dry_run=dry_run,
     )
     _write_json(output_json_path, report)
     markdown_path = Path(output_markdown_path)
