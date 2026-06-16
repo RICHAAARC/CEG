@@ -460,7 +460,10 @@ Notebook 与 repository module 的跨边界数据
 | blocking_report_decisions | artifact | none | false | true | false | Colab acceptance report 中决定 overall_decision 的阻断性子报告结论集合, 当前包含 bundle validation 和 paper result evidence。|
 | colab_acceptance_blocking_report_decisions | artifact | none | false | true | false | Colab cold start summary 中提升展示的阻断性 acceptance 子报告结论集合。|
 | formal_result_gap_decision | artifact | none | false | true | false | Colab acceptance report 中记录的 formal_result_gap 子报告结论, 用于提示当前运行是否已具备正式论文声明 readiness。|
+| formal_result_gap_decision_mode | artifact | none | false | true | false | Colab acceptance report 中记录 formal_result_gap_decision 的计算模式, 当前使用 post_acceptance_override 表示用本次 acceptance 命令结果复核正式缺口。|
+| formal_result_gap_blocking_gap_requirements | artifact | none | false | true | false | Colab acceptance report 中记录的 post-acceptance 正式缺口报告阻断项集合, 用于解释 formal_result_gap_decision 未 ready 的原因。|
 | colab_acceptance_formal_result_gap_decision | artifact | none | false | true | false | Colab cold start summary 中提升展示的 formal_result_gap_decision。|
+| colab_acceptance_formal_result_gap_decision_mode | artifact | none | false | true | false | Colab cold start summary 中提升展示的 formal_result_gap_decision_mode。|
 | formal_result_gap | artifact | none | false | true | false | Colab acceptance report 的 report_decisions 中记录正式论文结果缺口报告 overall_decision 的子报告键。|
 | source_bundle_path | artifact | none | false | false | false | 独立 Colab acceptance CLI 接收的 bundle 目录或 zip 路径。|
 | validated_archive_path | artifact | none | false | false | false | 独立 Colab acceptance CLI 复核 zip 文件时记录的原始压缩包路径。|

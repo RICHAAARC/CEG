@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from paper_workflow.colab_utils.cold_start import build_colab_formal_result_gap_report
+
 
 def _find_bundle_root(candidate_root: Path) -> Path:
     """在目录中定位包含 `colab_run_bundle_manifest.json` 的 bundle 根目录。"""
@@ -168,6 +170,7 @@ def build_acceptance_report(
             "report_decisions": report_decisions,
             "blocking_report_decisions": blocking_report_decisions,
             "formal_result_gap_decision": report_decisions.get("formal_result_gap"),
+            "formal_result_gap_decision_mode": "post_acceptance_override",
             "command_results": command_results,
             "report_paths": {
                 "colab_run_bundle_validation": str(bundle_report_path),
@@ -175,6 +178,14 @@ def build_acceptance_report(
                 "formal_result_gap": str(formal_gap_report_path),
             },
         }
+        post_acceptance_gap_report = build_colab_formal_result_gap_report(
+            bundle_root,
+            acceptance_report_override=acceptance_report,
+        )
+        report_decisions["formal_result_gap"] = post_acceptance_gap_report.get("overall_decision")
+        acceptance_report["report_decisions"] = report_decisions
+        acceptance_report["formal_result_gap_decision"] = report_decisions.get("formal_result_gap")
+        acceptance_report["formal_result_gap_blocking_gap_requirements"] = post_acceptance_gap_report.get("blocking_gap_requirements")
         if output_path is not None:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(json.dumps(acceptance_report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -1311,18 +1311,23 @@ def _formal_gap_check(
     }
 
 
-def build_colab_formal_result_gap_report(workspace_root: str | Path) -> dict[str, Any]:
+def build_colab_formal_result_gap_report(
+    workspace_root: str | Path,
+    *,
+    acceptance_report_override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """构造 Colab 正式论文结果缺口报告。
 
     该报告只读取 Colab workspace 中已经生成的 checklist、result index、evidence report、
     coverage report 和外部命令 provenance, 用于解释当前运行距离“可支撑正式论文结果声明”
     还缺哪些证据。它不重新生成 records、tables、figures 或 metrics。
+    `acceptance_report_override` 用于 acceptance CLI 在报告尚未写回 bundle 时复核最终验收状态。
     """
     workspace = Path(workspace_root).resolve()
     checklist = _read_json_object(workspace / "colab_formal_run_checklist.json") or {}
     result_index = _read_json_object(workspace / "colab_paper_result_index.json") or {}
     evidence_report = _read_json_object(workspace / "paper_result_evidence_report.json") or {}
-    acceptance_report = _read_json_object(workspace / "colab_acceptance_report.json") or {}
+    acceptance_report = acceptance_report_override if isinstance(acceptance_report_override, dict) else _read_json_object(workspace / "colab_acceptance_report.json") or {}
     coverage_report = _read_json_object(
         workspace / "paper_results_package" / "artifacts" / "paper_experiment_coverage_report.json"
     ) or {}
@@ -1843,6 +1848,7 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
                 "report_decisions": acceptance_payload.get("report_decisions") if isinstance(acceptance_payload, dict) else None,
                 "blocking_report_decisions": acceptance_payload.get("blocking_report_decisions") if isinstance(acceptance_payload, dict) else None,
                 "formal_result_gap_decision": acceptance_payload.get("formal_result_gap_decision") if isinstance(acceptance_payload, dict) else None,
+                "formal_result_gap_decision_mode": acceptance_payload.get("formal_result_gap_decision_mode") if isinstance(acceptance_payload, dict) else None,
             }
             report_decisions = acceptance_payload.get("report_decisions", {}) if isinstance(acceptance_payload, dict) else {}
             blocking_report_decisions = acceptance_payload.get("blocking_report_decisions", {}) if isinstance(acceptance_payload, dict) else {}
@@ -1858,6 +1864,7 @@ def validate_colab_run_bundle(bundle_root: str | Path) -> dict[str, Any]:
                 and "colab_run_bundle_validation" in blocking_report_decisions
                 and "paper_result_evidence" in blocking_report_decisions
                 and acceptance_payload.get("formal_result_gap_decision") == report_decisions.get("formal_result_gap")
+                and acceptance_payload.get("formal_result_gap_decision_mode") == "post_acceptance_override"
             )
             checks.append(
                 _pass_check("embedded_colab_acceptance_report_parseable", acceptance_summary)
@@ -3346,6 +3353,7 @@ def run_colab_acceptance_checks(
         "report_decisions": report_decisions,
         "blocking_report_decisions": blocking_report_decisions,
         "formal_result_gap_decision": report_decisions.get("formal_result_gap"),
+        "formal_result_gap_decision_mode": "post_acceptance_override",
         "command_results": command_results,
         "report_paths": {
             "colab_run_bundle_validation": str(acceptance_root / "colab_run_bundle_validation_cli.json"),
@@ -3353,6 +3361,14 @@ def run_colab_acceptance_checks(
             "formal_result_gap": str(formal_gap_report_path),
         },
     }
+    post_acceptance_gap_report = build_colab_formal_result_gap_report(
+        bundle_root,
+        acceptance_report_override=acceptance_report,
+    )
+    report_decisions["formal_result_gap"] = post_acceptance_gap_report.get("overall_decision")
+    acceptance_report["report_decisions"] = report_decisions
+    acceptance_report["formal_result_gap_decision"] = report_decisions.get("formal_result_gap")
+    acceptance_report["formal_result_gap_blocking_gap_requirements"] = post_acceptance_gap_report.get("blocking_gap_requirements")
     (workspace / "colab_acceptance_report.json").write_text(
         json.dumps(acceptance_report, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -3599,6 +3615,7 @@ def run_colab_cold_start_pipeline(
     summary["colab_acceptance_report_decisions"] = acceptance_report.get("report_decisions")
     summary["colab_acceptance_blocking_report_decisions"] = acceptance_report.get("blocking_report_decisions")
     summary["colab_acceptance_formal_result_gap_decision"] = acceptance_report.get("formal_result_gap_decision")
+    summary["colab_acceptance_formal_result_gap_decision_mode"] = acceptance_report.get("formal_result_gap_decision_mode")
     (workspace / "colab_cold_start_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

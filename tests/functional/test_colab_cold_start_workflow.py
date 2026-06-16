@@ -378,33 +378,29 @@ def test_colab_formal_result_gap_report_accepts_provided_file_strict_path(tmp_pa
         + "\n",
         encoding="utf-8",
     )
-    (workspace / "colab_acceptance_report.json").write_text(
-        json.dumps(
-            {
-                "artifact_name": "colab_acceptance_report.json",
-                "overall_decision": "pass",
-                "allow_dry_run": False,
-                "require_experiment_coverage": True,
-                "require_external_command_results": False,
-                "report_decisions": {
-                    "colab_run_bundle_validation": "pass",
-                    "paper_result_evidence": "pass",
-                    "formal_result_gap": "ready_for_formal_claims",
-                },
-                "blocking_report_decisions": {
-                    "colab_run_bundle_validation": "pass",
-                    "paper_result_evidence": "pass",
-                },
-                "formal_result_gap_decision": "ready_for_formal_claims",
-            },
-            ensure_ascii=False,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    acceptance_payload = {
+        "artifact_name": "colab_acceptance_report.json",
+        "overall_decision": "pass",
+        "allow_dry_run": False,
+        "require_experiment_coverage": True,
+        "require_external_command_results": False,
+        "report_decisions": {
+            "colab_run_bundle_validation": "pass",
+            "paper_result_evidence": "pass",
+            "formal_result_gap": "ready_for_formal_claims",
+        },
+        "blocking_report_decisions": {
+            "colab_run_bundle_validation": "pass",
+            "paper_result_evidence": "pass",
+        },
+        "formal_result_gap_decision": "ready_for_formal_claims",
+    }
 
-    report = build_colab_formal_result_gap_report(workspace)
+    report_without_acceptance = build_colab_formal_result_gap_report(workspace)
+    assert report_without_acceptance["overall_decision"] == "not_ready_for_formal_claims"
+    assert "strict_colab_acceptance_passed" in report_without_acceptance["blocking_gap_requirements"]
 
+    report = build_colab_formal_result_gap_report(workspace, acceptance_report_override=acceptance_payload)
     assert report["overall_decision"] == "ready_for_formal_claims"
     assert report["blocking_gap_requirements"] == []
     checks = {item["requirement"]: item for item in report["checks"]}
@@ -470,10 +466,13 @@ def test_colab_cold_start_pipeline_runs_dry_run_to_package(tmp_path) -> None:
     }
     assert acceptance_report["report_decisions"]["formal_result_gap"] == "not_ready_for_formal_claims"
     assert acceptance_report["formal_result_gap_decision"] == "not_ready_for_formal_claims"
+    assert acceptance_report["formal_result_gap_decision_mode"] == "post_acceptance_override"
+    assert "strict_colab_acceptance_passed" in acceptance_report["formal_result_gap_blocking_gap_requirements"]
     bundled_summary = json.loads((bundle_root / "colab_cold_start_summary.json").read_text(encoding="utf-8"))
     assert bundled_summary["paper_result_evidence_target_kind"] == "colab_run_bundle"
     assert bundled_summary["colab_acceptance_report_decisions"]["formal_result_gap"] == "not_ready_for_formal_claims"
     assert bundled_summary["colab_acceptance_formal_result_gap_decision"] == "not_ready_for_formal_claims"
+    assert bundled_summary["colab_acceptance_formal_result_gap_decision_mode"] == "post_acceptance_override"
     layout_manifest = json.loads((tmp_path / "colab_workspace" / "colab_output_layout_manifest.json").read_text(encoding="utf-8"))
     bundled_layout_manifest = json.loads((bundle_root / "colab_output_layout_manifest.json").read_text(encoding="utf-8"))
     assert layout_manifest["artifact_name"] == "colab_output_layout_manifest.json"
@@ -663,6 +662,8 @@ def test_validate_colab_run_bundle_cli_accepts_directory_and_zip(tmp_path) -> No
     }
     assert acceptance_report["report_decisions"]["formal_result_gap"] == "not_ready_for_formal_claims"
     assert acceptance_report["formal_result_gap_decision"] == "not_ready_for_formal_claims"
+    assert acceptance_report["formal_result_gap_decision_mode"] == "post_acceptance_override"
+    assert "strict_colab_acceptance_passed" in acceptance_report["formal_result_gap_blocking_gap_requirements"]
 
     archive_acceptance_report_path = tmp_path / "archive_acceptance_report.json"
     archive_acceptance_result = subprocess.run(
@@ -689,6 +690,8 @@ def test_validate_colab_run_bundle_cli_accepts_directory_and_zip(tmp_path) -> No
         "paper_result_evidence": "pass",
     }
     assert archive_acceptance_report["report_decisions"]["formal_result_gap"] == "not_ready_for_formal_claims"
+    assert archive_acceptance_report["formal_result_gap_decision_mode"] == "post_acceptance_override"
+    assert "strict_colab_acceptance_passed" in archive_acceptance_report["formal_result_gap_blocking_gap_requirements"]
     assert archive_acceptance_report["validated_archive_path"].endswith("ceg_colab_run_bundle.zip")
 
 
