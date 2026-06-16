@@ -30,6 +30,9 @@ SOURCE_MANIFEST_FILES = (
     "latex_tables/latex_tables_manifest.json",
     "pdf_figures/paper_figures_pdf_manifest.json",
     "paper_results_report_manifest.json",
+    "image_manifests/image_generation_manifest.json",
+    "image_manifests/image_pair_manifest.json",
+    "image_examples/image_example_manifest.json",
 )
 
 
@@ -93,6 +96,30 @@ def _pdf_files(output_root: Path) -> list[str]:
     return ["pdf_figures/paper_figures_pdf_manifest.json", f"pdf_figures/{pdf_name}"]
 
 
+def _image_manifest_files(output_root: Path) -> list[str]:
+    """收集可选图像 provenance manifest。"""
+    candidates = [
+        "image_manifests/image_generation_manifest.json",
+        "image_manifests/image_pair_manifest.json",
+        "image_examples/image_example_manifest.json",
+    ]
+    return [relative for relative in candidates if (output_root / relative).is_file()]
+
+
+def _image_example_files(output_root: Path) -> list[str]:
+    """从 image_example_manifest 收集示例图文件。"""
+    manifest_path = output_root / "image_examples" / "image_example_manifest.json"
+    if not manifest_path.exists():
+        return []
+    manifest = _read_json(manifest_path)
+    files = ["image_examples/image_example_manifest.json"]
+    if isinstance(manifest, dict):
+        for item in manifest.get("examples", []):
+            if isinstance(item, dict) and item.get("relative_path"):
+                files.append(str(item["relative_path"]))
+    return files
+
+
 def collect_paper_result_files(output_root: str | Path) -> list[str]:
     """收集一个完整论文结果输出目录中应进入交付包的相对路径。"""
     root = Path(output_root)
@@ -102,6 +129,8 @@ def collect_paper_result_files(output_root: str | Path) -> list[str]:
         *_rendered_figure_files(root),
         *_latex_files(root),
         *_pdf_files(root),
+        *_image_manifest_files(root),
+        *_image_example_files(root),
     ]
     return sorted(dict.fromkeys(str(path).replace("\\", "/") for path in candidates))
 

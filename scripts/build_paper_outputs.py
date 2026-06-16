@@ -15,6 +15,7 @@ from experiments.baseline_file_adapter import load_baseline_observation_rows
 from experiments.metric_file_adapter import load_metric_rows, merge_metric_rows_into_records
 from experiments.experiment_coverage import build_experiment_coverage_report, load_experiment_matrix_cells
 from experiments.protocol_runner import run_paper_protocol
+from main.analysis.image_examples import export_image_example_package
 from main.analysis.latex_tables import write_latex_tables
 from main.analysis.pdf_figures import render_figure_specs_pdf_package
 from main.analysis.paper_readiness import load_paper_output_requirements, write_paper_readiness_report
@@ -28,6 +29,14 @@ def _load_json_list(path: Path) -> list[dict[str, object]]:
     payload = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(payload, list):
         raise TypeError("events file must contain list")
+    return [dict(item) for item in payload]
+
+
+def _load_json_rows(path: Path) -> list[dict[str, object]]:
+    """读取 JSON 数组行文件。"""
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, list):
+        raise TypeError("row file must contain list")
     return [dict(item) for item in payload]
 
 
@@ -46,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--thresholds", required=True, help="method_name 到 content_threshold 的 JSON 映射。")
     parser.add_argument("--baseline-observations", default=None, help="可选 baseline observation 文件。")
     parser.add_argument("--metric-rows", default=None, help="可选高级指标文件, 支持 JSON / JSONL / CSV。")
+    parser.add_argument("--image-pairs", default=None, help="可选 image_pairs 文件, 用于导出 image_manifests 和 image_examples。")
     parser.add_argument("--experiment-matrix", default=None, help="可选 experiment_matrix.json, 用于生成论文实验覆盖率报告。")
     parser.add_argument("--require-experiment-coverage", action="store_true", help="实验矩阵覆盖率未通过时返回非零退出码。")
     parser.add_argument("--profile", default="paper_main_probe")
@@ -81,6 +91,9 @@ def main() -> None:
         result["all_paper_artifacts"]["paper_experiment_coverage_report.json"] = coverage_report
     output_root = Path(args.out)
     output_root.mkdir(parents=True, exist_ok=True)
+    image_example_manifest = None
+    if args.image_pairs:
+        image_example_manifest = export_image_example_package(_load_json_rows(Path(args.image_pairs)), output_root)
     (output_root / "event_records.json").write_text(
         json.dumps(result["records"], ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -108,6 +121,10 @@ def main() -> None:
         "pdf_figure_count": pdf_manifest["figure_count"],
         "experiment_coverage_report_path": "artifacts/paper_experiment_coverage_report.json" if coverage_report else None,
         "experiment_coverage_decision": coverage_report["overall_decision"] if coverage_report else None,
+        "image_generation_manifest_path": "image_manifests/image_generation_manifest.json" if image_example_manifest else None,
+        "image_pair_manifest_path": "image_manifests/image_pair_manifest.json" if image_example_manifest else None,
+        "image_example_manifest_path": "image_examples/image_example_manifest.json" if image_example_manifest else None,
+        "image_example_count": image_example_manifest["example_count"] if image_example_manifest else None,
     }
     summary_path = output_root / "paper_outputs_summary.json"
     summary["paper_results_report_path"] = "paper_results_report.md"

@@ -163,5 +163,11 @@
   },
   "minimum_record_count": 1,
   "minimum_figure_count": 8,
-  "minimum_latex_table_count": 15
+  "minimum_latex_table_count": 15,
+  "required_image_manifests": [
+    "image_manifests/image_generation_manifest.json",
+    "image_manifests/image_pair_manifest.json",
+    "image_examples/image_example_manifest.json"
+  ],
+  "minimum_image_example_count": 1
 }

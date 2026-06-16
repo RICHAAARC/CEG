@@ -938,6 +938,27 @@ COLAB_PAPER_RESULT_INDEX_SPECS: tuple[dict[str, Any], ...] = (
         "purpose": "supported claims 到受治理产物的审计报告。",
     },
     {
+        "result_group": "image_examples",
+        "result_id": "image_generation_manifest",
+        "relative_path": "paper_results_package/image_manifests/image_generation_manifest.json",
+        "required_for_paper_outputs": True,
+        "purpose": "图像生成 provenance manifest, 记录 prompt、seed、模型和图像来源字段。",
+    },
+    {
+        "result_group": "image_examples",
+        "result_id": "image_pair_manifest",
+        "relative_path": "paper_results_package/image_manifests/image_pair_manifest.json",
+        "required_for_paper_outputs": True,
+        "purpose": "clean / watermarked / attacked 图像配对 manifest。",
+    },
+    {
+        "result_group": "image_examples",
+        "result_id": "image_example_manifest",
+        "relative_path": "paper_results_package/image_examples/image_example_manifest.json",
+        "required_for_paper_outputs": True,
+        "purpose": "论文示例图 manifest, 记录示例图来源、角色、摘要和相对路径。",
+    },
+    {
         "result_group": "external_evidence",
         "result_id": "external_baseline_observations",
         "relative_path": "external_baselines/baseline_observations.json",
@@ -1096,6 +1117,21 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
             "paper_readiness_report.json latex_table_outputs_present",
             "paper_readiness_report.json paper_results_report_present",
             "paper_result_evidence_report.json strict claims and readiness checks",
+            "colab_paper_result_index semantic_check",
+        ),
+    },
+    "image_examples": {
+        "producer_steps": (
+            "scripts/export_image_examples.py",
+            "main.analysis.image_examples.export_image_example_package",
+            "scripts/export_paper_results_package.py",
+        ),
+        "required_inputs": (
+            "image_pairs.json 或 sample_manifest 派生的 image pairs",
+            "clean / watermarked / attacked image files",
+        ),
+        "validation_gates": (
+            "paper_readiness_report.json image_manifests_and_examples_present",
             "colab_paper_result_index semantic_check",
         ),
     },
@@ -2910,6 +2946,8 @@ def build_colab_command_plan(
         build_command.extend(["--baseline-observations", str(effective_baseline_path)])
     if effective_metric_rows_path is not None:
         build_command.extend(["--metric-rows", str(effective_metric_rows_path)])
+    if effective_image_pairs_path is not None:
+        build_command.extend(["--image-pairs", str(effective_image_pairs_path)])
 
     package_command = [
         sys.executable,
@@ -2960,7 +2998,7 @@ def build_colab_command_plan(
 def build_colab_input_manifest(command_plan: dict[str, Any]) -> dict[str, Any]:
     """根据命令计划生成输入路径和输出契约清单。"""
     build_command = list(command_plan.get("build_command", []))
-    path_flags = {"--events", "--thresholds", "--baseline-observations", "--metric-rows", "--experiment-matrix"}
+    path_flags = {"--events", "--thresholds", "--baseline-observations", "--metric-rows", "--image-pairs", "--experiment-matrix"}
     input_paths = []
     for index, part in enumerate(build_command[:-1]):
         if part in path_flags:

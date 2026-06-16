@@ -187,6 +187,12 @@ def build_paper_dry_run_inputs(*, repetitions: int = 1) -> dict[str, Any]:
     }
 
 
+def _write_ppm(path: Path, red: int, green: int, blue: int) -> None:
+    """写出 1x1 PPM 图像, 用于 dry-run 示例图和轻量质量指标。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"P3\n1 1\n255\n{red} {green} {blue}\n", encoding="ascii")
+
+
 def write_paper_dry_run_inputs(output_root: str | Path, *, repetitions: int = 1) -> dict[str, Any]:
     """写出 dry-run 输入文件并返回 manifest。"""
     output_path = Path(output_root)
@@ -197,7 +203,40 @@ def write_paper_dry_run_inputs(output_root: str | Path, *, repetitions: int = 1)
         "baseline_observations_path": "baseline_observations.json",
         "metric_rows_path": "metric_rows.json",
         "thresholds_path": "thresholds.json",
+        "image_pairs_path": "image_pairs.json",
     }
+    image_pairs = []
+    for index, event in enumerate(bundle["events"], start=1):
+        event_id = str(event["event_id"])
+        clean_path = output_path / "images" / "clean" / f"{event_id}.ppm"
+        watermarked_path = output_path / "images" / "watermarked" / f"{event_id}.ppm"
+        attacked_path = output_path / "images" / "attacked" / f"{event_id}.ppm"
+        _write_ppm(clean_path, 10 + index, 20 + index, 30 + index)
+        _write_ppm(watermarked_path, 12 + index, 21 + index, 29 + index)
+        _write_ppm(attacked_path, 13 + index, 20 + index, 28 + index)
+        image_pairs.append(
+            {
+                "image_id": event_id,
+                "event_id": event_id,
+                "prompt_id": f"dry_run_prompt_{index:03d}",
+                "prompt_text": "dry-run synthetic prompt for pipeline validation",
+                "seed": index,
+                "model_id": "dry_run_ppm_fixture",
+                "scheduler": "not_applicable",
+                "num_inference_steps": 0,
+                "guidance_scale": 0.0,
+                "method_name": "ceg",
+                "split": str(event.get("split", "test")),
+                "sample_role": str(event.get("sample_role", "unknown_role")),
+                "attack_family": str(event.get("attack_family", "clean")),
+                "attack_condition": str(event.get("attack_condition", "clean_none")),
+                "clean_image_path": str(clean_path),
+                "watermarked_image_path": str(watermarked_path),
+                "attacked_image_path": str(attacked_path),
+                "reference_path": str(clean_path),
+                "watermarked_path": str(watermarked_path),
+            }
+        )
     (output_path / file_map["events_path"]).write_text(
         json.dumps(bundle["events"], ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -214,7 +253,11 @@ def write_paper_dry_run_inputs(output_root: str | Path, *, repetitions: int = 1)
         json.dumps(bundle["thresholds"], ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    manifest = {**bundle["manifest"], **file_map}
+    (output_path / file_map["image_pairs_path"]).write_text(
+        json.dumps(image_pairs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    manifest = {**bundle["manifest"], **file_map, "image_pair_count": len(image_pairs)}
     (output_path / "paper_dry_run_inputs_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

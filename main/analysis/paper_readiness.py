@@ -334,6 +334,40 @@ def _check_summary(output_root: Path) -> dict[str, Any]:
     return _pass("paper_outputs_summary_present", {key: summary[key] for key in sorted(required_keys)})
 
 
+def _check_image_outputs(output_root: Path, requirements: dict[str, Any]) -> dict[str, Any] | None:
+    """按需检查 image_manifests 和 image_examples 是否进入论文输出目录。
+
+    该检查只在 requirements 显式声明图像产物要求时启用, 因此不会阻断
+    无真实图像的轻量 dry-run。正式论文实验应通过配置启用该检查。
+    """
+    required_manifests = [str(item) for item in requirements.get("required_image_manifests", [])]
+    minimum_examples = int(requirements.get("minimum_image_example_count", 0) or 0)
+    if not required_manifests and minimum_examples <= 0:
+        return None
+    missing = [relative for relative in required_manifests if not (output_root / relative).is_file()]
+    empty = [relative for relative in required_manifests if (output_root / relative).is_file() and (output_root / relative).stat().st_size == 0]
+    example_manifest_path = output_root / "image_examples" / "image_example_manifest.json"
+    example_count = 0
+    if example_manifest_path.is_file():
+        payload = _read_json(example_manifest_path)
+        if isinstance(payload, dict):
+            example_count = int(payload.get("example_count", 0) or 0)
+    if missing or empty or example_count < minimum_examples:
+        return _fail(
+            "image_manifests_and_examples_present",
+            {
+                "missing": missing,
+                "empty": empty,
+                "example_count": example_count,
+                "minimum_image_example_count": minimum_examples,
+            },
+        )
+    return _pass(
+        "image_manifests_and_examples_present",
+        {"required_image_manifests": required_manifests, "example_count": example_count},
+    )
+
+
 def validate_paper_output_directory(
     output_root: str | Path,
     *,
@@ -357,6 +391,9 @@ def validate_paper_output_directory(
         _check_claim_audit(root),
         _check_summary(root),
     ]
+    image_check = _check_image_outputs(root, merged_requirements)
+    if image_check is not None:
+        checks.append(image_check)
     fail_count = sum(1 for item in checks if item["status"] != "pass")
     return {
         "artifact_name": "paper_readiness_report.json",
