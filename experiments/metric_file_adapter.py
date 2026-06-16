@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
+from main.core.digest import build_stable_digest
+
 
 STANDARD_METRIC_COLUMNS = {
     "bit_correct_count",
@@ -27,6 +29,7 @@ STANDARD_METRIC_COLUMNS = {
 }
 
 IDENTITY_COLUMNS = {"event_id", "method_name", "baseline_id"}
+METRIC_ROW_IMPORT_MANIFEST_NAME = "metric_execution_manifest.json"
 
 
 def _load_json_or_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -97,6 +100,69 @@ def load_metric_rows(path: str | Path) -> list[dict[str, Any]]:
             }
         )
     return normalized
+
+
+def build_metric_row_import_manifest(
+    rows: Iterable[dict[str, Any]],
+    *,
+    source_metric_rows_path: str | Path,
+    output_metric_rows_path: str | Path,
+    formal_result_claim: bool = False,
+    evidence_paths: Iterable[str | Path] = (),
+    producer_id: str = "external_metric_row_importer",
+) -> dict[str, Any]:
+    """为离线高级指标 rows 文件生成可归档的执行 manifest.
+
+    通用工程写法:
+    - LPIPS、FID 和 CLIP score 通常依赖外部模型或第三方工具.
+    - 本项目只接收标准化 metric rows, 不把重型指标模型塞入默认测试路径.
+
+    项目特定写法:
+    - `formal_result_claim=False` 表示该导入仅证明接口、字段和结果包链路.
+    - 当 `formal_result_claim=True` 时, 必须提供外部运行日志、配置或摘要文件作为证据.
+    """
+    materialized_rows = [dict(row) for row in rows]
+    materialized_evidence_paths = [str(path) for path in evidence_paths]
+    if formal_result_claim and not materialized_evidence_paths:
+        raise ValueError("formal metric import requires at least one evidence path")
+    metric_fields = sorted(
+        {
+            key
+            for row in materialized_rows
+            for key in row
+            if key in STANDARD_METRIC_COLUMNS
+        }
+    )
+    advanced_metric_fields = sorted({"lpips", "fid", "clip_score"} & set(metric_fields))
+    method_names = sorted({str(row["method_name"]) for row in materialized_rows if row.get("method_name")})
+    baseline_ids = sorted({str(row["baseline_id"]) for row in materialized_rows if row.get("baseline_id")})
+    return {
+        "artifact_name": METRIC_ROW_IMPORT_MANIFEST_NAME,
+        "producer_id": producer_id,
+        "producer_role": "offline_external_metric_row_import",
+        "formal_result_claim": bool(formal_result_claim),
+        "execution_boundary": (
+            "offline_external_metric_evidence_provided"
+            if formal_result_claim
+            else "offline_metric_row_import_requires_separate_formal_evidence"
+        ),
+        "source_metric_rows_path": str(source_metric_rows_path),
+        "metric_rows_path": str(output_metric_rows_path),
+        "metric_row_count": len(materialized_rows),
+        "metric_fields": metric_fields,
+        "advanced_metric_fields": advanced_metric_fields,
+        "method_names": method_names,
+        "baseline_ids": baseline_ids,
+        "evidence_paths": materialized_evidence_paths,
+        "execution_digest": build_stable_digest(
+            {
+                "rows": materialized_rows,
+                "source_metric_rows_path": str(source_metric_rows_path),
+                "formal_result_claim": bool(formal_result_claim),
+                "evidence_paths": materialized_evidence_paths,
+            }
+        ),
+    }
 
 
 def _record_metric_key(row: dict[str, Any]) -> tuple[str, str]:

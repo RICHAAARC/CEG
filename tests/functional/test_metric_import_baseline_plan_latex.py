@@ -9,7 +9,7 @@ import sys
 import pytest
 
 from experiments.baseline_plan import build_baseline_plan_manifest, load_baseline_command_plan
-from experiments.metric_file_adapter import load_metric_rows, merge_metric_rows_into_records
+from experiments.metric_file_adapter import build_metric_row_import_manifest, load_metric_rows, merge_metric_rows_into_records
 from main.analysis.latex_tables import build_latex_tables_from_artifacts, write_latex_tables
 from main.analysis.result_package import export_paper_results_package
 
@@ -142,6 +142,61 @@ def test_run_metric_plan_cli_collects_rows_and_execution_manifest(tmp_path) -> N
     assert rows[0]["lpips"] == pytest.approx(0.04)
     assert manifest["artifact_name"] == "metric_execution_manifest.json"
     assert manifest["metric_names"] == ["lpips"]
+
+
+@pytest.mark.quick
+def test_metric_row_import_manifest_requires_formal_evidence(tmp_path) -> None:
+    """正式离线高级指标导入必须显式绑定外部运行证据."""
+    rows = [{"event_id": "e1", "method_name": "ceg", "lpips": 0.04, "fid": 8.5, "clip_score": 0.31}]
+
+    with pytest.raises(ValueError, match="formal metric import requires"):
+        build_metric_row_import_manifest(
+            rows,
+            source_metric_rows_path=tmp_path / "source_metrics.json",
+            output_metric_rows_path=tmp_path / "metric_rows.json",
+            formal_result_claim=True,
+        )
+
+
+@pytest.mark.quick
+def test_import_metric_rows_cli_writes_package_ready_manifest(tmp_path) -> None:
+    """离线高级指标 rows 导入应写出 build_paper_outputs 可直接消费的文件."""
+    source_path = tmp_path / "offline_metric_rows.json"
+    output_root = tmp_path / "metric_results"
+    source_path.write_text(
+        json.dumps(
+            [
+                {
+                    "event_id": "e1",
+                    "method_name": "ceg",
+                    "lpips": 0.04,
+                    "fid": 8.5,
+                    "clip_score": 0.31,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/import_metric_rows.py",
+            "--metric-rows",
+            str(source_path),
+            "--out",
+            str(output_root),
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    rows = json.loads((output_root / "metric_rows.json").read_text(encoding="utf-8"))
+    manifest = json.loads((output_root / "metric_execution_manifest.json").read_text(encoding="utf-8"))
+    assert rows[0]["lpips"] == pytest.approx(0.04)
+    assert manifest["producer_role"] == "offline_external_metric_row_import"
+    assert manifest["formal_result_claim"] is False
+    assert manifest["advanced_metric_fields"] == ["clip_score", "fid", "lpips"]
 
 
 @pytest.mark.quick

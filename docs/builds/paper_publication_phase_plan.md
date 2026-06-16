@@ -612,8 +612,9 @@ payload recovery rate
 ```text
 轻量 quality runner 已具备 image_pairs.json -> metric_rows.json / metric_execution_manifest.json 的 CPU dry-run 链路。
 该 runner 可计算 MSE、MAE、PSNR 和全局 SSIM, 并将 metric rows 与执行 manifest 纳入 paper_results_package。
-LPIPS、FID 和 CLIP score 仍应通过 external metric command plan 或用户提供的正式 metric rows 接入。
-当前状态不代表正式高级指标已经完成, 只代表质量指标 provenance 和结果包接入已打通。
+LPIPS、FID 和 CLIP score 可通过 external metric command plan 或 scripts/import_metric_rows.py 导入用户提供的正式 metric rows 接入。
+离线高级指标 rows 导入入口已具备, 可生成 metric_rows.json 与 metric_execution_manifest.json, 并在正式声明时要求绑定外部运行证据。
+当前状态不代表正式高级指标已经完成, 只代表质量指标 provenance、离线导入和结果包接入已打通。
 ```
 
 ### 示例图目录
@@ -751,7 +752,7 @@ colab_formal_result_gap_report.json = ready_for_formal_claims
 
 ```text
 1. 使用 scripts/import_baseline_observations.py 接入至少一个真实 external baseline backend 输出或离线正式 observation 文件。
-2. 接入真实 LPIPS / FID / CLIP score backend 或离线正式 metric rows。
+2. 使用 scripts/import_metric_rows.py 接入真实 LPIPS / FID / CLIP score backend 输出或离线正式 metric rows。
 3. 将真实 baseline 与高级 metric execution manifest 和 result package provenance 对齐。
 4. 运行 Colab pilot 小样本, 检查 baseline comparison、fixed-FPR / TPR@FPR、quality metrics 和 image examples。
 5. 继续保持所有论文表格由 records 和 manifests 重建。

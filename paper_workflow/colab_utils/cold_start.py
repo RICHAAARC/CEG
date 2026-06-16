@@ -273,7 +273,7 @@ def build_colab_formal_input_contract(workspace_root: str | Path) -> dict[str, A
             "optional_fields": ["method_name", "baseline_id", "psnr", "ssim", "mse", "mae", "bit_accuracy"],
             "required_when": "正式图像水印标准指标需要 LPIPS / FID / CLIP score 等高级指标时",
             "consumed_by": ["scripts/build_paper_outputs.py"],
-            "can_generate_from": "external metric command plan via scripts/run_metric_plan.py",
+            "can_generate_from": "external metric command plan via scripts/run_metric_plan.py, or offline metric rows import via scripts/import_metric_rows.py",
         },
         {
             "role": "image_pairs",
@@ -1111,7 +1111,7 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
         "producer_steps": (
             "scripts/build_paper_outputs.py",
             "main.analysis.standard_metrics.aggregate_standard_watermark_metrics",
-            "scripts/compute_image_quality_metrics.py 或 scripts/run_metric_plan.py",
+            "scripts/compute_image_quality_metrics.py、scripts/run_metric_plan.py 或 scripts/import_metric_rows.py",
             "scripts/export_paper_results_package.py",
         ),
         "required_inputs": (
@@ -1211,6 +1211,7 @@ COLAB_RESULT_GROUP_PRODUCTION_TRACES: dict[str, dict[str, tuple[str, ...]]] = {
             "scripts/import_baseline_observations.py",
             "scripts/run_baseline_pilot_producer.py",
             "scripts/run_metric_plan.py",
+            "scripts/import_metric_rows.py",
             "copy_provided_result_files",
         ),
         "required_inputs": (
@@ -1257,7 +1258,7 @@ COLAB_RESULT_ID_PRODUCTION_TRACE_OVERRIDES: dict[str, dict[str, tuple[str, ...]]
         "validation_gates": ("colab_run_bundle_validation.json",),
     },
     "external_metric_rows": {
-        "producer_steps": ("scripts/run_metric_plan.py", "scripts/compute_image_quality_metrics.py"),
+        "producer_steps": ("scripts/run_metric_plan.py", "scripts/import_metric_rows.py", "scripts/compute_image_quality_metrics.py"),
         "required_inputs": ("metric command plan", "image_pairs.json 或 sample_manifest"),
         "validation_gates": ("paper_result_evidence_report.json advanced_metrics_source_ready",),
     },
@@ -1267,7 +1268,7 @@ COLAB_RESULT_ID_PRODUCTION_TRACE_OVERRIDES: dict[str, dict[str, tuple[str, ...]]
         "validation_gates": ("colab_run_bundle_validation.json",),
     },
     "external_metric_execution_manifest": {
-        "producer_steps": ("scripts/run_metric_plan.py", "scripts/compute_image_quality_metrics.py"),
+        "producer_steps": ("scripts/run_metric_plan.py", "scripts/import_metric_rows.py", "scripts/compute_image_quality_metrics.py"),
         "required_inputs": ("metric command plan 或 image_pairs.json", "metric_rows.json"),
         "validation_gates": ("colab_run_bundle_validation.json",),
     },

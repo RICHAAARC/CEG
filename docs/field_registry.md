@@ -191,6 +191,9 @@ Notebook 与 repository module 的跨边界数据
 | external_metric_fields | metric | none | false | false | false | 正式 evidence 门禁在外部 metric_rows.json 中观察到的指标字段集合。|
 | external_advanced_metric_fields | metric | none | false | true | false | 正式 evidence 门禁在外部 metric_rows.json 中观察到的 LPIPS、FID 或 CLIP score 高级指标字段集合。|
 | metric_rows_path | artifact | none | false | true | false | 汇总后的外部高级指标行文件相对路径。|
+| source_metric_rows_path | artifact | none | false | false | false | 离线外部高级指标 rows 导入时记录的原始 metric rows 文件路径。|
+| metric_fields | metric | none | false | false | false | metric_execution_manifest 中记录的标准指标字段集合。|
+| advanced_metric_fields | metric | none | false | true | false | metric_execution_manifest 中记录的 LPIPS、FID 或 CLIP score 高级指标字段集合。|
 | model_root | protocol | none | true | false | false | 外部 baseline 或指标模型根目录。|
 | baseline_root | protocol | none | true | false | false | 外部 baseline 项目根目录。|
 | metric_root | protocol | none | true | false | false | 外部高级指标工具根目录。|
