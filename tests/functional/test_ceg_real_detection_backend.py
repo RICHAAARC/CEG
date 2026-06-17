@@ -96,6 +96,8 @@ def test_content_chain_detection_backend_writes_real_events(tmp_path: Path) -> N
     assert manifest["producer_id"] == "ceg_content_chain_detection_backend"
     assert manifest["formal_result_claim"] is False
     assert manifest["paper_main_method_ready"] is False
+    assert manifest["paper_main_method_blocking_reasons"] == ["keyed_attestation_ready"]
+    assert manifest["method_readiness_checks"]["geometry_recovery_ready"]["passed"] is True
     assert manifest["event_count"] == 2
     assert {event["sample_role"] for event in events} == {"clean_negative", "positive_source"}
     assert len(records) == 2
@@ -103,6 +105,7 @@ def test_content_chain_detection_backend_writes_real_events(tmp_path: Path) -> N
         payload = event["payload"]
         assert payload["detection_source"]["producer"] == "ceg_content_chain_detection_backend"
         assert payload["detection_source"]["paper_main_method_ready"] is False
+        assert payload["detection_source"]["paper_main_method_blocking_reasons"] == ["keyed_attestation_ready"]
         assert 0.0 <= payload["content"]["content_score_raw"] <= 1.0
         assert len(payload["semantic_mask"]["mask_digest"]) == 64
         assert len(payload["content_chain"]["content_chain_digest"]) == 64
@@ -118,6 +121,40 @@ def test_content_chain_detection_backend_writes_real_events(tmp_path: Path) -> N
         assert payload["attestation"]["attestation_score"] == 1.0
         assert len(payload["attestation"]["attestation_digest"]) == 64
         assert payload["attestation"]["paper_main_method_ready"] is False
+
+
+@pytest.mark.quick
+def test_content_chain_detection_backend_can_claim_formal_method_with_keyed_attestation(tmp_path: Path) -> None:
+    """提供 keyed attestation 后, detection backend 应能给出方法原语级正式 readiness。"""
+
+    image_pairs = _write_embedded_pair(tmp_path)
+    output_root = tmp_path / "keyed_detection"
+
+    manifest = write_content_chain_detection_inputs(
+        image_pairs,
+        output_root,
+        detector_config={
+            "mask_threshold_quantile": 0.75,
+            "mask_open_iters": 0,
+            "mask_close_iters": 0,
+            "attestation_secret_key": "unit-test-attestation-key",
+            "attestation_key_id": "unit-test-key",
+            "formal_result_claim": True,
+        },
+    )
+    events = json.loads((output_root / "detection_events.json").read_text(encoding="utf-8"))
+
+    assert manifest["paper_main_method_ready"] is True
+    assert manifest["formal_result_claim"] is True
+    assert manifest["paper_main_method_blocking_reasons"] == []
+    assert manifest["method_readiness_checks"]["keyed_attestation_ready"]["passed"] is True
+    for event in events:
+        payload = event["payload"]
+        assert payload["detection_source"]["paper_main_method_ready"] is True
+        assert payload["detection_source"]["formal_result_claim"] is True
+        assert payload["attestation"]["backend_id"] == "ceg_keyed_hmac_attestation"
+        assert payload["attestation"]["paper_main_method_ready"] is True
+        assert payload["attestation"]["paper_main_method_blocking_reason"] is None
 
 
 @pytest.mark.quick

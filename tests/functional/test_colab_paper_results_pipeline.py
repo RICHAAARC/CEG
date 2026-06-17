@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -144,8 +145,14 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
                 "1.0",
                 "--baseline-observations",
                 str(baseline_observations),
+                "--attestation-key-env",
+                "CEG_TEST_ATTESTATION_KEY",
+                "--attestation-key-id",
+                "unit-test-key",
+                "--detection-formal-result-claim",
             ],
             cwd=".",
+            env={**os.environ, "CEG_TEST_ATTESTATION_KEY": "unit-test-attestation-key"},
             check=True,
         )
 
@@ -153,6 +160,9 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
         assert manifest["overall_decision"] == "pass"
         assert (out / "attack_outputs" / "image_manifests" / "attacked_image_manifest.json").is_file()
         assert (out / "detection_outputs" / "detection_events.json").is_file()
+        detection_manifest = json.loads((out / "detection_outputs" / "ceg_detection_producer_manifest.json").read_text(encoding="utf-8"))
+        assert detection_manifest["paper_main_method_ready"] is True
+        assert detection_manifest["formal_result_claim"] is True
         assert (out / "baseline_outputs" / "baseline_observations.json").is_file()
         assert (
             out / "calibrated_paper_results_package" / "paper_results_package" / "paper_results_package_manifest.json"

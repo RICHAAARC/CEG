@@ -176,6 +176,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-invalid-archive", action="store_true")
     parser.add_argument("--attestation-key-env", default=None)
     parser.add_argument("--attestation-key-id", default=None)
+    parser.add_argument("--detection-formal-result-claim", action="store_true", help="当 detection backend readiness 通过时声明正式方法结果。")
     parser.add_argument("--affine-rotation-degrees", default="-6,-3,0,3,6")
     parser.add_argument("--affine-scales", default="0.95,1.0,1.05")
     parser.add_argument("--perspective-offsets", default="0.0")
@@ -306,6 +307,8 @@ def main() -> None:
     ]
     _append_optional(paper_pipeline_command, "--attestation-key-env", args.attestation_key_env)
     _append_optional(paper_pipeline_command, "--attestation-key-id", args.attestation_key_id)
+    if args.detection_formal_result_claim:
+        paper_pipeline_command.append("--detection-formal-result-claim")
     _append_optional(paper_pipeline_command, "--baseline-plan", args.baseline_plan)
     _append_optional(paper_pipeline_command, "--baseline-observations", args.baseline_observations)
     _append_optional(paper_pipeline_command, "--baseline-execution-manifest", args.baseline_execution_manifest)

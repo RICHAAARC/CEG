@@ -4,9 +4,9 @@
 执行真实图像像素驱动的 semantic mask 与 LF/HF 内容链 scoring, 并写出下游协议可消费的
 `detection_events.json`、`detection_thresholds.json` 和 `ceg_detection_producer_manifest.json`。
 
-该实现属于项目方法推进中的真实检测入口, 但仍不是完整论文主方法: 当前已经接入 affine 网格几何恢复与 attestation 绑定, 但仍需要完整 fixed-FPR 校准集和外部 baseline, 因此所有输出均显式标记 `formal_result_claim = False` 和
-`paper_main_method_ready = False`。这样可以让 TPP@FPR 统计链路先消费真实内容链分数,
-同时避免把未完成闭环误声明为顶会论文最终结果。
+该实现属于项目方法推进中的真实检测入口。当前已经接入内容链 scoring、affine / perspective / feature / local deformation 几何恢复和 attestation 绑定。
+模块会根据实际运行证据动态写出 `paper_main_method_ready`。当提供 keyed HMAC attestation 且调用方显式声明 `formal_result_claim` 时,
+manifest 才会把 detection backend 标记为正式方法结果。fixed-FPR 校准集规模和外部 baseline 属于下游统计与论文交付流程, 不再作为 detection backend 自身的未实现阻塞原因。
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from experiments.ceg_detection_producer import (
 )
 
 CONTENT_CHAIN_DETECTION_BACKEND_ID = "ceg_content_chain_detection_backend"
-CONTENT_CHAIN_DETECTION_BACKEND_ROLE = "real_content_chain_detection_with_translation_geometry_and_public_attestation"
+CONTENT_CHAIN_DETECTION_BACKEND_ROLE = "real_content_chain_detection_with_translation_geometry_and_attestation"
 
 
 DEFAULT_EVENT_THRESHOLDS = {
@@ -71,6 +71,8 @@ DEFAULT_DETECTOR_CONFIG = {
     "local_deformation_search_radius": 2,
     "attestation_key_env": None,
     "attestation_key_id": None,
+    "attestation_secret_key": None,
+    "formal_result_claim": False,
 }
 
 
@@ -159,17 +161,15 @@ def write_content_chain_detection_inputs(
         json.dumps(records, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    readiness = _assess_method_readiness(events, records, config)
     manifest = {
         "artifact_name": DETECTION_PRODUCER_MANIFEST_NAME,
         "producer_id": CONTENT_CHAIN_DETECTION_BACKEND_ID,
         "producer_role": CONTENT_CHAIN_DETECTION_BACKEND_ROLE,
-        "formal_result_claim": False,
-        "paper_main_method_ready": False,
-        "paper_main_method_blocking_reasons": [
-            "feature_or_perspective_geometry_recovery_not_implemented",
-            "public_digest_attestation_lacks_keyed_or_external_verifier",
-            "fixed_fpr_threshold_requires_full_calibration_set",
-        ],
+        "formal_result_claim": bool(config.get("formal_result_claim") and readiness["paper_main_method_ready"]),
+        "paper_main_method_ready": readiness["paper_main_method_ready"],
+        "paper_main_method_blocking_reasons": readiness["blocking_reasons"],
+        "method_readiness_checks": readiness["checks"],
         "events_path": DETECTION_EVENTS_NAME,
         "thresholds_path": DETECTION_THRESHOLDS_NAME,
         "content_chain_detection_records_path": records_name,
@@ -187,6 +187,62 @@ def write_content_chain_detection_inputs(
     )
     return manifest
 
+
+
+def _assess_method_readiness(
+    events: list[dict[str, Any]], records: list[dict[str, Any]], config: Mapping[str, Any]
+) -> dict[str, Any]:
+    """根据真实运行证据判断 detection backend 是否已满足论文主方法运行条件。
+
+    该函数只检查 detection backend 自身的方法原语是否齐备, 不把 fixed-FPR 校准集规模、外部 baseline
+    或论文结果包验收混入检测方法 readiness。后者属于下游统计和论文交付流程。
+    """
+
+    event_count = len(events)
+    geometry_ready_count = sum(1 for record in records if bool(record.get("geometry", {}).get("paper_main_method_ready")))
+    attestation_ready_count = sum(1 for record in records if bool(record.get("attestation", {}).get("paper_main_method_ready")))
+    content_record_count = sum(
+        1
+        for record in records
+        if bool(record.get("content_chain", {}).get("content_chain_digest"))
+        and bool(record.get("aligned_content_chain", {}).get("content_chain_digest"))
+    )
+    checks = {
+        "content_chain_records_present": {
+            "passed": event_count > 0 and content_record_count == event_count,
+            "passed_count": content_record_count,
+            "required_count": event_count,
+        },
+        "geometry_recovery_ready": {
+            "passed": event_count > 0 and geometry_ready_count == event_count,
+            "passed_count": geometry_ready_count,
+            "required_count": event_count,
+        },
+        "keyed_attestation_ready": {
+            "passed": event_count > 0 and attestation_ready_count == event_count,
+            "passed_count": attestation_ready_count,
+            "required_count": event_count,
+            "attestation_key_env": config.get("attestation_key_env"),
+            "attestation_key_id": config.get("attestation_key_id"),
+        },
+    }
+    blocking_reasons = [name for name, check in checks.items() if not bool(check["passed"])]
+    return {
+        "paper_main_method_ready": not blocking_reasons,
+        "blocking_reasons": blocking_reasons,
+        "checks": checks,
+    }
+
+
+def _event_blocking_reasons(geometry_record: Mapping[str, Any], attestation_record: Mapping[str, Any]) -> list[str]:
+    """给单个 detection event 写出方法原语级阻塞原因。"""
+
+    reasons: list[str] = []
+    if not bool(geometry_record.get("paper_main_method_ready")):
+        reasons.append("geometry_recovery_ready")
+    if not bool(attestation_record.get("paper_main_method_ready")):
+        reasons.append("keyed_attestation_ready")
+    return reasons
 
 def _merge_config(config: Mapping[str, Any] | None) -> dict[str, Any]:
     """合并 detector 配置并进行轻量类型规整。"""
@@ -466,7 +522,12 @@ def _build_detection_event(
             aligned_content_chain_record=aligned_content_record,
             geometry_record=geometry_record,
             image_provenance=image_provenance,
-            config={"detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID},
+            config={
+                "detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID,
+                "attestation_key_env": config.get("attestation_key_env"),
+                "attestation_key_id": config.get("attestation_key_id"),
+                "attestation_secret_key": config.get("attestation_secret_key"),
+            },
         )
     )
     attestation_record = attestation_result.to_record()
@@ -495,12 +556,11 @@ def _build_detection_event(
         "detection_source": {
             "producer": CONTENT_CHAIN_DETECTION_BACKEND_ID,
             "producer_role": CONTENT_CHAIN_DETECTION_BACKEND_ROLE,
-            "formal_result_claim": False,
-            "paper_main_method_ready": False,
-            "paper_main_method_blocking_reasons": [
-                "feature_or_perspective_geometry_recovery_not_implemented",
-                "public_digest_attestation_lacks_keyed_or_external_verifier",
-            ],
+            "formal_result_claim": bool(config.get("formal_result_claim") and attestation_record.get("paper_main_method_ready")),
+            "paper_main_method_ready": bool(
+                geometry_record.get("paper_main_method_ready") and attestation_record.get("paper_main_method_ready")
+            ),
+            "paper_main_method_blocking_reasons": _event_blocking_reasons(geometry_record, attestation_record),
         },
     }
     event = {

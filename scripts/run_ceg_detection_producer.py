@@ -86,6 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--local-deformation-search-radius", type=int, default=2, help="局部网格 deformation 的块内搜索半径。")
     parser.add_argument("--attestation-key-env", default=None, help="可选 HMAC attestation 密钥环境变量名。")
     parser.add_argument("--attestation-key-id", default=None, help="可选 HMAC attestation 密钥标识, 只写入 digest。")
+    parser.add_argument("--formal-result-claim", action="store_true", help="当方法 readiness 通过时, 将 detection manifest 标记为正式方法结果。")
     return parser
 
 
@@ -120,6 +121,7 @@ def main() -> None:
                 "local_deformation_search_radius": args.local_deformation_search_radius,
                 "attestation_key_env": args.attestation_key_env,
                 "attestation_key_id": args.attestation_key_id,
+                "formal_result_claim": args.formal_result_claim,
             },
         )
     else:

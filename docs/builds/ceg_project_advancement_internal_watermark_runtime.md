@@ -1657,3 +1657,67 @@ drive_result_inventory
 5. Drive 结果目录反查清单。
 
 该补充减少人工检查步骤, 使 `/content/drive/MyDrive/CEG` 本身成为可审计的论文结果交付目录。
+
+## 35. 本次继续推进: 真实 detection backend 方法 readiness 证据化
+
+本次修正了真实 CEG detection backend 的方法 readiness 判定。修改位置为:
+
+```text
+experiments/ceg_real_detection_backend.py
+scripts/run_ceg_detection_producer.py
+scripts/run_colab_paper_results_pipeline.py
+scripts/run_colab_end_to_end_paper_pipeline.py
+```
+
+### 35.1 修正的问题
+
+此前 detection manifest 固定写出:
+
+```text
+paper_main_method_ready = False
+formal_result_claim = False
+```
+
+并保留以下过期阻塞原因:
+
+```text
+feature_or_perspective_geometry_recovery_not_implemented
+public_digest_attestation_lacks_keyed_or_external_verifier
+fixed_fpr_threshold_requires_full_calibration_set
+```
+
+但当前项目已经实现了 feature homography、local deformation registration 和 keyed HMAC attestation。继续固定声明这些能力未实现, 会使正式结果包无法准确表达真实方法状态。
+
+### 35.2 新行为
+
+`ceg_real_detection_backend` 现在根据真实运行记录动态写出:
+
+```text
+method_readiness_checks
+paper_main_method_ready
+paper_main_method_blocking_reasons
+```
+
+检查项包括:
+
+1. `content_chain_records_present`: 内容链和对齐后内容链 digest 是否齐备。
+2. `geometry_recovery_ready`: 几何恢复记录是否声明方法原语已具备论文主方法条件。
+3. `keyed_attestation_ready`: 是否使用 keyed HMAC attestation 并完成本地验证。
+
+`fixed-FPR` 校准集规模和外部 baseline 不再作为 detection backend 自身的未实现阻塞原因。它们属于下游统计和论文结果包交付流程。
+
+### 35.3 正式声明入口
+
+底层 CLI 新增:
+
+```bash
+python scripts/run_ceg_detection_producer.py   --detection-backend ceg_content_chain_detection   --attestation-key-env CEG_ATTESTATION_KEY   --attestation-key-id <key_id>   --formal-result-claim
+```
+
+Colab 论文流水线新增并转发:
+
+```bash
+--detection-formal-result-claim
+```
+
+只有在 keyed attestation 和 geometry readiness 都通过时, `formal_result_claim` 才会被写为 `true`。如果用户没有提供密钥, backend 仍会输出真实 detection 分数, 但 readiness 会明确阻塞在 `keyed_attestation_ready`。
