@@ -1282,3 +1282,67 @@ WATERMARK_BACKEND = "ceg_content_chain_embedding"
 2. 大规模正式运行 profile, 包括 prompt 数量、attack 条件、baseline 列表和显存配置说明。
 3. 对正式 Colab 运行后的结果包进行一次真实 GPU 验收。
 4. 若论文需要更强攻击鲁棒性, 可继续加入 optical-flow 或 thin-plate-spline 局部形变恢复 backend。
+
+## 29. 本次继续推进: 外部 baseline 正式证据闭环
+
+本次补齐了外部 baseline 从命令计划到正式论文证据的关键链路。修改位置为:
+
+```text
+scripts/run_baseline_plan.py
+scripts/run_colab_paper_results_pipeline.py
+```
+
+### 29.1 原有缺口
+
+此前 CEG 已经具备外部 baseline 注册表、命令模板和 observation 导入能力, 但存在一个论文结果包层面的缺口:
+
+1. `run_baseline_plan.py` 执行第三方 baseline 命令后, 默认写出的 `baseline_execution_manifest.json` 始终是 `formal_result_claim=False`。
+2. 当 Colab 论文流水线使用 `--baseline-plan` 运行真实外部 baseline 时, `--baseline-formal-result-claim` 与 `--baseline-evidence-path` 没有传递给 baseline runner。
+3. 因此, baseline 结果虽然可以进入表格, 但缺少“这些结果来自正式外部运行证据”的强绑定。
+
+这不是 CEG 主方法算法缺失, 而是论文对比实验的证据链缺口。
+
+### 29.2 新增正式证据参数
+
+`run_baseline_plan.py` 新增:
+
+```bash
+--formal-result-claim
+--evidence-path <path>
+--require-pass
+```
+
+启用 `--formal-result-claim` 后, 脚本要求至少存在一个真实 evidence 文件。evidence 可以是第三方 baseline 仓库 commit 记录、运行日志、原始输出包 manifest、环境记录或人工验收说明。脚本会在 `baseline_execution_manifest.json` 中写入:
+
+```text
+formal_result_claim
+evidence_paths
+evidence_path_count
+failed_command_count
+failed_commands
+execution_boundary
+```
+
+其中 `execution_boundary=external_command_results_bound_to_formal_evidence` 表示该 baseline observation 文件已经与正式外部证据绑定。
+
+### 29.3 Colab 论文流水线传递规则
+
+`run_colab_paper_results_pipeline.py` 在使用 `--baseline-plan` 时现在会继续传递:
+
+```bash
+--baseline-formal-result-claim
+--baseline-evidence-path <path>
+```
+
+到 `run_baseline_plan.py`。这保证从 Colab 端到端运行时, 外部 baseline 命令执行、baseline observation、baseline execution manifest 和 evidence path 是同一条链路产生的, 而不是后期手工拼接。
+
+### 29.4 方法边界
+
+该补充不把 Tree-Ring、Gaussian Shading、Shallow Diffuse 或 Stable Signature DEE 的第三方算法复制进 CEG 主方法。CEG 只保存:
+
+1. baseline id 注册信息。
+2. 显式 argv 命令计划。
+3. 统一 observation 契约。
+4. 运行日志、证据路径和 manifest。
+
+这符合当前项目原则: 外部 baseline 用于论文对比, 但不成为 CEG 主方法的一部分。

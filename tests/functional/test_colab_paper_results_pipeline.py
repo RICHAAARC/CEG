@@ -162,3 +162,89 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
     finally:
         if short_root.exists():
             shutil.rmtree(short_root)
+
+
+@pytest.mark.quick
+def test_colab_paper_results_pipeline_runs_formal_baseline_plan(tmp_path: Path) -> None:
+    """当传入 baseline plan 时, Colab 论文流水线应把正式证据参数传给 baseline runner。"""
+
+    short_root = Path(".tmp_colab_pipeline_baseline_plan_test")
+    if short_root.exists():
+        shutil.rmtree(short_root)
+    workspace = _write_workspace(short_root)
+    drive_root = short_root / "MyDrive" / "CEG"
+    out = workspace / "paper_results_pipeline"
+    baseline_root = workspace / "external_baselines"
+    baseline_root.mkdir(parents=True, exist_ok=True)
+    baseline_observations = baseline_root / "tree_ring_observations.json"
+    evidence_path = baseline_root / "tree_ring_formal_run_log.txt"
+    evidence_path.write_text("tree-ring formal run evidence for CEG test events\n", encoding="utf-8")
+    writer_code = (
+        "import json, pathlib; "
+        f"pathlib.Path(r'{baseline_observations}').write_text("
+        "json.dumps(["
+        "{'event_id':'img_001__clean_negative','baseline_id':'tree_ring','score':0.1,'threshold':0.5},"
+        "{'event_id':'img_001__positive_source','baseline_id':'tree_ring','score':0.8,'threshold':0.5},"
+        "{'event_id':'img_001_brightness_contrast','baseline_id':'tree_ring','score':0.7,'threshold':0.5}"
+        "]), encoding='utf-8')"
+    )
+    baseline_plan = baseline_root / "baseline_plan.json"
+    baseline_plan.write_text(
+        json.dumps(
+            [
+                {
+                    "baseline_id": "tree_ring",
+                    "command": [sys.executable, "-c", writer_code],
+                    "output_path": str(baseline_observations),
+                    "timeout_seconds": 30,
+                }
+            ],
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/run_colab_paper_results_pipeline.py",
+                "--workspace",
+                str(workspace),
+                "--drive-root",
+                str(drive_root),
+                "--out",
+                str(out),
+                "--attack-families",
+                "brightness_contrast",
+                "--target-fpr",
+                "0.01",
+                "--allow-incomplete-package",
+                "--allow-invalid-archive",
+                "--affine-rotation-degrees",
+                "0",
+                "--affine-scales",
+                "1.0",
+                "--baseline-plan",
+                str(baseline_plan),
+                "--baseline-formal-result-claim",
+                "--baseline-evidence-path",
+                str(evidence_path),
+            ],
+            cwd=".",
+            check=True,
+        )
+
+        manifest = json.loads((out / "colab_paper_results_pipeline_manifest.json").read_text(encoding="utf-8"))
+        baseline_manifest = json.loads(
+            (out / "baseline_outputs" / "baseline_execution_manifest.json").read_text(encoding="utf-8")
+        )
+        assert manifest["overall_decision"] == "pass"
+        assert baseline_manifest["formal_result_claim"] is True
+        assert baseline_manifest["evidence_path_count"] == 1
+        assert baseline_manifest["failed_command_count"] == 0
+    finally:
+        if short_root.exists():
+            shutil.rmtree(short_root)

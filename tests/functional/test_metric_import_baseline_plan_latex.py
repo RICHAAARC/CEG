@@ -108,6 +108,59 @@ def test_run_baseline_plan_cli_collects_observations(tmp_path) -> None:
 
 
 @pytest.mark.quick
+def test_run_baseline_plan_cli_can_bind_formal_evidence(tmp_path) -> None:
+    """正式 baseline 命令计划必须把 observation 输出与外部运行证据显式绑定。"""
+
+    observation_path = tmp_path / "tree_ring_observations.json"
+    evidence_path = tmp_path / "tree_ring_formal_run_log.txt"
+    evidence_path.write_text("tree-ring commit abc123, evaluated on CEG event set\n", encoding="utf-8")
+    code = (
+        "import json, pathlib; "
+        f"pathlib.Path(r'{observation_path}').write_text("
+        "json.dumps([{'event_id':'e1','baseline_id':'tree_ring','score':0.8,'threshold':0.5}]), "
+        "encoding='utf-8')"
+    )
+    plan_path = tmp_path / "baseline_plan.json"
+    plan_path.write_text(
+        json.dumps(
+            [
+                {
+                    "baseline_id": "tree_ring",
+                    "command": [sys.executable, "-c", code],
+                    "output_path": str(observation_path),
+                    "timeout_seconds": 30,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    output_root = tmp_path / "baseline_outputs"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_baseline_plan.py",
+            "--plan",
+            str(plan_path),
+            "--out",
+            str(output_root),
+            "--formal-result-claim",
+            "--evidence-path",
+            str(evidence_path),
+            "--require-pass",
+        ],
+        cwd=".",
+        check=True,
+    )
+
+    manifest = json.loads((output_root / "baseline_execution_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["formal_result_claim"] is True
+    assert manifest["execution_boundary"] == "external_command_results_bound_to_formal_evidence"
+    assert manifest["evidence_path_count"] == 1
+    assert manifest["failed_command_count"] == 0
+
+
+@pytest.mark.quick
 def test_run_metric_plan_cli_collects_rows_and_execution_manifest(tmp_path) -> None:
     """metric plan CLI 应写出 metric rows、命令结果和执行 manifest。"""
     metric_path = tmp_path / "lpips_rows.json"

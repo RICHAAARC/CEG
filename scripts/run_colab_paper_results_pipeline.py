@@ -172,7 +172,12 @@ def main() -> None:
             str(Path(args.baseline_plan).resolve()),
             "--out",
             str(baseline_root),
+            "--require-pass",
         ]
+        if args.baseline_formal_result_claim:
+            baseline_command.append("--formal-result-claim")
+        for evidence_path in args.baseline_evidence_path:
+            baseline_command.extend(["--evidence-path", str(Path(evidence_path).resolve())])
         baseline_result = _run_command(baseline_command)
         if baseline_result["return_code"] != 0:
             _fail(
