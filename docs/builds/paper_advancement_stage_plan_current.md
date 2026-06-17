@@ -541,7 +541,7 @@ S17. 每完成一个阶段后运行 build_pilot_stage_progress_summary.py 更新
 
 ## 20. 下一步明确结论
 
-当前下一步不是运行模型, 也不是统计 `TPR@FPR`。当前下一步是填写并导入:
+历史记录: 在 P0 通过之前, 下一步不是运行模型, 也不是统计 `TPR@FPR`, 而是填写并导入:
 
 ```text
 D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\pilot_input_value_pack_fill_sheet.csv
@@ -560,7 +560,7 @@ python scripts/build_pilot_p0_input_freeze_report.py --workspace D:/content/driv
 python scripts/build_pilot_p0_input_freeze_report.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-pass
 ```
 
-只有该 CSV 的 `value_json` 全部合法填写并通过 P0 聚合门禁后, 才能继续进入图像生成启动计划、真实图像生成、attack、detection、baseline、metric 和 fixed-FPR 统计阶段。
+当前该 CSV 已填写并通过 P0 聚合门禁, 且 P1 图像生成启动计划已经通过。当前停在 P2 真实图像与水印图像生成。
 
 ---
 
@@ -584,7 +584,7 @@ docs/builds/paper_publication_stage_plan.md
 docs/builds/paper_gpu_handoff_and_pause_plan.md
 ```
 
-当前尚未到 GPU 暂停点, 因为 P0 真实输入冻结仍未通过。当前下一步仍是补齐 `pilot_input_value_pack_fill_sheet.csv` 中的 19 个 `value_json`。
+历史记录: 该段原用于说明 P0 未通过时的 GPU 暂停规则。当前 P0 和 P1 已通过, 已到达 P2 GPU 暂停点。
 
 P0 用户交接包可通过以下命令生成:
 
@@ -609,3 +609,66 @@ python scripts/validate_pilot_p0_input_handoff_bundle.py --workspace D:/content/
 ```text
 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/user_handoff/p0_input_handoff/
 ```
+
+---
+
+## 21. 2026-06-17 P0 / P1 最新推进状态
+
+根据当前真实工作区报告, P0 与 P1 已经通过, 项目已推进到 P2 GPU 图像生成暂停点。
+
+当前真实工作区仍为:
+
+```text
+D:\content\drive\MyDrive\CEG\pilot_runs
+eal_pilot_input_workspace_20260617_034500
+```
+
+已完成事项:
+
+1. 已使用 `D:\Code\CEG-WM\prompts\paper_main_probe_10.txt` 作为 pilot prompt 来源。
+2. 已记录用户确认的 Hugging Face token 状态: token 已在 Colab 环境定义, 不写入仓库、CSV、manifest 或日志。
+3. 已将 19 个 `value_json` 写入 canonical CSV 和 handoff CSV。
+4. `validate_pilot_input_value_pack_fill_sheet.py --require-pass` 已通过。
+5. `apply_pilot_p0_input_handoff_bundle.py --require-pass` 已通过。
+6. P0 dry-run 已通过。
+7. P0 正式 freeze 已通过。
+8. P1 image generation launch plan 已通过。
+9. `pilot_stage_progress_summary.json` 已更新, 当前阶段为 `p2_image_generation_outputs`。
+
+当前阶段看板关键事实:
+
+```text
+current_stage = p2_image_generation_outputs
+pass_count = 6
+fail_count = 8
+recommended_next_action = 运行真实 SD / watermark backend, 写出 clean / watermarked 图像和 image manifests。
+```
+
+当前暂停原因:
+
+```text
+本地没有 GPU 环境, P2 需要用户在 Colab GPU 环境运行真实 SD3 / CEG-WM 水印图像生成。
+```
+
+P2 GPU 交接目录已经生成:
+
+```text
+D:\content\drive\MyDrive\CEG\pilot_runs
+D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\gpu_handoff\p2_image_generation
+```
+
+交接目录中的关键文件:
+
+```text
+p2_image_generation_gpu_handoff_manifest.json
+p2_image_generation_gpu_handoff_readme.md
+```
+
+用户完成 Colab GPU 图像生成并回传输出后, 本地恢复验收命令为:
+
+```text
+python scripts/validate_pilot_image_generation_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_image_generation_output_acceptance_report.json --require-pass
+python scripts/build_pilot_stage_progress_summary.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+```
+
+注意: 当前不能继续本地伪造 P2 输出。P2 必须产出真实 clean / watermarked 图像和 image manifests 后, 才能进入 P3 attack pilot。

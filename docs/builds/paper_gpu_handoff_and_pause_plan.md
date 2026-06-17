@@ -312,9 +312,9 @@ python scripts/build_pilot_stage_progress_summary.py --workspace D:/content/driv
 
 ---
 
-## 10. 当前下一步
+## 10. 历史 P0 到 GPU-P2 推进顺序
 
-当前下一步仍是 P0 输入填写, 尚未到 GPU 暂停点。具体执行顺序为:
+以下内容记录从 P0 输入填写推进到 GPU-P2 暂停点的标准顺序。当前最新状态见后文“2026-06-17 已到达的第一个真实 GPU 暂停点”。标准执行顺序为:
 
 ```text
 1. 用户填写 pilot_input_value_pack_fill_sheet.csv 的 19 个 value_json。
@@ -326,4 +326,46 @@ python scripts/build_pilot_stage_progress_summary.py --workspace D:/content/driv
 7. 若 launch plan pass 且 command_count > 0, 暂停并交给用户在真实 GPU 环境运行。
 ```
 
-只有第 7 步到达后, 才进入本文档定义的 GPU-P2 暂停点。
+当前已经到达第 7 步后的 GPU-P2 暂停点。
+
+---
+
+## 2026-06-17 已到达的第一个真实 GPU 暂停点
+
+当前已到达 P2 暂停点:
+
+```text
+p2_image_generation_outputs
+```
+
+已通过的前置门禁:
+
+```text
+P0: pilot_p0_input_freeze_report.json overall_decision = pass
+P1: pilot_image_generation_launch_plan_report.json overall_decision = pass
+```
+
+本次 GPU 交接包位置:
+
+```text
+D:\content\drive\MyDrive\CEG\pilot_runs
+D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_034500\gpu_handoff\p2_image_generation
+```
+
+用户在 Colab GPU 环境中应完成:
+
+1. 使用 `stabilityai/stable-diffusion-3.5-medium` 生成 clean 图像。
+2. 使用与 `D:\Code\CEG-WM` 对齐的 CEG-WM 水印机制生成 watermarked 图像。
+3. 不把 Hugging Face token 写入任何落盘文件。
+4. 写出 `inputs/images/clean/*`。
+5. 写出 `inputs/images/watermarked/*`。
+6. 写出 `inputs/images/image_pairs.json`。
+7. 写出 `inputs/images/image_manifests/image_generation_manifest.json`。
+8. 写出 `inputs/images/image_manifests/image_pair_manifest.json`。
+
+完成后回到本地运行验收命令:
+
+```text
+python scripts/validate_pilot_image_generation_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_image_generation_output_acceptance_report.json --require-pass
+python scripts/build_pilot_stage_progress_summary.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+```

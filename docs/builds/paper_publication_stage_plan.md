@@ -676,3 +676,35 @@ FID: 取决于样本量, GPU 更快, CPU 可小规模验证。
 | `docs/builds/paper_gpu_handoff_and_pause_plan.md` | 本地无 GPU 时的暂停点、真实 GPU 运行交接产物和恢复验收命令 |
 
 后续若出现阶段变化, 应优先更新本文档中的“当前真实状态”和“当前立即执行计划”。
+
+---
+
+## 2026-06-17 当前执行状态补充
+
+当前真实执行状态已经从 P0 阻断推进到 P2 GPU 暂停点。
+
+```text
+P0 真实 pilot 输入冻结: pass
+P1 图像生成启动计划: pass
+P2 真实图像与水印图像生成: wait_for_user_colab_gpu_execution
+```
+
+P0 使用的真实来源包括:
+
+```text
+prompt source = D:/Code/CEG-WM/prompts/paper_main_probe_10.txt
+model_id = stabilityai/stable-diffusion-3.5-medium
+num_inference_steps = 28
+guidance_scale = 7.0
+image_size = [512, 512]
+requires_huggingface_token = true
+hf_token_status = defined_in_colab_environment_not_written_to_disk
+```
+
+P2 GPU 交接目录:
+
+```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/gpu_handoff/p2_image_generation
+```
+
+继续推进的唯一有效下一步是用户在 Colab GPU 环境中生成真实 clean / watermarked 图像并回传 manifests。当前不得用 mock 图像或 dry-run 结果替代 P2 论文证据。
