@@ -159,6 +159,7 @@ REQUIRED_CLEAN_FILES = (
     "scripts/render_paper_figures.py",
     "scripts/build_paper_outputs.py",
     "scripts/build_calibrated_paper_results_package.py",
+    "scripts/run_colab_paper_results_pipeline.py",
     "scripts/build_pilot_package_from_provided_results.py",
     "scripts/validate_pilot_input_manifest.py",
     "scripts/analyze_pilot_input_gap.py",
@@ -257,6 +258,7 @@ REQUIRED_CLEAN_FILES = (
     "scripts/run_colab_acceptance_checks.py",
     "paper_workflow/colab_ceg_cold_start.ipynb",
     "paper_workflow/colab_pilot_image_generation_outputs.ipynb",
+    "paper_workflow/colab_paper_results_pipeline.ipynb",
     "paper_workflow/colab_utils/cold_start.py",
     "paper_workflow/notebook_utils/protocol_entrypoint.py",
 )
@@ -449,6 +451,7 @@ REQUIRED_ARTIFACT_RELEASE_FILES = {
     "scripts/render_paper_figures.py",
     "scripts/build_paper_outputs.py",
     "scripts/build_calibrated_paper_results_package.py",
+    "scripts/run_colab_paper_results_pipeline.py",
     "scripts/build_pilot_package_from_provided_results.py",
     "scripts/validate_pilot_input_manifest.py",
     "scripts/analyze_pilot_input_gap.py",
@@ -541,6 +544,7 @@ REQUIRED_ARTIFACT_RELEASE_FILES = {
     "scripts/run_colab_acceptance_checks.py",
     "paper_workflow/colab_ceg_cold_start.ipynb",
     "paper_workflow/colab_pilot_image_generation_outputs.ipynb",
+    "paper_workflow/colab_paper_results_pipeline.ipynb",
     "paper_workflow/colab_utils/cold_start.py",
     "paper_workflow/notebook_utils/protocol_entrypoint.py",
 }

@@ -865,3 +865,87 @@ scale_candidates
 ### 22.3 当前边界
 
 该实现已经是真实像素级 affine 恢复, 不是占位字段。它仍不是完整 feature / perspective registration: 对透视变换、局部形变和大角度旋转, 仍需要后续补充特征匹配或更强几何 backend。因此整体论文主流程仍需继续推进, 不能因为该步骤完成就声明方法完全闭环。
+
+
+## 23. 本次继续推进: Colab paper results pipeline 编排入口
+
+在图像生成、attack、真实 detection 和 calibrated paper package 分别可运行之后, 本次新增一个正式 Colab / Drive 编排入口:
+
+```text
+scripts/run_colab_paper_results_pipeline.py
+```
+
+### 23.1 解决的问题
+
+用户的正式运行目标是:
+
+```text
+Colab 运行 notebook
+→ 从 GitHub 拉取代码
+→ 从 Google Drive 加载前序产物
+→ 运行真实 SD / watermark backend
+→ 生成 clean / watermarked 图像和 manifests
+→ attack
+→ detection
+→ fixed-FPR 校准
+→ paper outputs / paper results package
+→ 按结果类型归档回 Google Drive CEG 目录
+```
+
+此前图像生成 notebook 只覆盖到 `image_pairs.json` 和图像生成产物归档。新增脚本覆盖图像生成完成后的正式论文结果包链路。
+
+### 23.2 新入口行为
+
+脚本默认从工作区读取:
+
+```text
+<workspace>/inputs/images/image_pairs.json
+```
+
+然后顺序运行:
+
+```text
+scripts/run_image_attack_workflow.py
+scripts/run_ceg_detection_producer.py --detection-backend ceg_content_chain_detection
+scripts/build_calibrated_paper_results_package.py
+scripts/archive_paper_results_to_drive.py
+```
+
+输出目录为:
+
+```text
+<workspace>/paper_results_pipeline/
+  attack_outputs/
+  detection_outputs/
+  calibrated_paper_results_package/
+  colab_paper_results_pipeline_manifest.json
+```
+
+Drive 归档目录继续使用既有分类结构:
+
+```text
+<drive_root>/package_snapshots/
+<drive_root>/package_archives/
+<drive_root>/package_manifests/
+```
+
+### 23.3 运行方式
+
+```bash
+python scripts/run_colab_paper_results_pipeline.py   --workspace /content/drive/MyDrive/CEG/pilot_runs/<workspace_name>   --drive-root /content/drive/MyDrive/CEG   --attack-families brightness_contrast,gaussian_noise,rotate,resize,jpeg   --target-fpr 0.01   --attestation-key-env CEG_ATTESTATION_KEY   --attestation-key-id formal_colab_run_key   --allow-incomplete-package   --allow-invalid-archive
+```
+
+其中 `--allow-incomplete-package` 和 `--allow-invalid-archive` 只建议在 pilot 或调试运行使用。正式论文结果包应移除这两个参数, 让 readiness 和 package validation 失败时直接停止。
+
+### 23.4 与方法实现的关系
+
+该脚本是流程编排层, 不把 notebook、Google Drive 或 harness 逻辑写入 CEG 主方法。真实方法仍由以下模块承担:
+
+```text
+main/watermarking/content_chain/
+main/watermarking/geometry/
+main/watermarking/attestation/
+experiments/ceg_real_detection_backend.py
+```
+
+因此它符合“notebook 只做入口调度, 方法逻辑在 main / experiments / scripts 中”的项目约束。
