@@ -81,6 +81,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--feature-homography-enabled", default="true", help="是否启用 feature matching homography refinement。")
     parser.add_argument("--feature-max-features", type=int, default=48, help="feature homography 最大特征点数。")
     parser.add_argument("--homography-ransac-max-trials", type=int, default=160, help="homography RANSAC 最大采样次数。")
+    parser.add_argument("--local-deformation-enabled", default="true", help="是否启用局部网格 deformation refinement。")
+    parser.add_argument("--local-deformation-grid-size", type=int, default=4, help="局部网格 deformation 的网格大小。")
+    parser.add_argument("--local-deformation-search-radius", type=int, default=2, help="局部网格 deformation 的块内搜索半径。")
     parser.add_argument("--attestation-key-env", default=None, help="可选 HMAC attestation 密钥环境变量名。")
     parser.add_argument("--attestation-key-id", default=None, help="可选 HMAC attestation 密钥标识, 只写入 digest。")
     return parser
@@ -112,6 +115,9 @@ def main() -> None:
                 "feature_homography_enabled": _bool_from_cli(args.feature_homography_enabled),
                 "feature_max_features": args.feature_max_features,
                 "homography_ransac_max_trials": args.homography_ransac_max_trials,
+                "local_deformation_enabled": _bool_from_cli(args.local_deformation_enabled),
+                "local_deformation_grid_size": args.local_deformation_grid_size,
+                "local_deformation_search_radius": args.local_deformation_search_radius,
                 "attestation_key_env": args.attestation_key_env,
                 "attestation_key_id": args.attestation_key_id,
             },

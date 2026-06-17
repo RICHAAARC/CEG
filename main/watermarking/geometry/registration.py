@@ -19,9 +19,9 @@ import numpy as np
 from main.core.digest import build_stable_digest
 
 
-GEOMETRY_REGISTRATION_BACKEND_ID = "ceg_feature_homography_registration"
+GEOMETRY_REGISTRATION_BACKEND_ID = "ceg_local_deformation_registration"
 GEOMETRY_REGISTRATION_BACKEND_ROLE = "reference_frame_recovery_primitive"
-GEOMETRY_REGISTRATION_VERSION = "ceg_geometry_registration_v4"
+GEOMETRY_REGISTRATION_VERSION = "ceg_geometry_registration_v5"
 
 
 @dataclass(frozen=True)
@@ -93,7 +93,7 @@ class GeometryRegistrationResult:
             "paper_main_method_ready": self.paper_main_method_ready,
             "paper_main_method_blocking_reason": None
             if self.paper_main_method_ready
-            else "feature_homography_registration_lacks_local_deformation_recovery",
+            else "local_deformation_registration_unavailable",
         }
 
 
@@ -115,6 +115,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
 
     best = _search_affine_registration(reference_gray, target_gray_base, request)
     best = _maybe_refine_with_feature_homography(reference_gray, target_gray_base, best, request)
+    best = _maybe_refine_with_local_deformation(reference_gray, best, request)
     dx = int(best["dx"])
     dy = int(best["dy"])
     rotation_degrees = round(float(best["rotation_degrees"]), 6)
@@ -136,6 +137,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
         rotation_degrees=rotation_degrees,
         scale=scale,
         perspective_offset=perspective_offset,
+        local_deformation=best.get("local_deformation"),
     )
 
     reference_digest = build_stable_digest(_image_summary(reference_rgb, request.reference_image_path))
@@ -153,6 +155,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
         "scale_candidates": [float(v) for v in _scale_candidates(request.config)],
         "perspective_offset_candidates": [float(v) for v in _perspective_offset_candidates(request.config)],
         "feature_homography": dict(best.get("feature_homography") or {}),
+        "local_deformation": dict(best.get("local_deformation") or {}),
         "reference_shape": [int(v) for v in reference_rgb.shape],
         "target_shape": [int(v) for v in target_rgb.shape],
         "config": dict(request.config),
@@ -166,6 +169,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
             "scale": scale,
             "perspective_offset": perspective_offset,
             "feature_homography_digest": build_stable_digest(best.get("feature_homography") or {}),
+            "local_deformation_digest": build_stable_digest(best.get("local_deformation") or {}),
             "registration_confidence": confidence,
             "anchor_inlier_ratio": anchor_inlier_ratio,
             "recovered_sync_consistency": recovered_sync_consistency,
@@ -804,6 +808,145 @@ def _anchor_inlier_ratio(reference: np.ndarray, target: np.ndarray, *, dx: int, 
     return float(inliers / total) if total else 0.0
 
 
+def _local_deformation_config(config: Mapping[str, Any]) -> dict[str, Any]:
+    """读取局部网格 deformation refinement 配置。"""
+
+    return {
+        "enabled": str(config.get("local_deformation_enabled", "true")).lower() not in {"false", "0", "no"},
+        "grid_size": int(config.get("local_deformation_grid_size", 4)),
+        "search_radius": int(config.get("local_deformation_search_radius", 2)),
+        "min_score_gain": float(config.get("local_deformation_min_score_gain", 0.0)),
+    }
+
+
+def _maybe_refine_with_local_deformation(
+    reference: np.ndarray,
+    current_best: dict[str, Any],
+    request: GeometryRegistrationRequest,
+) -> dict[str, Any]:
+    """使用局部网格位移对已全局对齐的 target 做 refinement。"""
+
+    cfg = _local_deformation_config(request.config)
+    if not cfg["enabled"]:
+        current_best["local_deformation"] = {"enabled": False, "status": "disabled"}
+        return current_best
+    target = current_best["target_gray"]
+    globally_aligned = _apply_shift_gray(target, dx=int(current_best["dx"]), dy=int(current_best["dy"]))
+    local = _estimate_local_deformation(
+        reference,
+        globally_aligned,
+        grid_size=int(cfg["grid_size"]),
+        search_radius=int(cfg["search_radius"]),
+    )
+    local_score = _normalized_correlation(reference, local["warped_target"])
+    global_score = float(current_best["score"])
+    local_record = {key: value for key, value in local.items() if key != "warped_target"}
+    local_record["enabled"] = True
+    local_record["global_score"] = round(global_score, 8)
+    local_record["local_score"] = round(float(local_score), 8)
+    if local_score + 1e-12 >= global_score + float(cfg["min_score_gain"]):
+        return {
+            **current_best,
+            "dx": 0,
+            "dy": 0,
+            "target_gray": local["warped_target"],
+            "score": float(local_score),
+            "score_margin": max(float(current_best.get("score_margin", 0.0)), float(local_score) - global_score),
+            "local_deformation": {**local_record, "selected": True},
+        }
+    current_best["local_deformation"] = {**local_record, "selected": False}
+    return current_best
+
+
+def _estimate_local_deformation(reference: np.ndarray, aligned_target: np.ndarray, *, grid_size: int, search_radius: int) -> dict[str, Any]:
+    """估计局部网格位移并返回局部 warp 后的 target。"""
+
+    height, width = reference.shape
+    row_edges = np.linspace(0, height, grid_size + 1, dtype=np.int64)
+    col_edges = np.linspace(0, width, grid_size + 1, dtype=np.int64)
+    warped = np.zeros_like(aligned_target)
+    shifts: list[dict[str, Any]] = []
+    inliers = 0
+    total = 0
+    for row in range(grid_size):
+        for col in range(grid_size):
+            y0, y1 = int(row_edges[row]), int(row_edges[row + 1])
+            x0, x1 = int(col_edges[col]), int(col_edges[col + 1])
+            ref_block = reference[y0:y1, x0:x1]
+            best = {"score": -1.0, "dx": 0, "dy": 0}
+            for dy in range(-search_radius, search_radius + 1):
+                for dx in range(-search_radius, search_radius + 1):
+                    candidate = _crop_shifted_block(aligned_target, x0=x0, x1=x1, y0=y0, y1=y1, dx=dx, dy=dy)
+                    score = _normalized_correlation(ref_block, candidate)
+                    if score > float(best["score"]):
+                        best = {"score": float(score), "dx": int(dx), "dy": int(dy)}
+            warped[y0:y1, x0:x1] = _crop_shifted_block(
+                aligned_target,
+                x0=x0,
+                x1=x1,
+                y0=y0,
+                y1=y1,
+                dx=int(best["dx"]),
+                dy=int(best["dy"]),
+            )
+            total += 1
+            if float(best["score"]) >= 0.55:
+                inliers += 1
+            shifts.append({"row": row, "col": col, "dx": int(best["dx"]), "dy": int(best["dy"]), "score": round(float(best["score"]), 8)})
+    return {
+        "status": "ok",
+        "grid_size": int(grid_size),
+        "search_radius": int(search_radius),
+        "block_count": int(total),
+        "local_inlier_ratio": round(float(inliers / total), 8) if total else 0.0,
+        "shifts": shifts,
+        "warped_target": warped,
+    }
+
+
+def _crop_shifted_block(array: np.ndarray, *, x0: int, x1: int, y0: int, y1: int, dx: int, dy: int) -> np.ndarray:
+    """从局部位移后的数组中裁剪与 reference block 同尺寸的块。"""
+
+    result = np.zeros((y1 - y0, x1 - x0), dtype=np.float32)
+    src_y0 = max(0, y0 - dy)
+    src_y1 = min(array.shape[0], y1 - dy)
+    src_x0 = max(0, x0 - dx)
+    src_x1 = min(array.shape[1], x1 - dx)
+    dst_y0 = max(0, src_y0 + dy - y0)
+    dst_x0 = max(0, src_x0 + dx - x0)
+    copy_h = max(0, src_y1 - src_y0)
+    copy_w = max(0, src_x1 - src_x0)
+    if copy_h and copy_w:
+        result[dst_y0 : dst_y0 + copy_h, dst_x0 : dst_x0 + copy_w] = array[src_y0:src_y1, src_x0:src_x1]
+    return result
+
+
+def _apply_local_deformation_rgb(array: np.ndarray, local_deformation: Mapping[str, Any] | None) -> np.ndarray:
+    """把局部网格位移应用到 RGB 图像。"""
+
+    if not isinstance(local_deformation, Mapping) or not local_deformation.get("selected"):
+        return array
+    grid_size = int(local_deformation.get("grid_size", 0))
+    shifts = local_deformation.get("shifts") or []
+    if grid_size <= 0 or not isinstance(shifts, list):
+        return array
+    height, width, channels = array.shape
+    row_edges = np.linspace(0, height, grid_size + 1, dtype=np.int64)
+    col_edges = np.linspace(0, width, grid_size + 1, dtype=np.int64)
+    result = np.zeros_like(array)
+    shift_lookup = {(int(item.get("row", -1)), int(item.get("col", -1))): item for item in shifts if isinstance(item, Mapping)}
+    for row in range(grid_size):
+        for col in range(grid_size):
+            y0, y1 = int(row_edges[row]), int(row_edges[row + 1])
+            x0, x1 = int(col_edges[col]), int(col_edges[col + 1])
+            item = shift_lookup.get((row, col), {})
+            dx = int(item.get("dx", 0)) if isinstance(item, Mapping) else 0
+            dy = int(item.get("dy", 0)) if isinstance(item, Mapping) else 0
+            for channel in range(channels):
+                result[y0:y1, x0:x1, channel] = _crop_shifted_block(array[:, :, channel], x0=x0, x1=x1, y0=y0, y1=y1, dx=dx, dy=dy)
+    return result
+
+
 def _sync_consistency(dx: int, dy: int, radius: int) -> float:
     """根据估计位移相对搜索窗口的位置给出同步一致性。"""
 
@@ -857,6 +1000,7 @@ def _write_aligned_image(
     rotation_degrees: float,
     scale: float,
     perspective_offset: float = 0.0,
+    local_deformation: Mapping[str, Any] | None = None,
 ) -> str | None:
     """按需写出经过 affine 候选变换和平移恢复后的 target 图像。"""
 
@@ -869,6 +1013,7 @@ def _write_aligned_image(
         perspective_offset=perspective_offset,
     )
     aligned = _apply_shift_rgb(transformed, dx=dx, dy=dy)
+    aligned = _apply_local_deformation_rgb(aligned, local_deformation)
     _write_rgb_array(output_path, aligned)
     return output_path.as_posix()
 

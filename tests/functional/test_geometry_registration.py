@@ -122,13 +122,14 @@ def test_affine_registration_records_rotation_and_scale_candidates(tmp_path: Pat
     record = result.to_record()
     assert result.status == "ok"
     assert aligned.is_file()
-    assert result.backend_id == "ceg_feature_homography_registration"
+    assert result.backend_id == "ceg_local_deformation_registration"
     assert result.paper_main_method_ready is True
     assert record["paper_main_method_blocking_reason"] is None
     assert result.rotation_degrees in {-3.0, 0.0, 3.0}
     assert result.diagnostics["affine_candidate_count"] == 3
     assert result.diagnostics["candidate_count"] == 3 * 81
     assert result.diagnostics["feature_homography"]["enabled"] is True
+    assert result.diagnostics["local_deformation"]["enabled"] is True
 
 
 @pytest.mark.quick
@@ -199,3 +200,48 @@ def test_feature_homography_registration_records_matches(tmp_path: Path) -> None
         assert feature["match_count"] >= 4
         assert feature["inlier_count"] >= 4
         assert len(feature["homography_matrix"]) == 3
+
+
+@pytest.mark.quick
+def test_local_deformation_registration_records_grid_shifts(tmp_path: Path) -> None:
+    """registration 原语应运行局部网格 deformation refinement 并记录块级位移。"""
+
+    reference = tmp_path / "reference.png"
+    target = tmp_path / "target_local.png"
+    aligned = tmp_path / "aligned_local.png"
+    _write_reference_image(reference)
+    with Image.open(reference) as image:
+        rgb = image.convert("RGB")
+        locally_shifted = Image.new("RGB", rgb.size, color=(0, 0, 0))
+        locally_shifted.paste(rgb.crop((0, 0, rgb.width, rgb.height // 2)), (1, 0))
+        locally_shifted.paste(rgb.crop((0, rgb.height // 2, rgb.width, rgb.height)), (-1, rgb.height // 2))
+        target.parent.mkdir(parents=True, exist_ok=True)
+        locally_shifted.save(target)
+
+    result = estimate_geometry_registration(
+        GeometryRegistrationRequest(
+            target_image_path=target,
+            reference_image_path=reference,
+            output_aligned_image_path=aligned,
+            search_radius=3,
+            downsample_size=64,
+            anchor_grid_size=3,
+            config={
+                "affine_rotation_degrees": [0.0],
+                "affine_scales": [1.0],
+                "perspective_offsets": [0.0],
+                "feature_homography_enabled": False,
+                "local_deformation_enabled": True,
+                "local_deformation_grid_size": 3,
+                "local_deformation_search_radius": 2,
+            },
+        )
+    )
+
+    local = result.diagnostics["local_deformation"]
+    assert result.status == "ok"
+    assert aligned.is_file()
+    assert local["enabled"] is True
+    assert local["status"] == "ok"
+    assert local["block_count"] == 9
+    assert len(local["shifts"]) == 9

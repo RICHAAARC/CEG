@@ -66,6 +66,9 @@ DEFAULT_DETECTOR_CONFIG = {
     "feature_homography_enabled": True,
     "feature_max_features": 48,
     "homography_ransac_max_trials": 160,
+    "local_deformation_enabled": True,
+    "local_deformation_grid_size": 4,
+    "local_deformation_search_radius": 2,
     "attestation_key_env": None,
     "attestation_key_id": None,
 }
@@ -402,6 +405,9 @@ def _build_detection_event(
                     "feature_homography_enabled": config.get("feature_homography_enabled"),
                     "feature_max_features": config.get("feature_max_features"),
                     "homography_ransac_max_trials": config.get("homography_ransac_max_trials"),
+                    "local_deformation_enabled": config.get("local_deformation_enabled"),
+                    "local_deformation_grid_size": config.get("local_deformation_grid_size"),
+                    "local_deformation_search_radius": config.get("local_deformation_search_radius"),
                 },
         )
     )

@@ -83,6 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--affine-scales", default="0.95,1.0,1.05")
     parser.add_argument("--perspective-offsets", default="0.0")
     parser.add_argument("--feature-homography-enabled", default="true")
+    parser.add_argument("--local-deformation-enabled", default="true")
     parser.add_argument("--baseline-plan", default=None, help="可选外部 baseline 命令计划。")
     parser.add_argument("--baseline-observations", default=None, help="可选已生成的 baseline observations 文件。")
     parser.add_argument("--baseline-execution-manifest", default=None, help="可选已生成的 baseline execution manifest。")
@@ -144,6 +145,8 @@ def main() -> None:
         str(args.perspective_offsets),
         "--feature-homography-enabled",
         str(args.feature_homography_enabled),
+        "--local-deformation-enabled",
+        str(args.local_deformation_enabled),
     ]
     _append_optional(detection_command, "--attestation-key-env", args.attestation_key_env)
     _append_optional(detection_command, "--attestation-key-id", args.attestation_key_id)
