@@ -949,3 +949,79 @@ experiments/ceg_real_detection_backend.py
 ```
 
 因此它符合“notebook 只做入口调度, 方法逻辑在 main / experiments / scripts 中”的项目约束。
+
+
+## 24. 本次继续推进: Colab pipeline 接入外部 baseline observations
+
+在 Colab paper results pipeline 建立之后, 本次继续补充外部 baseline 同口径接入能力。更新入口仍为:
+
+```text
+scripts/run_colab_paper_results_pipeline.py
+```
+
+### 24.1 新增能力
+
+流水线现在支持两种 baseline 输入方式:
+
+1. 直接导入已由外部 baseline 项目生成的 observation 文件:
+
+```bash
+--baseline-observations <baseline_observations.json>
+```
+
+2. 执行已经物化好的 baseline 命令计划:
+
+```bash
+--baseline-plan <baseline_command_plan.json>
+```
+
+二者互斥。离线导入方式会调用:
+
+```text
+scripts/import_baseline_observations.py
+```
+
+命令计划方式会调用:
+
+```text
+scripts/run_baseline_plan.py
+```
+
+随后流水线会把以下参数传给 calibrated paper package 构建入口:
+
+```text
+--baseline-observations <pipeline_baseline_outputs>/baseline_observations.json
+--baseline-execution-manifest <pipeline_baseline_outputs>/baseline_execution_manifest.json
+```
+
+### 24.2 baseline observation 契约
+
+每条 observation 至少需要包含:
+
+```text
+event_id
+baseline_id
+score
+threshold
+```
+
+其中 `event_id` 必须和 CEG detection events 同口径, 例如:
+
+```text
+img_001__clean_negative
+img_001__positive_source
+img_001_brightness_contrast
+```
+
+这样 paper protocol 才能把 baseline 分数附加到同一批 event 上, 进而生成 baseline comparison table。
+
+### 24.3 正式证据边界
+
+如果 baseline observation 只是手工导入或调试产物, 默认 `formal_result_claim = false`。若要声明 baseline 可作为正式论文证据, 应额外提供:
+
+```bash
+--baseline-formal-result-claim
+--baseline-evidence-path <external_run_manifest_or_log>
+```
+
+这保持了 CEG 项目的边界: baseline 算法实现可以存在于外部仓库, 但进入 CEG 结果包的必须是统一 observation 契约和可审计 provenance。

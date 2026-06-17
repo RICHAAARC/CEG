@@ -81,6 +81,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--attestation-key-id", default=None)
     parser.add_argument("--affine-rotation-degrees", default="-6,-3,0,3,6")
     parser.add_argument("--affine-scales", default="0.95,1.0,1.05")
+    parser.add_argument("--baseline-plan", default=None, help="可选外部 baseline 命令计划。")
+    parser.add_argument("--baseline-observations", default=None, help="可选已生成的 baseline observations 文件。")
+    parser.add_argument("--baseline-execution-manifest", default=None, help="可选已生成的 baseline execution manifest。")
+    parser.add_argument("--baseline-formal-result-claim", action="store_true", help="导入离线 baseline 时声明其有正式证据。")
+    parser.add_argument("--baseline-evidence-path", action="append", default=[], help="离线 baseline 正式证据路径。")
     parser.add_argument("--refresh-stage-summary", action="store_true")
     return parser
 
@@ -98,6 +103,7 @@ def main() -> None:
 
     attack_root = output_root / "attack_outputs"
     detection_root = output_root / "detection_outputs"
+    baseline_root = output_root / "baseline_outputs"
     package_run_root = output_root / "calibrated_paper_results_package"
 
     attack_command = [
@@ -144,6 +150,62 @@ def main() -> None:
         )
         raise SystemExit(int(detection_result["return_code"]))
 
+    baseline_result = None
+    baseline_observations_path = args.baseline_observations
+    baseline_execution_manifest_path = args.baseline_execution_manifest
+    if args.baseline_plan and args.baseline_observations:
+        raise ValueError("--baseline-plan and --baseline-observations are mutually exclusive")
+    if args.baseline_plan:
+        baseline_command = [
+            sys.executable,
+            str(ROOT / "scripts" / "run_baseline_plan.py"),
+            "--plan",
+            str(Path(args.baseline_plan).resolve()),
+            "--out",
+            str(baseline_root),
+        ]
+        baseline_result = _run_command(baseline_command)
+        if baseline_result["return_code"] != 0:
+            _fail(
+                output_root,
+                failed_step="run_baseline_plan",
+                results={
+                    "attack_result": attack_result,
+                    "detection_result": detection_result,
+                    "baseline_result": baseline_result,
+                },
+            )
+            raise SystemExit(int(baseline_result["return_code"]))
+        baseline_observations_path = str(baseline_root / "baseline_observations.json")
+        baseline_execution_manifest_path = str(baseline_root / "baseline_execution_manifest.json")
+    elif args.baseline_observations:
+        baseline_command = [
+            sys.executable,
+            str(ROOT / "scripts" / "import_baseline_observations.py"),
+            "--observations",
+            str(Path(args.baseline_observations).resolve()),
+            "--out",
+            str(baseline_root),
+        ]
+        if args.baseline_formal_result_claim:
+            baseline_command.append("--formal-result-claim")
+        for evidence_path in args.baseline_evidence_path:
+            baseline_command.extend(["--evidence-path", str(Path(evidence_path).resolve())])
+        baseline_result = _run_command(baseline_command)
+        if baseline_result["return_code"] != 0:
+            _fail(
+                output_root,
+                failed_step="import_baseline_observations",
+                results={
+                    "attack_result": attack_result,
+                    "detection_result": detection_result,
+                    "baseline_result": baseline_result,
+                },
+            )
+            raise SystemExit(int(baseline_result["return_code"]))
+        baseline_observations_path = str(baseline_root / "baseline_observations.json")
+        baseline_execution_manifest_path = str(baseline_root / "baseline_execution_manifest.json")
+
     package_command = [
         sys.executable,
         str(ROOT / "scripts" / "build_calibrated_paper_results_package.py"),
@@ -162,6 +224,8 @@ def main() -> None:
         "--attack-shard-manifest",
         str(attack_shard_manifest),
     ]
+    _append_optional(package_command, "--baseline-observations", baseline_observations_path)
+    _append_optional(package_command, "--baseline-execution-manifest", baseline_execution_manifest_path)
     if args.allow_incomplete_package:
         package_command.append("--allow-incomplete-package")
     package_result = _run_command(package_command)
@@ -172,6 +236,7 @@ def main() -> None:
             results={
                 "attack_result": attack_result,
                 "detection_result": detection_result,
+                "baseline_result": baseline_result,
                 "package_result": package_result,
             },
         )
@@ -196,6 +261,7 @@ def main() -> None:
             results={
                 "attack_result": attack_result,
                 "detection_result": detection_result,
+                "baseline_result": baseline_result,
                 "package_result": package_result,
                 "archive_result": archive_result,
             },
@@ -213,6 +279,7 @@ def main() -> None:
                 results={
                     "attack_result": attack_result,
                     "detection_result": detection_result,
+                    "baseline_result": baseline_result,
                     "package_result": package_result,
                     "archive_result": archive_result,
                     "stage_summary_result": stage_summary_result,
@@ -229,11 +296,15 @@ def main() -> None:
         "attacked_image_manifest": str(attacked_manifest),
         "attack_shard_manifest": str(attack_shard_manifest),
         "detection_root": str(detection_root),
+        "baseline_root": str(baseline_root) if baseline_result is not None else None,
+        "baseline_observations_path": baseline_observations_path,
+        "baseline_execution_manifest_path": baseline_execution_manifest_path,
         "package_run_root": str(package_run_root),
         "paper_results_package_root": str(package_run_root / "paper_results_package"),
         "drive_root": str(Path(args.drive_root).resolve()),
         "attack_result": attack_result,
         "detection_result": detection_result,
+        "baseline_result": baseline_result,
         "package_result": package_result,
         "archive_result": archive_result,
         "stage_summary_result": stage_summary_result,
@@ -241,6 +312,8 @@ def main() -> None:
             {
                 "attack_command": attack_command,
                 "detection_command": detection_command,
+                "baseline_observations_path": baseline_observations_path,
+                "baseline_execution_manifest_path": baseline_execution_manifest_path,
                 "package_command": package_command,
                 "archive_command": archive_command,
             }

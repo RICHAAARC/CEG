@@ -90,6 +90,36 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
     workspace = _write_workspace(short_root)
     drive_root = short_root / "MyDrive" / "CEG"
     out = workspace / "paper_results_pipeline"
+    baseline_observations = workspace / "external_baselines" / "baseline_observations.json"
+    baseline_observations.parent.mkdir(parents=True, exist_ok=True)
+    baseline_observations.write_text(
+        json.dumps(
+            [
+                {
+                    "event_id": "img_001__clean_negative",
+                    "baseline_id": "tree_ring",
+                    "score": 0.1,
+                    "threshold": 0.5,
+                },
+                {
+                    "event_id": "img_001__positive_source",
+                    "baseline_id": "tree_ring",
+                    "score": 0.8,
+                    "threshold": 0.5,
+                },
+                {
+                    "event_id": "img_001_brightness_contrast",
+                    "baseline_id": "tree_ring",
+                    "score": 0.7,
+                    "threshold": 0.5,
+                },
+            ],
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     try:
         subprocess.run(
@@ -112,6 +142,8 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
                 "0",
                 "--affine-scales",
                 "1.0",
+                "--baseline-observations",
+                str(baseline_observations),
             ],
             cwd=".",
             check=True,
@@ -121,9 +153,11 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
         assert manifest["overall_decision"] == "pass"
         assert (out / "attack_outputs" / "image_manifests" / "attacked_image_manifest.json").is_file()
         assert (out / "detection_outputs" / "detection_events.json").is_file()
+        assert (out / "baseline_outputs" / "baseline_observations.json").is_file()
         assert (
             out / "calibrated_paper_results_package" / "paper_results_package" / "paper_results_package_manifest.json"
         ).is_file()
+        assert manifest["baseline_observations_path"].endswith("baseline_observations.json")
         assert any((drive_root / "package_archives").glob("paper_results_package_*.zip"))
     finally:
         if short_root.exists():
