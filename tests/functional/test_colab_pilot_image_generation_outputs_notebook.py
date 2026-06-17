@@ -69,3 +69,14 @@ def test_colab_pilot_image_generation_outputs_notebook_enforces_drive_workspace_
     assert "archives" in source
     assert "ZipFile" in source
     assert "Google Drive 工作区缺少图像生成前置文件" in source
+
+
+@pytest.mark.quick
+def test_colab_pilot_image_generation_outputs_notebook_pulls_code_before_drive_artifacts() -> None:
+    """Notebook 的运行顺序必须先更新 GitHub 代码, 再检查 Google Drive 前序产物。"""
+    source = _notebook_source()
+    assert 'REPO_URL = "https://github.com/RICHAAARC/CEG.git"' in source
+    assert "UPDATE_REPO_FROM_GITHUB = True" in source
+    assert "pull" in source
+    assert source.index('git", "clone') < source.index("从 Google Drive 加载前序产物")
+    assert '"archives" / "image_generation_outputs"' in source

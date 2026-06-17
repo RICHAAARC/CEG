@@ -216,16 +216,15 @@ python scripts/run_colab_acceptance_checks.py --bundle path\to\ceg_colab_run_bun
 
 `paper_workflow/colab_pilot_image_generation_outputs.ipynb` 是专门用于图像生成产物的 Colab 入口。
 
-它的职责是:
+它的正式运行顺序是:
 
-1. 挂载 Google Drive 并定位 `PILOT_WORKSPACE_ROOT`。
-2. 严格检查 Google Drive 工作区是否包含 prompt、model config、前置验收报告和 backend 命令文件。
-3. 可选将历史 backend 命令文件迁移为语义化命令文件名。
-4. 可选调用 `scripts/apply_pilot_image_generation_backend_command.py` 写入真实外部 SD / watermark backend 命令。
-5. 调用 `scripts/validate_pilot_image_generation_backend_command.py` 校验命令文件。
-6. 调用 `scripts/run_pilot_image_generation_backend.py` 执行真实外部 backend。
-7. 调用 `scripts/validate_pilot_image_generation_outputs.py` 验收图像生成输出。
-8. 调用 `scripts/build_pilot_stage_progress_summary.py` 刷新阶段进度。
-9. 验收通过后, 将图像生成产物和关键报告打包为 zip 保存到 Google Drive 的 `archives/image_generation_outputs/`。
+1. 在 Colab 中运行 Notebook。
+2. 从 GitHub 拉取或更新 `CEG` 仓库代码。
+3. 如果图像生成需要前序产物, 从 Google Drive 的 `CEG` 工作区加载前序产物结果。
+4. 在 Colab GPU 环境中运行仓库脚本和真实外部 backend。
+5. 调用真实 SD / watermark backend 生成 clean / watermarked 图像和 image manifests。
+6. 调用 `scripts/validate_pilot_image_generation_outputs.py` 验收图像生成输出。
+7. 调用 `scripts/build_pilot_stage_progress_summary.py` 刷新阶段摘要。
+8. 将图像生成产物打包为 zip, 保存回 Google Drive 的 `CEG/archives/image_generation_outputs/` 目录。
 
 该 Notebook 不直接手写正式 `prompt_plan.json`、`image_pairs.json` 或 image manifests。图像生成产物是否完成只以验收脚本是否通过为准。
