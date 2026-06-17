@@ -5,6 +5,7 @@ from main.watermarking.attestation.binding import (
     ATTESTATION_BACKEND_ROLE,
     AttestationBindingRequest,
     AttestationBindingResult,
+    KEYED_ATTESTATION_BACKEND_ID,
     build_attestation_binding,
 )
 
@@ -13,5 +14,6 @@ __all__ = [
     "ATTESTATION_BACKEND_ROLE",
     "AttestationBindingRequest",
     "AttestationBindingResult",
+    "KEYED_ATTESTATION_BACKEND_ID",
     "build_attestation_binding",
 ]

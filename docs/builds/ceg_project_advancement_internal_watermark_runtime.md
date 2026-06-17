@@ -774,3 +774,45 @@ python scripts/build_calibrated_paper_results_package.py \
 5. 更强 geometry 和 keyed / external attestation。
 
 但从工程闭环角度, 当前已经可以从真实 detection events 一条命令进入 fixed-FPR 校准后的论文结果包构建。
+
+
+## 21. 本次继续推进: keyed HMAC attestation 原语
+
+在公开 digest 级 attestation 之后, 本次继续补充了可选 keyed HMAC attestation 原语。该实现位于:
+
+```text
+main/watermarking/attestation/binding.py
+```
+
+### 21.1 方法意义
+
+公开 digest 绑定只能证明 detection event 内部 evidence 的可复现摘要一致, 不能证明该 evidence 是由受控运行方或受控实验环境产生的。keyed HMAC attestation 增加了一个真实密钥参与的签名步骤:
+
+```text
+message = attestation_version + evidence_bundle_digest
+signature = HMAC-SHA256(secret_key, message)
+```
+
+输出结果只保存 `signature_digest` 和 `key_identifier_digest`, 不保存原始密钥。因此它可以用于论文实验的 provenance 绑定, 同时避免把 Hugging Face token、运行密钥或本地密钥写入结果包。
+
+### 21.2 运行入口
+
+`run_ceg_detection_producer.py` 新增两个可选参数:
+
+```bash
+python scripts/run_ceg_detection_producer.py   --image-pairs <image_pairs.json>   --out <detection_out>   --detection-backend ceg_content_chain_detection   --attestation-key-env CEG_ATTESTATION_KEY   --attestation-key-id formal_colab_run_key
+```
+
+其中 `CEG_ATTESTATION_KEY` 应由 Colab / CI / 本地 shell 环境注入, 不应写入仓库或 notebook 明文单元格。
+
+### 21.3 与现有流程的关系
+
+该能力属于 CEG 主方法的 attestation 原语, 不是 notebook 门禁, 也不是 CEG-WM 流程框架迁移。没有配置密钥时, 代码自动退化为公开 digest 绑定, 以保持 pilot dry-run 和无密钥环境可运行。配置密钥时, 单个 attestation record 会标记:
+
+```text
+backend_id = ceg_keyed_hmac_attestation
+signature_mode = keyed_hmac_sha256
+signature_verified = true
+```
+
+当前整体论文主方法仍不会因此直接标记为完成, 因为 geometry 仍是平移搜索版本, 尚未实现更强 affine / feature-based recovery。

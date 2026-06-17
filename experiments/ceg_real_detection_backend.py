@@ -61,6 +61,8 @@ DEFAULT_DETECTOR_CONFIG = {
     "geometry_search_radius": 8,
     "geometry_downsample_size": 96,
     "geometry_anchor_grid_size": 4,
+    "attestation_key_env": None,
+    "attestation_key_id": None,
 }
 
 
@@ -357,7 +359,11 @@ def _build_detection_event(
             threshold_quantile=float(config["mask_threshold_quantile"]),
             open_iters=int(config["mask_open_iters"]),
             close_iters=int(config["mask_close_iters"]),
-            config={"detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID},
+            config={
+                "detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID,
+                "attestation_key_env": config.get("attestation_key_env"),
+                "attestation_key_id": config.get("attestation_key_id"),
+            },
         )
     )
     content_result = extract_content_chain_evidence(

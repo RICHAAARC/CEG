@@ -8,7 +8,11 @@ from PIL import Image
 import pytest
 
 from main.core.digest import build_stable_digest
-from main.watermarking.attestation import AttestationBindingRequest, build_attestation_binding
+from main.watermarking.attestation import (
+    KEYED_ATTESTATION_BACKEND_ID,
+    AttestationBindingRequest,
+    build_attestation_binding,
+)
 from main.watermarking.interfaces import WatermarkPromptContext
 
 
@@ -74,3 +78,59 @@ def test_attestation_binding_scores_complete_evidence(tmp_path: Path) -> None:
     assert len(result.attestation_digest) == 64
     assert result.paper_main_method_ready is False
     assert all(item["passed"] for item in result.check_results.values())
+
+
+@pytest.mark.quick
+def test_attestation_binding_supports_keyed_hmac(tmp_path: Path) -> None:
+    """当提供密钥时, attestation 应写出真实 HMAC 签名记录, 且不能泄露原始密钥。"""
+
+    image_path = tmp_path / "image.png"
+    _write_image(image_path)
+    prompt_context = WatermarkPromptContext(
+        image_id="img_001",
+        prompt_id="prompt_001",
+        prompt_text="a test image",
+        seed=1,
+        model_id="test-model",
+    )
+    semantic = {"mask_digest": _digest("mask"), "routing_digest": _digest("routing")}
+    content = {"content_chain_digest": _digest("content")}
+    aligned_content = {"content_chain_digest": _digest("aligned")}
+    geometry = {
+        "alignment_digest": _digest("geometry"),
+        "registration_confidence": 0.9,
+        "anchor_inlier_ratio": 0.8,
+        "recovered_sync_consistency": 0.7,
+        "alignment_residual": 0.1,
+    }
+    provenance = {
+        "image_path": image_path.as_posix(),
+        "reference_image_path": image_path.as_posix(),
+        "aligned_image_path": image_path.as_posix(),
+    }
+
+    result = build_attestation_binding(
+        AttestationBindingRequest(
+            event_id="event_001",
+            method_name="ceg",
+            sample_role="positive_source",
+            image_path=image_path,
+            prompt_context=prompt_context,
+            semantic_mask_record=semantic,
+            content_chain_record=content,
+            aligned_content_chain_record=aligned_content,
+            geometry_record=geometry,
+            image_provenance=provenance,
+            config={"attestation_secret_key": "unit-test-secret", "attestation_key_id": "unit-test-key"},
+        )
+    )
+
+    record = result.to_record()
+    signature = record["diagnostics"]["signature"]
+    assert result.backend_id == KEYED_ATTESTATION_BACKEND_ID
+    assert result.paper_main_method_ready is True
+    assert record["paper_main_method_blocking_reason"] is None
+    assert signature["signature_mode"] == "keyed_hmac_sha256"
+    assert signature["signature_verified"] is True
+    assert len(signature["signature_digest"]) == 64
+    assert "unit-test-secret" not in str(record)
