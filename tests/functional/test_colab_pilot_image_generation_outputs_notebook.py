@@ -1,4 +1,4 @@
-"""验证图像生成产物 Colab Notebook 边界。"""
+"""验证图像生成产物 Colab Notebook 的运行边界。"""
 
 from __future__ import annotations
 
@@ -69,29 +69,36 @@ def test_colab_pilot_image_generation_outputs_notebook_uses_semantic_stage_wordi
 
 
 @pytest.mark.quick
-def test_colab_pilot_image_generation_outputs_notebook_enforces_local_runtime_and_drive_archive() -> None:
-    """Notebook 必须在 Colab 本地运行, 仅把 Google Drive 用作输入来源和归档位置。"""
+def test_colab_pilot_image_generation_outputs_notebook_creates_workspace_without_drive_input_workspace() -> None:
+    """Notebook 必须能在空 Drive 下启动, 即从仓库 prompt plan 创建 Colab 本地运行工作区。"""
     source = _notebook_source()
     assert "STRICT_GOOGLE_DRIVE_PREFLIGHT = True" in source
     assert "ARCHIVE_IMAGE_GENERATION_OUTPUTS = True" in source
+    assert 'DRIVE_ROOT = Path("/content/drive/MyDrive/CEG")' in source
     assert 'LOCAL_RUNTIME_ROOT = Path("/content/ceg_runtime")' in source
-    assert "DRIVE_INPUT_WORKSPACE_ROOT" in source
-    assert "shutil.copytree(DRIVE_INPUT_WORKSPACE_ROOT, PILOT_WORKSPACE_ROOT)" in source
+    assert 'RUN_ID = f"{PROMPT_PLAN_PROFILE}_image_generation_outputs"' in source
+    assert "DRIVE_INPUT_WORKSPACE_ROOT" not in source
+    assert "real_pilot_input_workspace" not in source
+    assert "shutil.copytree(DRIVE_INPUT_WORKSPACE_ROOT, PILOT_WORKSPACE_ROOT)" not in source
+    assert "prepare_local_runtime_workspace()" in source
+    assert "write_default_model_config()" in source
+    assert "MODEL_CONFIG_DEFAULTS" in source
+    assert "已创建 Colab 本地运行工作区" in source
     assert "archives" in source
     assert "ZipFile" in source
     assert 'PROMPT_PLAN = REPO_ROOT / "prompts" / "prompt_plans" / f"{PROMPT_PLAN_PROFILE}_prompt_plan.json"' in source
     assert 'PROMPT_PLAN_PROFILE = "paper_main_probe"' in source
-    assert "仓库内置 prompt plan 缺少图像生成前置文件" in source
+    assert "仓库内置 prompt plan" in source
 
 
 @pytest.mark.quick
-def test_colab_pilot_image_generation_outputs_notebook_pulls_code_before_drive_artifacts() -> None:
-    """Notebook 的运行顺序必须先更新 GitHub 代码, 再检查 Google Drive 前序产物。"""
+def test_colab_pilot_image_generation_outputs_notebook_pulls_code_before_local_workspace() -> None:
+    """Notebook 的运行顺序必须先更新 GitHub 代码, 再创建 Colab 本地运行目录。"""
     source = _notebook_source()
     assert 'REPO_URL = "https://github.com/RICHAAARC/CEG.git"' in source
     assert "UPDATE_REPO_FROM_GITHUB = True" in source
     assert "pull" in source
-    assert source.index('git", "clone') < source.index("从 Google Drive 读取前序产物到 Colab 本地运行目录")
+    assert source.index('git", "clone') < source.index("创建 Colab 本地运行目录")
     assert '"archives" / "image_generation_outputs"' in source
 
 
