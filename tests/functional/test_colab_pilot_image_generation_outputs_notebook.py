@@ -93,3 +93,14 @@ def test_colab_pilot_image_generation_outputs_notebook_pulls_code_before_drive_a
     assert "pull" in source
     assert source.index('git", "clone') < source.index("从 Google Drive 读取前序产物到 Colab 本地运行目录")
     assert '"archives" / "image_generation_outputs"' in source
+
+
+@pytest.mark.quick
+def test_colab_pilot_image_generation_outputs_notebook_uses_ceg_wm_aligned_inspyrenet_drive_path() -> None:
+    """Notebook 必须使用与 CEG-WM paper_workflow 对齐的 InSPyReNet Drive 权重路径, 不保留旧 CEG 子目录 fallback。"""
+
+    source = _notebook_source()
+    assert 'INSPYRENET_WEIGHT_DRIVE_PATH = Path("/content/drive/MyDrive/Models/inspyrenet/ckpt_base.pth")' in source
+    legacy_ceg_subdir_path = "/content/drive/MyDrive/CEG" + "/Models/inspyrenet/ckpt_base.pth"
+    assert legacy_ceg_subdir_path not in source
+    assert "INSPYRENET_WEIGHT_FALLBACK_PATHS" not in source

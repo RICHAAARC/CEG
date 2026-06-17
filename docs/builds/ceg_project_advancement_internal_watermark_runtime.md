@@ -1889,7 +1889,7 @@ Colab Notebook 会定义 `CEG_ATTESTATION_KEY`。实现方式是:
 InSPyReNet 权重准备被放在 Colab Notebook 中, 不进入 `main/` 主方法。Notebook 优先使用:
 
 ```text
-/content/drive/MyDrive/CEG/Models/inspyrenet/ckpt_base.pth
+/content/drive/MyDrive/Models/inspyrenet/ckpt_base.pth
 ```
 
 如果不存在, 可从以下地址下载:
