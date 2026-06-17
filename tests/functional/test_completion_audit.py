@@ -27,5 +27,9 @@ def test_completion_audit_passes_and_covers_release_boundaries(tmp_path):
         item for item in report["checks"] if item["requirement"] == "paper_artifact_rebuild_package_extractable"
     )
     assert "scripts/run_colab_acceptance_checks.py" in clean_files_check["evidence"]
+    assert "paper_workflow/colab_external_baseline_outputs.ipynb" in clean_files_check["evidence"]
+    assert "paper_workflow/colab_end_to_end_paper_pipeline.ipynb" in clean_files_check["evidence"]
     assert "scripts/run_colab_acceptance_checks.py" in artifact_package_check["evidence"]["required"]
+    assert "paper_workflow/colab_external_baseline_outputs.ipynb" in artifact_package_check["evidence"]["required"]
+    assert "paper_workflow/colab_end_to_end_paper_pipeline.ipynb" in artifact_package_check["evidence"]["required"]
 
