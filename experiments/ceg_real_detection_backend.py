@@ -18,6 +18,7 @@ from typing import Any, Iterable, Mapping
 
 from main.core.digest import build_stable_digest
 from main.methods.ceg.ablations import CEG_ABLATIONS
+from main.watermarking.attestation import AttestationBindingRequest, build_attestation_binding
 from main.watermarking.content_chain import ContentChainRequest, extract_content_chain_evidence
 from main.watermarking.geometry import GeometryRegistrationRequest, estimate_geometry_registration
 from main.watermarking.interfaces import WatermarkPromptContext
@@ -35,7 +36,7 @@ from experiments.ceg_detection_producer import (
 )
 
 CONTENT_CHAIN_DETECTION_BACKEND_ID = "ceg_content_chain_detection_backend"
-CONTENT_CHAIN_DETECTION_BACKEND_ROLE = "real_content_chain_detection_with_translation_geometry_without_attestation"
+CONTENT_CHAIN_DETECTION_BACKEND_ROLE = "real_content_chain_detection_with_translation_geometry_and_public_attestation"
 
 
 DEFAULT_EVENT_THRESHOLDS = {
@@ -156,7 +157,7 @@ def write_content_chain_detection_inputs(
         "paper_main_method_ready": False,
         "paper_main_method_blocking_reasons": [
             "full_affine_or_feature_geometry_recovery_not_implemented",
-            "attestation_binding_not_implemented",
+            "public_digest_attestation_lacks_keyed_or_external_verifier",
             "fixed_fpr_threshold_requires_full_calibration_set",
         ],
         "events_path": DETECTION_EVENTS_NAME,
@@ -419,6 +420,31 @@ def _build_detection_event(
         content_fail_reason = "geometry_suspected"
     else:
         content_fail_reason = "content_chain_below_threshold"
+    image_provenance = {
+        "image_id": event_id,
+        "source_image_id": source_image_id,
+        "image_path": image_path.as_posix(),
+        "reference_image_path": reference_image_path.as_posix(),
+        "aligned_image_path": geometry_result.aligned_image_path,
+        "prompt_id": prompt_context.prompt_id,
+        "model_id": prompt_context.model_id,
+    }
+    attestation_result = build_attestation_binding(
+        AttestationBindingRequest(
+            event_id=event_id,
+            method_name="ceg",
+            sample_role=sample_role,
+            image_path=image_path,
+            prompt_context=prompt_context,
+            semantic_mask_record=semantic_record,
+            content_chain_record=content_record,
+            aligned_content_chain_record=aligned_content_record,
+            geometry_record=geometry_record,
+            image_provenance=image_provenance,
+            config={"detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID},
+        )
+    )
+    attestation_record = attestation_result.to_record()
     payload = {
         "thresholds": dict(DEFAULT_EVENT_THRESHOLDS),
         "content": {
@@ -435,23 +461,12 @@ def _build_detection_event(
             "geometry_fail_reason": "translation_registration_only",
             "geometry_record": geometry_record,
         },
-        "attestation": {
-            "attestation_score": 0.0,
-            "attestation_status": "attestation_binding_not_implemented",
-        },
+        "attestation": attestation_record,
         "ceg_ablation_variants": list(CEG_ABLATIONS),
         "semantic_mask": semantic_record,
         "content_chain": content_record,
         "aligned_content_chain": aligned_content_record,
-        "image_provenance": {
-            "image_id": event_id,
-            "source_image_id": source_image_id,
-            "image_path": image_path.as_posix(),
-            "reference_image_path": reference_image_path.as_posix(),
-            "aligned_image_path": geometry_result.aligned_image_path,
-            "prompt_id": prompt_context.prompt_id,
-            "model_id": prompt_context.model_id,
-        },
+        "image_provenance": image_provenance,
         "detection_source": {
             "producer": CONTENT_CHAIN_DETECTION_BACKEND_ID,
             "producer_role": CONTENT_CHAIN_DETECTION_BACKEND_ROLE,
@@ -459,7 +474,7 @@ def _build_detection_event(
             "paper_main_method_ready": False,
             "paper_main_method_blocking_reasons": [
                 "full_affine_or_feature_geometry_recovery_not_implemented",
-                "attestation_binding_not_implemented",
+                "public_digest_attestation_lacks_keyed_or_external_verifier",
             ],
         },
     }
@@ -483,7 +498,18 @@ def _build_detection_event(
         "semantic_mask": semantic_record,
         "content_chain": content_record,
         "aligned_content_chain": aligned_content_record,
-        "record_digest": build_stable_digest({"event": event_id, "semantic_mask": semantic_record, "content_chain": content_record}),
+        "geometry": geometry_record,
+        "attestation": attestation_record,
+        "record_digest": build_stable_digest(
+            {
+                "event": event_id,
+                "semantic_mask": semantic_record,
+                "content_chain": content_record,
+                "aligned_content_chain": aligned_content_record,
+                "geometry": geometry_record,
+                "attestation": attestation_record,
+            }
+        ),
     }
     return event, detection_record
 

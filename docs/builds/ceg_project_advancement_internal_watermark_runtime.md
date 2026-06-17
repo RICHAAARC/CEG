@@ -554,3 +554,78 @@ main/watermarking/attestation/
 ```
 
 该模块应把图像、prompt、mask digest、content chain digest、geometry digest 和方法配置绑定为事件级证明, 并输出 `attestation_score`。只有 attestation 接入后, CEG formal decision 中的 `final_decision = evidence_decision AND attestation_pass` 才能从真实 backend 获得完整输入。
+
+
+## 18. 本次继续推进: 事件级 attestation 绑定原语
+
+在几何 registration 接入之后, 本次继续补充了事件级 attestation 方法原语:
+
+```text
+main/watermarking/attestation/
+  __init__.py
+  binding.py
+```
+
+### 18.1 已实现能力
+
+当前 attestation backend 为公开 digest 级 evidence binding, 入口为:
+
+```text
+build_attestation_binding
+```
+
+该入口会把以下信息绑定为一个可审计 record:
+
+1. `event_id`、`method_name` 和 `sample_role`。
+2. `WatermarkPromptContext` 中的 image / prompt / seed / model 绑定。
+3. semantic mask 的 `mask_digest` 和 `routing_digest`。
+4. 原始内容链和几何对齐后内容链的 `content_chain_digest`。
+5. 几何 registration 的 `alignment_digest` 和质量指标。
+6. 图像 provenance 中的 image / reference / aligned 路径。
+
+输出字段包括:
+
+```text
+attestation_score
+attestation_digest
+evidence_bundle_digest
+verifier_digest
+check_results
+```
+
+### 18.2 detection backend 接入
+
+`experiments/ceg_real_detection_backend.py` 现在不再固定写入 `attestation_score = 0.0`, 而是在每个 event 中调用
+`build_attestation_binding`。因此 CEG formal decision 的输入已经同时具备:
+
+1. 内容链原始分数。
+2. 几何恢复后分数。
+3. 几何质量指标。
+4. attestation score。
+
+这使 `final_decision = evidence_decision AND attestation_pass` 可以消费真实 backend 产生的 attestation 字段。
+
+### 18.3 当前边界
+
+该实现是真实的一致性检查和 digest 绑定, 不是 mock, 但仍不是最终论文级 attestation。原因是它尚未包含:
+
+1. keyed signature。
+2. 外部可信 verifier。
+3. 与模型生成过程绑定的不可抵赖证明。
+4. 跨机器或跨运行环境的密钥管理。
+
+因此 backend 继续保持:
+
+```text
+paper_main_method_ready = false
+```
+
+blocking reason 已推进为:
+
+```text
+public_digest_attestation_lacks_keyed_or_external_verifier
+```
+
+### 18.4 下一步
+
+下一步应继续推进固定 FPR 校准和真实结果包闭环, 使 clean negative 集合能够校准阈值, positive / attacked 集合能够产出论文表格中的 TPP@FPR / TPR@FPR 指标。

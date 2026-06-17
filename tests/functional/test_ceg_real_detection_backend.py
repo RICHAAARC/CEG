@@ -109,7 +109,9 @@ def test_content_chain_detection_backend_writes_real_events(tmp_path: Path) -> N
         assert len(payload["aligned_content_chain"]["content_chain_digest"]) == 64
         assert len(payload["geometry"]["geometry_record"]["alignment_digest"]) == 64
         assert payload["geometry"]["geometry_record"]["paper_main_method_ready"] is False
-        assert payload["attestation"]["attestation_score"] == 0.0
+        assert payload["attestation"]["attestation_score"] == 1.0
+        assert len(payload["attestation"]["attestation_digest"]) == 64
+        assert payload["attestation"]["paper_main_method_ready"] is False
 
 
 @pytest.mark.quick

@@ -17,6 +17,13 @@ from main.watermarking.content_chain import (
     embed_content_chain_watermark,
     extract_content_chain_evidence,
 )
+from main.watermarking.attestation import (
+    ATTESTATION_BACKEND_ID,
+    ATTESTATION_BACKEND_ROLE,
+    AttestationBindingRequest,
+    AttestationBindingResult,
+    build_attestation_binding,
+)
 from main.watermarking.interfaces import (
     WatermarkDetectionRequest,
     WatermarkDetectionResult,
@@ -45,6 +52,11 @@ from main.watermarking.semantic_mask import (
 from main.watermarking.native_lsb import NativeLsbWatermarkResult, embed_native_lsb_watermark
 
 __all__ = [
+    "ATTESTATION_BACKEND_ID",
+    "ATTESTATION_BACKEND_ROLE",
+    "AttestationBindingRequest",
+    "AttestationBindingResult",
+    "build_attestation_binding",
     "CONTENT_CHAIN_EMBEDDING_BACKEND_ID",
     "CONTENT_CHAIN_EMBEDDING_BACKEND_ROLE",
     "ContentChainEmbeddingRequest",
