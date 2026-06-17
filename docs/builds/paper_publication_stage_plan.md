@@ -728,3 +728,25 @@ python scripts/build_pilot_p2_gpu_handoff.py --workspace D:/content/drive/MyDriv
 4. `local_acceptance_commands`: 回到 Windows 本地后复核同一份 MyDrive 工作区。
 
 该设计避免用户在 Colab GPU 环境中手工改路径, 同时保留原始 Windows 命令计划作为 provenance。
+
+### P2 外部 backend 入口检查
+
+当前 P2 handoff 会生成 `entrypoint_checks` 和 `execution_warnings`。该检查发现当前命令计划中的 Colab 入口为:
+
+```text
+/content/CEG/run_image_generation.py
+```
+
+但当前仓库内不存在对应的:
+
+```text
+D:/Code/CEG/run_image_generation.py
+```
+
+因此, 当前 P2 命令计划应理解为外部 SD / watermark backend 模板, 不能误认为仓库已经内置真实 SD3 图像生成脚本。用户在 Colab GPU 环境中继续 P2 时必须满足以下任一条件:
+
+1. 在 `/content/CEG/run_image_generation.py` 位置提供真实外部 backend 入口。
+2. 修改 `image_generation_command_plan.json`, 指向实际可运行的 Colab 图像生成 / 水印脚本。
+3. 使用 Notebook 或其他外部 backend 直接生成 P2 必需输出, 但仍必须写出 `prompt_plan.json`、clean / watermarked 图像、`image_pairs.json` 和 image manifests。
+
+无论采用哪种方式, 回传后都必须运行 P2 接收门禁, 不能仅凭命令运行完成判断 P2 通过。

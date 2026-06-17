@@ -121,6 +121,90 @@ def _command_to_shell(command: Any) -> str:
     return str(command)
 
 
+def _repo_relative_colab_path(value: str) -> str | None:
+    """若 Colab 路径位于 `/content/CEG` 下, 返回仓库相对路径。"""
+    normalized = value.replace("\\", "/")
+    prefix = COLAB_REPO_PREFIX.rstrip("/") + "/"
+    if normalized.startswith(prefix):
+        return normalized[len(prefix) :]
+    return None
+
+
+def _python_entrypoint_from_command(command: Any) -> str | None:
+    """从 Python argv 命令中提取入口脚本路径。"""
+    if not isinstance(command, list) or len(command) < 2:
+        return None
+    executable = str(command[0]).lower()
+    if executable not in {"python", "python3"} and not executable.endswith("/python"):
+        return None
+    entrypoint = str(command[1]).strip()
+    return entrypoint or None
+
+
+def _build_entrypoint_checks(*, repo_root: Path, colab_command_plan: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """检查 Colab 命令中的仓库内 Python 入口是否存在。
+
+    该检查只验证仓库内路径。外部 backend 路径可能由用户在 Colab 中挂载或安装,
+    因此不能在本地证明存在, 只能作为需要用户确认的外部入口。
+    """
+    checks: list[dict[str, Any]] = []
+    for index, row in enumerate(colab_command_plan):
+        entrypoint = _python_entrypoint_from_command(row.get("command"))
+        if entrypoint is None:
+            checks.append(
+                {
+                    "command_index": index,
+                    "status": "not_python_entrypoint_command",
+                    "entrypoint": None,
+                    "message": "该命令不是可解析的 python <script> 形式, 需要用户在 Colab 中确认。",
+                }
+            )
+            continue
+        relative = _repo_relative_colab_path(entrypoint)
+        if relative is None:
+            checks.append(
+                {
+                    "command_index": index,
+                    "status": "external_entrypoint_unchecked",
+                    "entrypoint": entrypoint,
+                    "message": "入口不在 /content/CEG 下, 本地无法验证, 需要用户在 Colab 中确认。",
+                }
+            )
+            continue
+        local_path = repo_root / relative
+        exists = local_path.is_file()
+        checks.append(
+            {
+                "command_index": index,
+                "status": "repo_entrypoint_exists" if exists else "repo_entrypoint_missing",
+                "entrypoint": entrypoint,
+                "repo_relative_path": relative,
+                "local_path": str(local_path),
+                "message": (
+                    "仓库内入口存在, Colab 中 clone 或上传仓库后可定位该脚本。"
+                    if exists
+                    else "仓库内不存在该入口。需要用户提供外部 backend 脚本, 或修改 image_generation_root / command_plan。"
+                ),
+            }
+        )
+    return checks
+
+
+def _execution_warnings(entrypoint_checks: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """把入口检查结果转换为用户可读 warning。"""
+    warnings: list[dict[str, str]] = []
+    for check in entrypoint_checks:
+        if check.get("status") in {"repo_entrypoint_missing", "external_entrypoint_unchecked", "not_python_entrypoint_command"}:
+            warnings.append(
+                {
+                    "warning_type": str(check.get("status")),
+                    "entrypoint": str(check.get("entrypoint")),
+                    "message": str(check.get("message")),
+                }
+            )
+    return warnings
+
+
 def _required_output_rows(output_root: Path) -> list[dict[str, str]]:
     """构造 P2 必需输出路径列表。"""
     rows = [
@@ -168,6 +252,9 @@ def build_p2_image_generation_gpu_handoff_checklist(
     p1_status = _report_status(p1_report)
     command_plan = _load_command_plan(command_plan_path)
     colab_command_plan = _to_colab_command_plan(command_plan)
+    repo_root = Path(__file__).resolve().parents[1]
+    entrypoint_checks = _build_entrypoint_checks(repo_root=repo_root, colab_command_plan=colab_command_plan)
+    execution_warnings = _execution_warnings(entrypoint_checks)
     blocking_items: list[dict[str, str]] = []
     if p0_status.get("overall_decision") != "pass":
         blocking_items.append({"gate": "p0_input_freeze", "reason": "p0_report_not_pass"})
@@ -210,6 +297,8 @@ def build_p2_image_generation_gpu_handoff_checklist(
         "command_plan": command_plan,
         "colab_command_plan": colab_command_plan,
         "colab_shell_commands": [_command_to_shell(row.get("command", "")) for row in colab_command_plan],
+        "entrypoint_checks": entrypoint_checks,
+        "execution_warnings": execution_warnings,
         "required_outputs": _required_output_rows(output_root),
         "local_acceptance_commands": [
             (
@@ -294,7 +383,28 @@ def render_p2_image_generation_gpu_handoff_runbook(checklist: dict[str, Any]) ->
         [
             "```",
             "",
-            "## 6. 必须回传的 P2 输出",
+            "## 6. 命令入口检查",
+            "",
+            "| 序号 | 状态 | 入口 | 说明 |",
+            "|---:|---|---|---|",
+        ]
+    )
+    for index, check in enumerate(checklist.get("entrypoint_checks", []), start=1):
+        lines.append(
+            "| {index} | `{status}` | `{entrypoint}` | {message} |".format(
+                index=index,
+                status=check.get("status", ""),
+                entrypoint=check.get("entrypoint", ""),
+                message=check.get("message", ""),
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "如果状态为 `repo_entrypoint_missing`, 说明当前命令计划仍是外部 backend 模板,",
+            "需要在 Colab 中提供对应脚本或改用真实图像生成 Notebook / backend, 但最终仍必须产出下一节列出的文件。",
+            "",
+            "## 7. 必须回传的 P2 输出",
         "",
         "| 序号 | 相对路径 | 用途 |",
         "|---:|---|---|",
@@ -305,7 +415,7 @@ def render_p2_image_generation_gpu_handoff_runbook(checklist: dict[str, Any]) ->
     lines.extend(
         [
             "",
-            "## 7. Colab 自检命令",
+            "## 8. Colab 自检命令",
             "",
             "这些命令可在 Colab 中执行, 用于确认 P2 输出已经满足接收门禁。",
             "",
@@ -317,7 +427,7 @@ def render_p2_image_generation_gpu_handoff_runbook(checklist: dict[str, Any]) ->
         [
             "```",
             "",
-            "## 8. 回传后本地验收命令",
+            "## 9. 回传后本地验收命令",
             "",
             "这些命令用于回到 Windows 本地后复核同一份 MyDrive 工作区。",
             "",
@@ -325,7 +435,7 @@ def render_p2_image_generation_gpu_handoff_runbook(checklist: dict[str, Any]) ->
         ]
     )
     lines.extend(str(command) for command in checklist.get("local_acceptance_commands", []))
-    lines.extend(["```", "", "## 9. 禁止事项", ""])
+    lines.extend(["```", "", "## 10. 禁止事项", ""])
     lines.extend(
         [
             "1. 不能用 mock 图像替代真实 P2 图像。",

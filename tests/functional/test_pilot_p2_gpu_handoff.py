@@ -38,7 +38,7 @@ def _prepare_ready_workspace(tmp_path) -> None:
                 "backend_id": "external_sd_watermark_backend",
                 "command": [
                     "python",
-                    "D:/Code/CEG/run_image_generation.py",
+                    "D:/Code/CEG/scripts/run_image_generation_plan.py",
                     "--prompt-plan",
                     "D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/prompts/prompt_plan.draft.json",
                     "--out",
@@ -74,6 +74,8 @@ def test_p2_gpu_handoff_checklist_requires_prompt_plan_output(tmp_path) -> None:
     assert checklist["colab_shell_commands"]
     assert "D:/" not in checklist["colab_shell_commands"][0]
     assert "D:\\" not in checklist["colab_shell_commands"][0]
+    assert checklist["entrypoint_checks"][0]["status"] == "repo_entrypoint_exists"
+    assert checklist["execution_warnings"] == []
     assert checklist["colab_acceptance_commands"][0].startswith(
         "python scripts/validate_pilot_image_generation_outputs.py --output-root /content/drive/"
     )
@@ -81,6 +83,31 @@ def test_p2_gpu_handoff_checklist_requires_prompt_plan_output(tmp_path) -> None:
     assert (handoff_root / P2_GPU_HANDOFF_CHECKLIST_NAME).is_file()
     assert (handoff_root / P2_GPU_HANDOFF_RUNBOOK_NAME).is_file()
     assert "不能用 mock 图像替代真实 P2 图像" in (handoff_root / P2_GPU_HANDOFF_RUNBOOK_NAME).read_text(encoding="utf-8")
+
+
+@pytest.mark.quick
+def test_p2_gpu_handoff_warns_when_template_entrypoint_is_missing(tmp_path) -> None:
+    """命令计划指向不存在的仓库入口时, handoff 应明确提示需要外部 backend。"""
+    _prepare_ready_workspace(tmp_path)
+    _write_json(
+        tmp_path / "image_generation_command_plan.json",
+        [
+            {
+                "backend_id": "external_sd_watermark_backend",
+                "command": ["python", "D:/Code/CEG/run_image_generation.py"],
+                "output_root": "D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images",
+                "working_directory": "D:/Code/CEG",
+                "timeout_seconds": 7200,
+            }
+        ],
+    )
+
+    checklist = write_p2_image_generation_gpu_handoff(workspace_root=tmp_path)
+
+    assert checklist["overall_decision"] == "ready_for_user_colab_gpu_execution"
+    assert checklist["entrypoint_checks"][0]["status"] == "repo_entrypoint_missing"
+    assert checklist["execution_warnings"][0]["warning_type"] == "repo_entrypoint_missing"
+    assert "需要用户提供外部 backend 脚本" in checklist["execution_warnings"][0]["message"]
 
 
 @pytest.mark.quick
