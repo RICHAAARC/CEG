@@ -1,0 +1,468 @@
+"""CEG 内容链真实检测 backend。
+
+该模块读取 `image_pairs.json` 和可选 attack manifest, 对 clean / watermarked / attacked 图像
+执行真实图像像素驱动的 semantic mask 与 LF/HF 内容链 scoring, 并写出下游协议可消费的
+`detection_events.json`、`detection_thresholds.json` 和 `ceg_detection_producer_manifest.json`。
+
+该实现属于项目方法推进中的真实检测入口, 但仍不是完整论文主方法: 当前尚未实现几何恢复与
+attestation 绑定, 因此所有输出均显式标记 `formal_result_claim = False` 和
+`paper_main_method_ready = False`。这样可以让 TPP@FPR 统计链路先消费真实内容链分数,
+同时避免把未完成闭环误声明为顶会论文最终结果。
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, Iterable, Mapping
+
+from main.core.digest import build_stable_digest
+from main.methods.ceg.ablations import CEG_ABLATIONS
+from main.watermarking.content_chain import ContentChainRequest, extract_content_chain_evidence
+from main.watermarking.interfaces import WatermarkPromptContext
+from main.watermarking.semantic_mask import GRADIENT_SALIENCY_BACKEND_ID, SemanticMaskRequest, extract_semantic_mask
+
+from experiments.ceg_detection_producer import (
+    DETECTION_EVENTS_NAME,
+    DETECTION_PRODUCER_MANIFEST_NAME,
+    DETECTION_THRESHOLDS_NAME,
+    _bool_from_any,
+    _image_id,
+    _optional_string,
+    _source_lookup,
+    default_detection_thresholds,
+)
+
+CONTENT_CHAIN_DETECTION_BACKEND_ID = "ceg_content_chain_detection_backend"
+CONTENT_CHAIN_DETECTION_BACKEND_ROLE = "real_content_chain_detection_without_geometry_or_attestation"
+
+
+DEFAULT_EVENT_THRESHOLDS = {
+    "content_threshold": 0.5,
+    "attestation_threshold": 0.5,
+    "registration_confidence_min": 0.3,
+    "anchor_inlier_ratio_min": 0.5,
+    "recovered_sync_consistency_min": 0.55,
+    "rescue_delta_low": 0.05,
+}
+
+
+DEFAULT_DETECTOR_CONFIG = {
+    "semantic_mask_backend_id": GRADIENT_SALIENCY_BACKEND_ID,
+    "mask_threshold_quantile": 0.80,
+    "mask_open_iters": 1,
+    "mask_close_iters": 1,
+    "lf_grid_size": 8,
+    "hf_grid_size": 8,
+    "lf_weight": 0.5,
+    "hf_weight": 0.5,
+}
+
+
+def load_image_pair_rows(path: str | Path) -> list[dict[str, Any]]:
+    """读取 image pair 行文件, 支持 JSON / JSONL / CSV。
+
+    该函数在真实 backend 中复用脚本层常见输入格式, 但只返回普通字典列表, 不把 CLI 或
+    notebook 约束写入方法逻辑。
+    """
+
+    import csv
+
+    input_path = Path(path)
+    if input_path.suffix == ".json":
+        payload = json.loads(input_path.read_text(encoding="utf-8-sig"))
+        if not isinstance(payload, list):
+            raise TypeError("image pair JSON must contain a list")
+        return [dict(row) for row in payload]
+    if input_path.suffix == ".jsonl":
+        return [json.loads(line) for line in input_path.read_text(encoding="utf-8-sig").splitlines() if line.strip()]
+    if input_path.suffix == ".csv":
+        with input_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            return [dict(row) for row in csv.DictReader(handle)]
+    raise ValueError(f"unsupported image pair extension: {input_path.suffix}")
+
+
+def load_optional_manifest(path: str | Path | None) -> dict[str, Any] | None:
+    """读取可选 JSON manifest, 缺失时返回 None。"""
+
+    if path is None:
+        return None
+    payload = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    if not isinstance(payload, dict):
+        raise TypeError("manifest JSON must contain an object")
+    return dict(payload)
+
+
+def write_content_chain_detection_inputs(
+    image_pairs_path: str | Path,
+    output_root: str | Path,
+    *,
+    attacked_image_manifest_path: str | Path | None = None,
+    detector_config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """运行真实内容链检测并写出统一 detection 输入。"""
+
+    image_pair_path = Path(image_pairs_path)
+    output_path = Path(output_root)
+    output_path.mkdir(parents=True, exist_ok=True)
+    rows = load_image_pair_rows(image_pair_path)
+    attacked_manifest = load_optional_manifest(attacked_image_manifest_path)
+    config = _merge_config(detector_config)
+    mask_root = output_path / "semantic_masks"
+
+    events: list[dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
+    for index, row in enumerate(rows, start=1):
+        pair_events, pair_records = _events_from_image_pair(row, index, image_pair_path.parent, mask_root, config)
+        events.extend(pair_events)
+        records.extend(pair_records)
+
+    if attacked_manifest is not None:
+        attack_events, attack_records = _events_from_attack_manifest(
+            attacked_manifest,
+            rows,
+            image_pair_path.parent,
+            mask_root,
+            config,
+        )
+        events.extend(attack_events)
+        records.extend(attack_records)
+
+    thresholds = default_detection_thresholds()
+    (output_path / DETECTION_EVENTS_NAME).write_text(
+        json.dumps(events, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (output_path / DETECTION_THRESHOLDS_NAME).write_text(
+        json.dumps(thresholds, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    records_name = "content_chain_detection_records.json"
+    (output_path / records_name).write_text(
+        json.dumps(records, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    manifest = {
+        "artifact_name": DETECTION_PRODUCER_MANIFEST_NAME,
+        "producer_id": CONTENT_CHAIN_DETECTION_BACKEND_ID,
+        "producer_role": CONTENT_CHAIN_DETECTION_BACKEND_ROLE,
+        "formal_result_claim": False,
+        "paper_main_method_ready": False,
+        "paper_main_method_blocking_reasons": [
+            "geometry_recovery_not_implemented",
+            "attestation_binding_not_implemented",
+            "fixed_fpr_threshold_requires_full_calibration_set",
+        ],
+        "events_path": DETECTION_EVENTS_NAME,
+        "thresholds_path": DETECTION_THRESHOLDS_NAME,
+        "content_chain_detection_records_path": records_name,
+        "event_count": len(events),
+        "content_chain_detection_record_count": len(records),
+        "attacked_manifest_consumed": attacked_manifest is not None,
+        "sample_roles": sorted({str(event["sample_role"]) for event in events}),
+        "attack_families": sorted({str(event["attack_family"]) for event in events}),
+        "detector_config": config,
+        "producer_digest": build_stable_digest({"events": events, "thresholds": thresholds, "records": records}),
+    }
+    (output_path / DETECTION_PRODUCER_MANIFEST_NAME).write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
+def _merge_config(config: Mapping[str, Any] | None) -> dict[str, Any]:
+    """合并 detector 配置并进行轻量类型规整。"""
+
+    merged = {**DEFAULT_DETECTOR_CONFIG, **dict(config or {})}
+    merged["mask_threshold_quantile"] = float(merged["mask_threshold_quantile"])
+    merged["mask_open_iters"] = int(merged["mask_open_iters"])
+    merged["mask_close_iters"] = int(merged["mask_close_iters"])
+    merged["lf_grid_size"] = int(merged["lf_grid_size"])
+    merged["hf_grid_size"] = int(merged["hf_grid_size"])
+    merged["lf_weight"] = float(merged["lf_weight"])
+    merged["hf_weight"] = float(merged["hf_weight"])
+    return merged
+
+
+def _events_from_image_pair(
+    row: dict[str, Any],
+    index: int,
+    base_dir: Path,
+    mask_root: Path,
+    config: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """从单个 image pair 生成 clean 负样本和 watermarked 正样本事件。"""
+
+    image_id = _image_id(row, index)
+    events: list[dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
+    clean_path = _resolve_existing_path(
+        _optional_string(row, "clean_image_path") or _optional_string(row, "reference_path"),
+        base_dir,
+        field_name="clean_image_path",
+    )
+    watermarked_path = _resolve_existing_path(
+        _optional_string(row, "watermarked_image_path") or _optional_string(row, "watermarked_path"),
+        base_dir,
+        field_name="watermarked_image_path",
+    )
+
+    clean_event, clean_record = _build_detection_event(
+        image_path=clean_path,
+        row=row,
+        event_id=f"{image_id}__clean_negative",
+        sample_role="clean_negative",
+        attack_family="clean",
+        attack_condition="clean_none",
+        is_watermarked=False,
+        source_image_id=image_id,
+        mask_root=mask_root,
+        config=config,
+        suffix="clean",
+    )
+    events.append(clean_event)
+    records.append(clean_record)
+
+    watermarked_event, watermarked_record = _build_detection_event(
+        image_path=watermarked_path,
+        row=row,
+        event_id=f"{image_id}__positive_source",
+        sample_role="positive_source",
+        attack_family="clean",
+        attack_condition="clean_none",
+        is_watermarked=True,
+        source_image_id=image_id,
+        mask_root=mask_root,
+        config=config,
+        suffix="watermarked",
+    )
+    events.append(watermarked_event)
+    records.append(watermarked_record)
+    return events, records
+
+
+def _events_from_attack_manifest(
+    attacked_manifest: Mapping[str, Any],
+    rows: Iterable[dict[str, Any]],
+    base_dir: Path,
+    mask_root: Path,
+    config: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """从 attack manifest 生成 attacked detection 事件。"""
+
+    attack_records = attacked_manifest.get("attacked_images", [])
+    if not isinstance(attack_records, list):
+        raise TypeError("attacked_image_manifest.attacked_images must be list")
+    lookup = _source_lookup(rows)
+    events: list[dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
+    for index, record in enumerate(attack_records, start=1):
+        if not isinstance(record, dict):
+            raise TypeError(f"attacked_images[{index}] must be object")
+        source_key = _optional_string(record, "source_image_id") or _optional_string(record, "event_id")
+        source_row = lookup.get(source_key or "", {})
+        attacked_image_id = _optional_string(record, "attacked_image_id", f"attacked_{index:04d}") or f"attacked_{index:04d}"
+        attacked_path = _resolve_existing_path(
+            _optional_string(record, "attacked_image_path"),
+            base_dir,
+            field_name="attacked_image_path",
+        )
+        is_watermarked = _infer_attack_watermark_label(record, source_row)
+        event, detection_record = _build_detection_event(
+            image_path=attacked_path,
+            row={**source_row, **record},
+            event_id=attacked_image_id,
+            sample_role="attacked_positive" if is_watermarked else "attacked_negative",
+            attack_family=_optional_string(record, "attack_family", "unknown_attack") or "unknown_attack",
+            attack_condition=(
+                _optional_string(record, "attack_condition", "unknown_attack_condition")
+                or "unknown_attack_condition"
+            ),
+            is_watermarked=is_watermarked,
+            source_image_id=_optional_string(record, "source_image_id"),
+            mask_root=mask_root,
+            config=config,
+            suffix="attacked",
+        )
+        events.append(event)
+        records.append(detection_record)
+    return events, records
+
+
+def _infer_attack_watermark_label(record: Mapping[str, Any], source_row: Mapping[str, Any]) -> bool:
+    """从 attack record 或 source row 推断 attacked 样本标签。"""
+
+    if "is_watermarked" in record:
+        return _bool_from_any(record.get("is_watermarked"), default=True)
+    if "is_watermarked" in source_row:
+        return _bool_from_any(source_row.get("is_watermarked"), default=True)
+    role = str(source_row.get("sample_role") or record.get("sample_role") or "").lower()
+    if "negative" in role:
+        return False
+    return True
+
+
+def _build_detection_event(
+    *,
+    image_path: Path,
+    row: Mapping[str, Any],
+    event_id: str,
+    sample_role: str,
+    attack_family: str,
+    attack_condition: str,
+    is_watermarked: bool,
+    source_image_id: str | None,
+    mask_root: Path,
+    config: Mapping[str, Any],
+    suffix: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """对单张图像运行 semantic mask 与内容链 scoring 并构造协议事件。"""
+
+    prompt_context = _prompt_context(row, event_id=event_id, source_image_id=source_image_id)
+    safe_event_id = _safe_path_token(event_id)
+    mask_path = mask_root / f"{safe_event_id}__{suffix}_semantic_mask.png"
+    semantic_mask = extract_semantic_mask(
+        SemanticMaskRequest(
+            image_path=image_path,
+            output_mask_path=mask_path,
+            backend_id=str(config["semantic_mask_backend_id"]),
+            threshold_quantile=float(config["mask_threshold_quantile"]),
+            open_iters=int(config["mask_open_iters"]),
+            close_iters=int(config["mask_close_iters"]),
+            config={"detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID},
+        )
+    )
+    content_result = extract_content_chain_evidence(
+        ContentChainRequest(
+            image_path=image_path,
+            semantic_mask=semantic_mask,
+            prompt_context=prompt_context,
+            lf_grid_size=int(config["lf_grid_size"]),
+            hf_grid_size=int(config["hf_grid_size"]),
+            lf_weight=float(config["lf_weight"]),
+            hf_weight=float(config["hf_weight"]),
+            config={"detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID},
+        )
+    )
+    content_record = content_result.to_record()
+    semantic_record = semantic_mask.to_record()
+    content_score = round(float(content_result.content_score), 6)
+    content_fail_reason = "content_chain_scored" if content_score >= DEFAULT_EVENT_THRESHOLDS["content_threshold"] else "content_chain_below_threshold"
+    payload = {
+        "thresholds": dict(DEFAULT_EVENT_THRESHOLDS),
+        "content": {
+            "content_score_raw": content_score,
+            "content_score_aligned": content_score,
+            "content_fail_reason": content_fail_reason,
+            "payload_probe_score": content_score,
+        },
+        "geometry": {
+            "registration_confidence": 0.0,
+            "anchor_inlier_ratio": 0.0,
+            "recovered_sync_consistency": 0.0,
+            "alignment_residual": 0.0,
+            "geometry_fail_reason": "geometry_recovery_not_implemented",
+        },
+        "attestation": {
+            "attestation_score": 0.0,
+            "attestation_status": "attestation_binding_not_implemented",
+        },
+        "ceg_ablation_variants": list(CEG_ABLATIONS),
+        "semantic_mask": semantic_record,
+        "content_chain": content_record,
+        "image_provenance": {
+            "image_id": event_id,
+            "source_image_id": source_image_id,
+            "image_path": image_path.as_posix(),
+            "prompt_id": prompt_context.prompt_id,
+            "model_id": prompt_context.model_id,
+        },
+        "detection_source": {
+            "producer": CONTENT_CHAIN_DETECTION_BACKEND_ID,
+            "producer_role": CONTENT_CHAIN_DETECTION_BACKEND_ROLE,
+            "formal_result_claim": False,
+            "paper_main_method_ready": False,
+            "paper_main_method_blocking_reasons": [
+                "geometry_recovery_not_implemented",
+                "attestation_binding_not_implemented",
+            ],
+        },
+    }
+    event = {
+        "event_id": event_id,
+        "method_name": "ceg",
+        "split": _optional_string(dict(row), "split", "test") or "test",
+        "sample_role": sample_role,
+        "attack_family": attack_family,
+        "attack_condition": attack_condition,
+        "is_watermarked": is_watermarked,
+        "payload": payload,
+    }
+    detection_record = {
+        "event_id": event_id,
+        "sample_role": sample_role,
+        "attack_family": attack_family,
+        "attack_condition": attack_condition,
+        "is_watermarked": is_watermarked,
+        "image_path": image_path.as_posix(),
+        "semantic_mask": semantic_record,
+        "content_chain": content_record,
+        "record_digest": build_stable_digest({"event": event_id, "semantic_mask": semantic_record, "content_chain": content_record}),
+    }
+    return event, detection_record
+
+
+def _prompt_context(row: Mapping[str, Any], *, event_id: str, source_image_id: str | None) -> WatermarkPromptContext:
+    """从 image pair 或 attack record 中构造 prompt 上下文。"""
+
+    row_dict = dict(row)
+    image_id = source_image_id or _optional_string(row_dict, "image_id") or event_id
+    prompt_id = _optional_string(row_dict, "prompt_id") or f"prompt_for_{image_id}"
+    prompt_text = _optional_string(row_dict, "prompt_text") or _optional_string(row_dict, "prompt") or ""
+    model_id = _optional_string(row_dict, "model_id") or _optional_string(row_dict, "generator_model_id")
+    seed = _optional_int(row_dict.get("seed"))
+    generation_params = {
+        key: row_dict[key]
+        for key in ("height", "width", "guidance_scale", "num_inference_steps", "negative_prompt")
+        if key in row_dict
+    }
+    return WatermarkPromptContext(
+        image_id=str(image_id),
+        prompt_id=str(prompt_id),
+        prompt_text=str(prompt_text),
+        seed=seed,
+        model_id=model_id,
+        generation_params=generation_params,
+    )
+
+
+def _optional_int(value: Any) -> int | None:
+    """把可选 seed 字段规整为整数。"""
+
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _resolve_existing_path(value: str | None, base_dir: Path, *, field_name: str) -> Path:
+    """解析图像路径并确认文件存在。"""
+
+    if value is None:
+        raise ValueError(f"missing required image path field: {field_name}")
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        candidate = base_dir / candidate
+    resolved = candidate.resolve()
+    if not resolved.is_file():
+        raise FileNotFoundError(f"{field_name} not found: {resolved}")
+    return resolved
+
+
+def _safe_path_token(value: str) -> str:
+    """把 event id 转换为安全文件名片段。"""
+
+    return "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in value)[:120]

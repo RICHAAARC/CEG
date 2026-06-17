@@ -420,3 +420,73 @@ paper_main_method_ready = false
 ### 15.4 下一步
 
 下一步应补充真实 detection backend, 读取 `image_pairs.json` 和 `watermark_runs` provenance, 对 clean / watermarked / attacked 图像运行 semantic mask 与内容链 scoring, 输出可进入固定 FPR 统计的 detection records。
+
+
+## 16. 本次继续推进: 真实内容链 detection backend
+
+在图像生成 backend 已经能够产出内容链 watermarked 图像之后, 本次继续补充了真实检测入口:
+
+```text
+experiments/ceg_real_detection_backend.py
+scripts/run_ceg_detection_producer.py --detection-backend ceg_content_chain_detection
+```
+
+### 16.1 已实现能力
+
+该 backend 会读取 `image_pairs.json`, 并对每一组样本生成两类检测事件:
+
+1. `clean_negative`: 对 clean 图像运行检测, 用于后续固定 FPR 阈值校准。
+2. `positive_source`: 对 watermarked 图像运行检测, 用于后续 TPP / TPR 统计。
+
+如果提供 `attacked_image_manifest.json`, backend 还会对 attacked 图像生成 `attacked_positive` 或
+`attacked_negative` 事件。每个事件都会真实执行:
+
+1. `extract_semantic_mask`: 读取图像像素并生成 semantic mask、mask digest 和 routing digest。
+2. `extract_content_chain_evidence`: 在 mask 路由下提取 LF / HF 内容链分数。
+3. 写出统一协议事件 `detection_events.json`。
+4. 写出 `content_chain_detection_records.json`, 便于后续审计每张图像的 mask 与 content chain provenance。
+5. 写出 `ceg_detection_producer_manifest.json`, 记录 producer、配置、事件数量和 digest。
+
+### 16.2 与旧 dry-run producer 的关系
+
+旧的 `contract_dry_run` 路径仍然保留, 用于快速验证事件协议、表格重建和结果包链路。新的
+`ceg_content_chain_detection` 路径不是 dry-run 分数, 它会读取真实图像并计算真实内容链分数。
+
+两者的 CLI 入口统一在:
+
+```bash
+python scripts/run_ceg_detection_producer.py \
+  --image-pairs <image_pairs.json> \
+  --out <detection_dir> \
+  --detection-backend ceg_content_chain_detection
+```
+
+### 16.3 当前边界
+
+该 backend 仍显式标记:
+
+```text
+formal_result_claim = false
+paper_main_method_ready = false
+```
+
+原因是当前只完成了 semantic mask 与内容链 scoring 闭环, 仍缺少:
+
+1. 攻击后的几何同步、registration 和 recovery。
+2. 事件级 attestation 绑定与验证。
+3. 基于完整校准集的固定 FPR 阈值选择。
+4. 与外部 baseline 在同一正式数据规模下的最终对比运行。
+
+因此该 backend 的主要价值是把真实图像水印产物接入 TPP@FPR 所需的 records 形态, 不是直接声明最终论文主结果。
+
+### 16.4 下一步
+
+下一步应继续补充 `main/watermarking/geometry/` 和 `main/watermarking/attestation/`。只有当 detection 事件同时包含:
+
+1. 内容链原始分数与恢复后分数。
+2. 几何恢复质量指标。
+3. attestation score。
+4. clean negative 校准集合。
+5. attacked positive 评测集合。
+
+项目才能稳定产出论文主表中的固定 FPR 下 TPP / TPR 结果。

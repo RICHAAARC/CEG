@@ -1,4 +1,4 @@
-﻿"""从 image_pairs 和 attack manifest 生成 CEG detection 协议事件。"""
+"""从 image_pairs 和 attack manifest 生成 CEG detection 协议事件。"""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from experiments.ceg_detection_producer import write_detection_inputs_from_image_manifests
+from experiments.ceg_real_detection_backend import write_content_chain_detection_inputs
 
 
 def _load_rows(path: Path) -> list[dict[str, object]]:
@@ -42,21 +43,46 @@ def _load_manifest(path: str | None) -> dict[str, object] | None:
 
 def build_parser() -> argparse.ArgumentParser:
     """构造命令行参数解析器。"""
-    parser = argparse.ArgumentParser(description="生成 CEG detection dry-run 协议事件。")
+    parser = argparse.ArgumentParser(description="生成 CEG detection 协议事件。")
     parser.add_argument("--image-pairs", required=True, help="image_pairs.json / jsonl / csv 路径。")
     parser.add_argument("--attacked-image-manifest", default=None, help="可选 attacked_image_manifest.json 路径。")
     parser.add_argument("--out", required=True, help="detection 输入输出目录。")
+    parser.add_argument(
+        "--detection-backend",
+        choices=("contract_dry_run", "ceg_content_chain_detection"),
+        default="contract_dry_run",
+        help="检测 backend。contract_dry_run 保留旧协议演练, ceg_content_chain_detection 运行真实内容链 scoring。",
+    )
+    parser.add_argument("--mask-threshold-quantile", type=float, default=0.80, help="semantic mask 分位数阈值。")
+    parser.add_argument("--mask-open-iters", type=int, default=1, help="semantic mask 开运算次数。")
+    parser.add_argument("--mask-close-iters", type=int, default=1, help="semantic mask 闭运算次数。")
+    parser.add_argument("--lf-grid-size", type=int, default=8, help="LF 内容链网格大小。")
+    parser.add_argument("--hf-grid-size", type=int, default=8, help="HF 内容链网格大小。")
     return parser
 
 
 def main() -> None:
     """CLI 入口。"""
     args = build_parser().parse_args()
-    manifest = write_detection_inputs_from_image_manifests(
-        _load_rows(Path(args.image_pairs)),
-        args.out,
-        attacked_image_manifest=_load_manifest(args.attacked_image_manifest),
-    )
+    if args.detection_backend == "ceg_content_chain_detection":
+        manifest = write_content_chain_detection_inputs(
+            args.image_pairs,
+            args.out,
+            attacked_image_manifest_path=args.attacked_image_manifest,
+            detector_config={
+                "mask_threshold_quantile": args.mask_threshold_quantile,
+                "mask_open_iters": args.mask_open_iters,
+                "mask_close_iters": args.mask_close_iters,
+                "lf_grid_size": args.lf_grid_size,
+                "hf_grid_size": args.hf_grid_size,
+            },
+        )
+    else:
+        manifest = write_detection_inputs_from_image_manifests(
+            _load_rows(Path(args.image_pairs)),
+            args.out,
+            attacked_image_manifest=_load_manifest(args.attacked_image_manifest),
+        )
     print(json.dumps(manifest, ensure_ascii=False, indent=2))
 
 
