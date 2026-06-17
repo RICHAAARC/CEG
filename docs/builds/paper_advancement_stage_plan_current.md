@@ -561,3 +561,15 @@ python scripts/build_pilot_p0_input_freeze_report.py --workspace D:/content/driv
 ```
 
 只有该 CSV 的 `value_json` 全部合法填写并通过 P0 聚合门禁后, 才能继续进入图像生成启动计划、真实图像生成、attack、detection、baseline、metric 和 fixed-FPR 统计阶段。
+
+---
+
+## 10. 阶段计划规范整理稿
+
+当前阶段计划的规范整理稿已经更新到:
+
+```text
+docs/builds/paper_publication_stage_plan.md
+```
+
+后续若需要回答“当前向论文推进的阶段顺序、阻断点、门禁和立即下一步是什么”, 优先读取该文档。本文档保留较完整的背景说明和历史推进记录。

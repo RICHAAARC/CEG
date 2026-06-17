@@ -18,6 +18,7 @@ from experiments.pilot_input_value_pack_sheet import (
     export_pilot_input_value_pack_fill_sheet,
     export_pilot_input_value_pack_fill_sheet_guidance,
     import_and_write_pilot_input_value_pack_fill_sheet,
+    validate_and_write_pilot_input_value_pack_fill_sheet,
 )
 from experiments.pilot_input_value_pack_status import build_pilot_input_value_pack_status
 from experiments.pilot_p0_input_freeze import write_pilot_p0_input_freeze_report
@@ -211,6 +212,78 @@ def test_value_pack_fill_sheet_cli_roundtrip(tmp_path) -> None:
 
     assert completed.returncode == 1
     assert report_path.is_file()
+
+
+@pytest.mark.quick
+def test_validate_value_pack_fill_sheet_writes_reports_without_rewrite(tmp_path) -> None:
+    """只读预检应写出 JSON 和 Markdown 报告, 且不回写 value pack。"""
+    value_pack_path, _ = _prepare_value_pack(tmp_path)
+    fill_sheet = tmp_path / "pilot_input_value_pack_fill_sheet.csv"
+    report_json = tmp_path / "pilot_input_value_pack_fill_sheet_validation_report.json"
+    report_md = tmp_path / "pilot_input_value_pack_fill_sheet_validation_report.md"
+    export_pilot_input_value_pack_fill_sheet(value_pack_path=value_pack_path, output_csv_path=fill_sheet)
+
+    report = validate_and_write_pilot_input_value_pack_fill_sheet(
+        value_pack_path=value_pack_path,
+        input_csv_path=fill_sheet,
+        report_path=report_json,
+        markdown_report_path=report_md,
+    )
+
+    payload = json.loads(value_pack_path.read_text(encoding="utf-8"))
+    report_payload = json.loads(report_json.read_text(encoding="utf-8"))
+    assert report["overall_decision"] == "fail"
+    assert report["write_performed"] is False
+    assert report["summary"]["blocking_item_count"] == 19
+    assert report_payload["artifact_name"] == "pilot_input_value_pack_fill_sheet_validation_report.json"
+    assert report_md.is_file()
+    assert all("value" not in entry for entry in payload["value_entries"])
+
+
+@pytest.mark.quick
+def test_validate_value_pack_fill_sheet_cli_passes_without_rewrite(tmp_path) -> None:
+    """只读预检 CLI 在 CSV 填写完整时应通过, 但仍不得回写 value pack。"""
+    value_pack_path, _ = _prepare_value_pack(tmp_path)
+    fill_sheet = tmp_path / "pilot_input_value_pack_fill_sheet.csv"
+    report_json = tmp_path / "pilot_input_value_pack_fill_sheet_validation_report.json"
+    report_md = tmp_path / "pilot_input_value_pack_fill_sheet_validation_report.md"
+    export_pilot_input_value_pack_fill_sheet(value_pack_path=value_pack_path, output_csv_path=fill_sheet)
+    rows = _read_csv_rows(fill_sheet)
+    fieldnames = list(rows[0].keys())
+    for row in rows:
+        row["value_json"] = json.dumps(REAL_VALUES[row["task_id"]], ensure_ascii=False)
+    _write_csv_rows(fill_sheet, rows, fieldnames)
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_pilot_input_value_pack_fill_sheet.py",
+            "--workspace",
+            str(tmp_path),
+            "--value-pack",
+            str(value_pack_path),
+            "--fill-sheet",
+            str(fill_sheet),
+            "--out-json",
+            str(report_json),
+            "--out-md",
+            str(report_md),
+            "--require-pass",
+        ],
+        cwd=".",
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    payload = json.loads(value_pack_path.read_text(encoding="utf-8"))
+    report = json.loads(report_json.read_text(encoding="utf-8"))
+    assert completed.returncode == 0
+    assert report["overall_decision"] == "pass"
+    assert report["write_performed"] is False
+    assert report["summary"]["updated_entry_count"] == 19
+    assert report_md.is_file()
+    assert all("value" not in entry for entry in payload["value_entries"])
 
 
 @pytest.mark.quick
