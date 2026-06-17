@@ -240,7 +240,7 @@ REQUIRED_CLEAN_FILES = (
     "scripts/build_colab_formal_run_checklist.py",
     "scripts/run_colab_acceptance_checks.py",
     "paper_workflow/colab_ceg_cold_start.ipynb",
-    "paper_workflow/colab_p2_image_generation.ipynb",
+    "paper_workflow/colab_pilot_image_generation_outputs.ipynb",
     "paper_workflow/colab_utils/cold_start.py",
     "paper_workflow/notebook_utils/protocol_entrypoint.py",
 )
@@ -508,7 +508,7 @@ REQUIRED_ARTIFACT_RELEASE_FILES = {
     "scripts/build_colab_formal_run_checklist.py",
     "scripts/run_colab_acceptance_checks.py",
     "paper_workflow/colab_ceg_cold_start.ipynb",
-    "paper_workflow/colab_p2_image_generation.ipynb",
+    "paper_workflow/colab_pilot_image_generation_outputs.ipynb",
     "paper_workflow/colab_utils/cold_start.py",
     "paper_workflow/notebook_utils/protocol_entrypoint.py",
 }

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 
-NOTEBOOK_PATH = Path("paper_workflow/colab_p2_image_generation.ipynb")
+NOTEBOOK_PATH = Path("paper_workflow/colab_pilot_image_generation_outputs.ipynb")
 
 
 def _notebook_source() -> str:
@@ -18,7 +18,7 @@ def _notebook_source() -> str:
 
 
 @pytest.mark.quick
-def test_colab_p2_image_generation_notebook_exists_and_calls_governed_scripts() -> None:
+def test_colab_pilot_image_generation_outputs_notebook_exists_and_calls_governed_scripts() -> None:
     """P2 Notebook 必须调用仓库脚本, 而不是把正式协议逻辑写在 cell 中。"""
     source = _notebook_source()
     required_scripts = [
@@ -36,7 +36,7 @@ def test_colab_p2_image_generation_notebook_exists_and_calls_governed_scripts() 
 
 
 @pytest.mark.quick
-def test_colab_p2_image_generation_notebook_does_not_write_formal_manifests_directly() -> None:
+def test_colab_pilot_image_generation_outputs_notebook_does_not_write_formal_manifests_directly() -> None:
     """Notebook 不得直接手写 P2 正式 manifest 或 image_pairs。"""
     source = _notebook_source()
     forbidden_snippets = [

@@ -214,7 +214,7 @@ python scripts/run_colab_acceptance_checks.py --bundle path\to\ceg_colab_run_bun
 
 ## P2 真实图像生成 Notebook
 
-`paper_workflow/colab_p2_image_generation.ipynb` 是专门用于 `p2_image_generation_outputs` 的 Colab 入口。
+`paper_workflow/colab_pilot_image_generation_outputs.ipynb` 是专门用于 `p2_image_generation_outputs` 的 Colab 入口。
 
 它的职责是:
 

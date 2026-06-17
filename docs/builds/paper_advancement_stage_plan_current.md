@@ -878,7 +878,7 @@ P2 接收门禁通过后, 接续计划会提供以下命令顺序:
 当前已补充 P2 专用 Colab 入口:
 
 ```text
-D:/Code/CEG/paper_workflow/colab_p2_image_generation.ipynb
+D:/Code/CEG/paper_workflow/colab_pilot_image_generation_outputs.ipynb
 ```
 
 该 Notebook 用于在 Colab GPU 环境中编排 `p2_image_generation_outputs` 阶段。它不会直接手写正式 P2 manifests, 而是调用以下仓库脚本:
