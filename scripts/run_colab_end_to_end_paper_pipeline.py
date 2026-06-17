@@ -356,6 +356,8 @@ def main() -> None:
         "paper_pipeline_root": str(paper_pipeline_root),
         "paper_pipeline_manifest": str(paper_pipeline_manifest_path),
         "paper_results_package_root": paper_pipeline_manifest.get("paper_results_package_root"),
+        "metric_rows_path": paper_pipeline_manifest.get("metric_rows_path"),
+        "metric_execution_manifest_path": paper_pipeline_manifest.get("metric_execution_manifest_path"),
         "drive_result_inventory": paper_pipeline_manifest.get("drive_result_inventory"),
         "image_generation_result": image_generation_result,
         "image_acceptance_result": image_acceptance_result,
@@ -365,6 +367,7 @@ def main() -> None:
             "attack_root": paper_pipeline_manifest.get("attack_root"),
             "detection_root": paper_pipeline_manifest.get("detection_root"),
             "baseline_root": paper_pipeline_manifest.get("baseline_root"),
+            "metric_root": paper_pipeline_manifest.get("metric_root"),
             "package_run_root": paper_pipeline_manifest.get("package_run_root"),
         },
         "execution_digest": build_stable_digest(

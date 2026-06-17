@@ -63,6 +63,19 @@ def test_build_quality_metric_rows_preserves_protocol_fields(tmp_path) -> None:
     assert rows[0]["attack_family"] == "gaussian_noise"
     assert rows[0]["psnr"] is not None
 
+    fallback_rows = build_quality_metric_rows(
+        [
+            {
+                "event_id": "event_quality_fallback",
+                "method_name": "ceg",
+                "clean_image_path": str(reference),
+                "watermarked_image_path": str(watermarked),
+            }
+        ]
+    )
+    assert fallback_rows[0]["event_id"] == "event_quality_fallback"
+    assert fallback_rows[0]["psnr"] is not None
+
 
 @pytest.mark.quick
 def test_render_paper_figure_package_writes_svg_and_html(tmp_path) -> None:
@@ -132,14 +145,24 @@ def test_quality_metric_cli_and_render_cli(tmp_path) -> None:
     )
 
     subprocess.run(
-        [sys.executable, "scripts/compute_image_quality_metrics.py", "--pairs", str(pairs_path), "--out", str(metrics_path)],
+        [
+            sys.executable,
+            "scripts/compute_image_quality_metrics.py",
+            "--pairs",
+            str(pairs_path),
+            "--out",
+            str(metrics_path),
+            "--formal-result-claim",
+        ],
         cwd=".",
         check=True,
     )
     assert json.loads(metrics_path.read_text(encoding="utf-8"))[0]["event_id"] == "event_cli"
     metric_manifest = json.loads((tmp_path / "metric_execution_manifest.json").read_text(encoding="utf-8"))
     assert metric_manifest["artifact_name"] == "metric_execution_manifest.json"
-    assert metric_manifest["formal_result_claim"] is False
+    assert metric_manifest["producer_id"] == "ceg_basic_image_quality_metric_runner"
+    assert metric_manifest["formal_result_claim"] is True
+    assert metric_manifest["metric_readiness"]["overall_decision"] == "pass"
     assert metric_manifest["metric_names"] == ["mse", "mae", "psnr", "ssim"]
 
     specs_path = tmp_path / "paper_figure_specs.json"

@@ -108,6 +108,7 @@ def main() -> None:
     attack_root = output_root / "attack_outputs"
     detection_root = output_root / "detection_outputs"
     baseline_root = output_root / "baseline_outputs"
+    metric_root = output_root / "metric_outputs"
     package_run_root = output_root / "calibrated_paper_results_package"
 
     attack_command = [
@@ -223,6 +224,33 @@ def main() -> None:
         baseline_observations_path = str(baseline_root / "baseline_observations.json")
         baseline_execution_manifest_path = str(baseline_root / "baseline_execution_manifest.json")
 
+    metric_rows_path = metric_root / "quality_metric_rows.json"
+    metric_manifest_path = metric_root / "metric_execution_manifest.json"
+    metric_command = [
+        sys.executable,
+        str(ROOT / "scripts" / "compute_image_quality_metrics.py"),
+        "--pairs",
+        str(image_pairs),
+        "--out",
+        str(metric_rows_path),
+        "--manifest",
+        str(metric_manifest_path),
+        "--formal-result-claim",
+    ]
+    metric_result = _run_command(metric_command)
+    if metric_result["return_code"] != 0:
+        _fail(
+            output_root,
+            failed_step="compute_image_quality_metrics",
+            results={
+                "attack_result": attack_result,
+                "detection_result": detection_result,
+                "baseline_result": baseline_result,
+                "metric_result": metric_result,
+            },
+        )
+        raise SystemExit(int(metric_result["return_code"]))
+
     package_command = [
         sys.executable,
         str(ROOT / "scripts" / "build_calibrated_paper_results_package.py"),
@@ -243,6 +271,7 @@ def main() -> None:
     ]
     _append_optional(package_command, "--baseline-observations", baseline_observations_path)
     _append_optional(package_command, "--baseline-execution-manifest", baseline_execution_manifest_path)
+    package_command.extend(["--metric-rows", str(metric_rows_path), "--metric-execution-manifest", str(metric_manifest_path)])
     if args.allow_incomplete_package:
         package_command.append("--allow-incomplete-package")
     package_result = _run_command(package_command)
@@ -254,6 +283,7 @@ def main() -> None:
                 "attack_result": attack_result,
                 "detection_result": detection_result,
                 "baseline_result": baseline_result,
+                "metric_result": metric_result,
                 "package_result": package_result,
             },
         )
@@ -279,6 +309,7 @@ def main() -> None:
                 "attack_result": attack_result,
                 "detection_result": detection_result,
                 "baseline_result": baseline_result,
+                "metric_result": metric_result,
                 "package_result": package_result,
                 "archive_result": archive_result,
             },
@@ -304,6 +335,7 @@ def main() -> None:
                 "attack_result": attack_result,
                 "detection_result": detection_result,
                 "baseline_result": baseline_result,
+                "metric_result": metric_result,
                 "package_result": package_result,
                 "archive_result": archive_result,
                 "drive_inventory_result": drive_inventory_result,
@@ -342,6 +374,9 @@ def main() -> None:
         "baseline_root": str(baseline_root) if baseline_result is not None else None,
         "baseline_observations_path": baseline_observations_path,
         "baseline_execution_manifest_path": baseline_execution_manifest_path,
+        "metric_root": str(metric_root),
+        "metric_rows_path": str(metric_rows_path),
+        "metric_execution_manifest_path": str(metric_manifest_path),
         "package_run_root": str(package_run_root),
         "paper_results_package_root": str(package_run_root / "paper_results_package"),
         "drive_root": str(Path(args.drive_root).resolve()),
@@ -349,6 +384,7 @@ def main() -> None:
         "attack_result": attack_result,
         "detection_result": detection_result,
         "baseline_result": baseline_result,
+        "metric_result": metric_result,
         "package_result": package_result,
         "archive_result": archive_result,
         "stage_summary_result": stage_summary_result,
@@ -358,6 +394,7 @@ def main() -> None:
                 "detection_command": detection_command,
                 "baseline_observations_path": baseline_observations_path,
                 "baseline_execution_manifest_path": baseline_execution_manifest_path,
+                "metric_command": metric_command,
                 "package_command": package_command,
                 "archive_command": archive_command,
                 "drive_inventory_command": drive_inventory_command,

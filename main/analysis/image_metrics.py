@@ -190,16 +190,26 @@ def compute_global_ssim(reference: ImageArray, candidate: ImageArray) -> float:
 def build_quality_metric_rows(pairs: Iterable[dict[str, str]]) -> list[dict[str, object]]:
     """批量计算图像质量指标行。
 
-    输入每行至少包含 `reference_path` 和 `watermarked_path`, 可选包含 `image_id`、`event_id`
-    和 `method_name`。输出可以继续并入实验 records 或单独写入质量指标文件。
+    输入每行至少包含 `reference_path` / `clean_image_path` 和 `watermarked_path` / `watermarked_image_path`,
+    可选包含 `image_id`、`event_id` 和 `method_name`。输出可以继续并入实验 records 或单独写入质量指标文件。
     """
     rows: list[dict[str, object]] = []
     for pair in pairs:
+        reference_path = pair.get("reference_path") or pair.get("clean_image_path")
+        watermarked_path = pair.get("watermarked_path") or pair.get("watermarked_image_path")
+        if reference_path is None:
+            raise KeyError("quality metric pair missing reference_path or clean_image_path")
+        if watermarked_path is None:
+            raise KeyError("quality metric pair missing watermarked_path or watermarked_image_path")
         metrics = compute_pair_quality_metrics(
-            pair["reference_path"],
-            pair["watermarked_path"],
+            reference_path,
+            watermarked_path,
             image_id=pair.get("image_id") or pair.get("event_id"),
         ).to_record()
+        if "event_id" not in pair and pair.get("image_id"):
+            metrics["event_id"] = f"{pair['image_id']}__positive_source"
+        if "method_name" not in pair:
+            metrics["method_name"] = "ceg"
         for optional_field in ("event_id", "method_name", "split", "sample_role", "attack_family", "attack_condition"):
             if optional_field in pair:
                 metrics[optional_field] = pair[optional_field]

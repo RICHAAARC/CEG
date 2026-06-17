@@ -164,6 +164,10 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
         assert detection_manifest["paper_main_method_ready"] is True
         assert detection_manifest["formal_result_claim"] is True
         assert (out / "baseline_outputs" / "baseline_observations.json").is_file()
+        metric_manifest = json.loads((out / "metric_outputs" / "metric_execution_manifest.json").read_text(encoding="utf-8"))
+        assert metric_manifest["formal_result_claim"] is True
+        assert metric_manifest["metric_readiness"]["overall_decision"] == "pass"
+        assert (out / "metric_outputs" / "quality_metric_rows.json").is_file()
         assert (
             out / "calibrated_paper_results_package" / "paper_results_package" / "paper_results_package_manifest.json"
         ).is_file()
@@ -259,6 +263,9 @@ def test_colab_paper_results_pipeline_runs_formal_baseline_plan(tmp_path: Path) 
         assert baseline_manifest["formal_result_claim"] is True
         assert baseline_manifest["evidence_path_count"] == 1
         assert baseline_manifest["failed_command_count"] == 0
+        assert Path(manifest["metric_execution_manifest_path"]).is_file()
+        metric_manifest = json.loads(Path(manifest["metric_execution_manifest_path"]).read_text(encoding="utf-8"))
+        assert metric_manifest["formal_result_claim"] is True
         assert Path(manifest["drive_result_inventory"]).is_file()
     finally:
         if short_root.exists():

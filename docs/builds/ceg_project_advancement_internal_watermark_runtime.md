@@ -1769,3 +1769,92 @@ watermark_method_ready
 6. 至少一条嵌入路由是否实际修改像素。
 
 `ceg_native_lsb` 仍保持 pilot-only, 不作为论文主方法内容链嵌入原语。
+
+## 37. 本次继续推进: 基础图像质量指标正式证据化
+
+本次补充的目标是让论文结果包不只包含检测统计, 还能够自动产出可用于论文表格的基础图像质量指标。修改位置为:
+
+```text
+main/analysis/image_metrics.py
+scripts/compute_image_quality_metrics.py
+scripts/run_colab_paper_results_pipeline.py
+scripts/run_colab_end_to_end_paper_pipeline.py
+tests/functional/test_image_metrics_and_rendering.py
+tests/functional/test_colab_paper_results_pipeline.py
+```
+
+### 37.1 真实方法链路
+
+`compute_image_quality_metrics.py` 现在作为 CEG 内部真实 CPU 图像质量指标 runner 使用。它从 `image_pairs.json` 读取 clean / watermarked 图像路径, 调用 `main.analysis.image_metrics.build_quality_metric_rows`, 计算以下基础指标:
+
+```text
+mse
+mae
+psnr
+ssim
+```
+
+这些指标不依赖另一个项目, 也不依赖 CEG-WM。它们属于通用论文图像质量表格中常见的轻量指标。LPIPS、FID、CLIP score 等重型指标仍然保留为外部 metric rows 导入机制, 不在默认 CPU 路径中伪造。
+
+### 37.2 readiness 与正式声明
+
+`metric_execution_manifest.json` 新增证据字段:
+
+```text
+producer_id = ceg_basic_image_quality_metric_runner
+producer_role = real_cpu_image_quality_metric_runner
+formal_result_claim
+metric_names
+metric_readiness
+execution_boundary
+```
+
+`metric_readiness` 会逐行检查每个图像对是否都产出了 `mse`、`mae`、`psnr`、`ssim`。只有满足以下条件时, `--formal-result-claim` 才会让 `formal_result_claim=true`:
+
+1. 输入图像对数量大于0。
+2. 每一行都存在全部基础质量指标。
+3. 计算过程真实读取 clean / watermarked 图像, 而不是读取占位字段。
+
+这一实现属于项目特定写法: CEG 不把“有一个指标文件”直接等价为“正式论文结果”, 而是要求 manifest 中存在可审计的 readiness 结果。
+
+### 37.3 与 Colab 论文流水线的关系
+
+`run_colab_paper_results_pipeline.py` 现在在 detection 和 baseline 之后自动执行:
+
+```bash
+python scripts/compute_image_quality_metrics.py \
+  --pairs <workspace>/inputs/images/image_pairs.json \
+  --out <paper_results_pipeline>/metric_outputs/quality_metric_rows.json \
+  --manifest <paper_results_pipeline>/metric_outputs/metric_execution_manifest.json \
+  --formal-result-claim
+```
+
+随后流水线会把以下参数传给 `build_calibrated_paper_results_package.py`:
+
+```text
+--metric-rows
+--metric-execution-manifest
+```
+
+因此, 最终论文结果包可以同时包含:
+
+1. fixed-FPR / TPP 统计。
+2. attack 条件下的检测事件。
+3. 外部 baseline 观测。
+4. CEG 自身 clean / watermarked 图像质量指标。
+5. metric execution manifest 证据。
+
+`run_colab_end_to_end_paper_pipeline.py` 也会在顶层 end-to-end manifest 中透传 `metric_rows_path`、`metric_execution_manifest_path` 和 `metric_root`, 方便 Google Drive 结果包索引和后续论文写作定位。
+
+### 37.4 输入字段兼容
+
+`build_quality_metric_rows` 现在同时支持两类图像对字段:
+
+```text
+reference_path / watermarked_path
+clean_image_path / watermarked_image_path
+```
+
+如果输入来自正式图像生成 backend, 通常会使用 `clean_image_path` 和 `watermarked_image_path`。如果输入来自独立指标实验, 可以使用更通用的 `reference_path` 和 `watermarked_path`。
+
+当 `image_pairs.json` 没有显式 `event_id` 时, CEG 会把图像质量指标挂接到 `image_id__positive_source`, 并默认 `method_name=ceg`。这样做的主要考虑在于: 图像质量指标描述的是原始 clean 图像与 watermarked 图像之间的失真, 它应当绑定到 CEG 正样本源图像, 而不是绑定到攻击后的派生样本。
