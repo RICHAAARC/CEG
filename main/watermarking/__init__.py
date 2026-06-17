@@ -8,8 +8,13 @@ CEG 自包含实现。
 from main.watermarking.content_chain import (
     CONTENT_CHAIN_BACKEND_ID,
     CONTENT_CHAIN_BACKEND_ROLE,
+    CONTENT_CHAIN_EMBEDDING_BACKEND_ID,
+    CONTENT_CHAIN_EMBEDDING_BACKEND_ROLE,
+    ContentChainEmbeddingRequest,
+    ContentChainEmbeddingResult,
     ContentChainRequest,
     ContentChainResult,
+    embed_content_chain_watermark,
     extract_content_chain_evidence,
 )
 from main.watermarking.interfaces import (
@@ -33,6 +38,11 @@ from main.watermarking.semantic_mask import (
 from main.watermarking.native_lsb import NativeLsbWatermarkResult, embed_native_lsb_watermark
 
 __all__ = [
+    "CONTENT_CHAIN_EMBEDDING_BACKEND_ID",
+    "CONTENT_CHAIN_EMBEDDING_BACKEND_ROLE",
+    "ContentChainEmbeddingRequest",
+    "ContentChainEmbeddingResult",
+    "embed_content_chain_watermark",
     "CONTENT_CHAIN_BACKEND_ID",
     "CONTENT_CHAIN_BACKEND_ROLE",
     "ContentChainRequest",

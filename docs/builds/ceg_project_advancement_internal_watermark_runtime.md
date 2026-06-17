@@ -276,3 +276,68 @@ main/watermarking/content_chain/embedding.py
 ```
 
 该模块应基于 semantic mask 分区, 对 LF 区域和 HF 区域施加可控、可复现且有 provenance 的像素或频域扰动。
+
+## 14. 本次继续推进: 内容链 embedding 图像改写原语
+
+在 LF/HF 内容链 scoring 原语之后, 本次继续补充了 embedding 侧图像改写能力:
+
+```text
+main/watermarking/content_chain/embedding.py
+```
+
+该模块让 `semantic mask -> LF/HF routing -> content score` 不再只是检测侧 evidence, 而是具备对应的真实图像改写来源。
+
+### 14.1 已实现能力
+
+1. `mask_false -> lf`:
+   - 在低显著性区域按固定网格施加平滑亮度偏移。
+   - 网格 challenge 由 prompt、mask digest、routing digest 和配置稳定派生。
+   - 输出 `lf_embedding_trace_digest`。
+
+2. `mask_true -> hf`:
+   - 在高显著性区域施加细粒度符号扰动。
+   - 扰动模式由 prompt、mask digest、routing digest 和配置稳定派生。
+   - 使用互补 RGB 通道符号降低整体亮度漂移。
+   - 输出 `hf_embedding_trace_digest`。
+
+3. manifest provenance:
+   - 写出真实 watermarked 图像。
+   - 输出 `embedding_digest`、`changed_pixel_count`、`changed_channel_count`、LF/HF 修改像素数和 diagnostics。
+
+### 14.2 当前真实性边界
+
+该模块执行真实像素改写, 不是 mock、复制图像或空产物。
+但它仍然不是完整论文主方法, 因为尚未实现:
+
+1. 攻击后的几何同步和 recovery。
+2. Attestation 事件绑定。
+3. 图像生成 backend 中对该 embedding 原语的正式接入。
+4. detection producer 中对该 content chain score 的正式接入。
+5. 固定 FPR 阈值校准和 TPP@FPR 统计闭环。
+
+因此模块输出仍然保留:
+
+```text
+paper_main_method_ready = false
+```
+
+### 14.3 与 CEG-WM 的关系
+
+本次只参考 CEG-WM 的 LF/HF 双通道思想和 trace digest 思路。
+没有迁入 CEG-WM 的 LDPC 约束、paper faithfulness gate、runtime resolver、复杂流程框架或门禁逻辑。
+
+### 14.4 下一步
+
+下一步应把该 embedding 原语接入真实图像生成 backend:
+
+```text
+scripts/run_pilot_real_image_generation_backend.py
+```
+
+建议保留 `ceg_native_lsb` 作为 pilot fallback, 新增可选 backend:
+
+```text
+ceg_content_chain_embedding
+```
+
+该 backend 应写出 `image_pairs.json`、`image_generation_manifest.json` 和 `image_pair_manifest.json` 中可追溯的 embedding provenance。
