@@ -1571,3 +1571,50 @@ paper_writing_index.md
 ```
 
 这意味着一个可用于论文写作的结果包不能只包含零散表格和图, 还必须包含统一导航索引。该索引不改变指标计算结果, 只增强交付物的可审计性和可写作性。
+
+## 33. 本次继续推进: Drive 结果目录反查清单
+
+本次补充了 Colab 正式运行后面向 `Google Drive` / `MyDrive` 目录的结果反查工具。修改位置为:
+
+```text
+experiments/drive_result_inventory.py
+scripts/build_drive_result_inventory.py
+tests/functional/test_drive_result_inventory.py
+```
+
+### 33.1 功能定位
+
+该能力不参与水印方法本身, 也不重新计算指标。它的作用是在 Colab 跑完后, 对 `/content/drive/MyDrive/CEG` 或 Windows 映射目录中的结果产物进行统一盘点。
+
+盘点范围包括:
+
+```text
+package_manifests/
+package_snapshots/
+package_archives/
+archives/image_generation_outputs/
+```
+
+### 33.2 可解决的问题
+
+论文结果包进入写作阶段前, 需要确认以下产物是否能被反查:
+
+1. 图像生成阶段的 zip 归档是否存在。
+2. 论文结果包 snapshot 是否存在。
+3. 论文结果包 zip 是否存在。
+4. package archive manifest 是否能解析。
+5. package validation 是否为 pass。
+6. 每个归档的 run_id、digest、路径和文件计数是否可见。
+
+### 33.3 运行方式
+
+在 Colab 或本地 Drive 映射目录中可运行:
+
+```bash
+python scripts/build_drive_result_inventory.py \
+  --drive-root /content/drive/MyDrive/CEG \
+  --out /content/drive/MyDrive/CEG/drive_result_inventory.json \
+  --require-pass
+```
+
+若只有论文结果包而没有图像生成归档, 清单会判定为 `fail`。这是因为论文发表结果包原则上既需要指标表格和图表, 也需要示例水印图像及其生成证据。
