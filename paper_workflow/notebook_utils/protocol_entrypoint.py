@@ -5,8 +5,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from experiments.pilot_input_value_pack import VALUE_PACK_NAME
+from experiments.pilot_input_value_pack_sheet import FILL_SHEET_NAME
+from experiments.pilot_p0_input_freeze import (
+    P0_INPUT_FREEZE_MARKDOWN_NAME,
+    P0_INPUT_FREEZE_REPORT_NAME,
+    write_pilot_p0_input_freeze_report,
+)
 from experiments.protocol_runner import run_paper_protocol
 from paper_workflow.colab_utils.cold_start import build_colab_formal_run_checklist, run_colab_cold_start_pipeline, write_colab_formal_run_checklist
+
+
+P0_INPUT_FREEZE_DRY_RUN_REPORT_NAME = "pilot_p0_input_freeze_dry_run_report.json"
+P0_INPUT_FREEZE_DRY_RUN_MARKDOWN_NAME = "pilot_p0_input_freeze_dry_run_report.md"
 
 
 def run_profile_from_notebook(
@@ -20,6 +31,51 @@ def run_profile_from_notebook(
     Notebook 只负责传入事件 rows、profile 和阈值映射。正式协议执行、baseline 适配、结果聚合和产物构造均由 repository modules 完成。
     """
     return run_paper_protocol(event_rows, profile=profile, content_thresholds=content_thresholds)
+
+
+def run_p0_input_freeze_from_notebook(
+    workspace_root: str | Path,
+    *,
+    value_pack_path: str | Path | None = None,
+    fill_sheet_path: str | Path | None = None,
+    dry_run: bool = True,
+    require_pass: bool = False,
+    output_json_path: str | Path | None = None,
+    output_markdown_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """供 Notebook 调度 P0 输入冻结门禁。
+
+    该入口只调用 repository module, 不在 Notebook helper 中实现 CSV 导入、
+    value pack 应用或正式报告拼接逻辑。默认使用 dry-run, 目的是避免
+    Notebook 单元格在未确认前改写真正的 pilot value pack 和输入模板。
+    """
+    workspace = Path(workspace_root)
+    value_pack = Path(value_pack_path) if value_pack_path is not None else workspace / VALUE_PACK_NAME
+    fill_sheet = Path(fill_sheet_path) if fill_sheet_path is not None else workspace / FILL_SHEET_NAME
+    if output_json_path is None:
+        output_json = workspace / (P0_INPUT_FREEZE_DRY_RUN_REPORT_NAME if dry_run else P0_INPUT_FREEZE_REPORT_NAME)
+    else:
+        output_json = Path(output_json_path)
+    if output_markdown_path is None:
+        output_markdown = workspace / (
+            P0_INPUT_FREEZE_DRY_RUN_MARKDOWN_NAME if dry_run else P0_INPUT_FREEZE_MARKDOWN_NAME
+        )
+    else:
+        output_markdown = Path(output_markdown_path)
+
+    report = write_pilot_p0_input_freeze_report(
+        workspace_root=workspace,
+        value_pack_path=value_pack,
+        fill_sheet_path=fill_sheet,
+        dry_run=dry_run,
+        output_json_path=output_json,
+        output_markdown_path=output_markdown,
+    )
+    if require_pass and report["overall_decision"] != "pass":
+        first_blocking = report.get("first_blocking_gate") or {}
+        gate_id = first_blocking.get("gate_id", "unknown_gate")
+        raise RuntimeError(f"P0 输入冻结门禁未通过: {gate_id}")
+    return report
 
 
 def run_colab_paper_outputs_from_notebook(
