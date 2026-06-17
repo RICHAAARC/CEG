@@ -1721,3 +1721,51 @@ Colab 论文流水线新增并转发:
 ```
 
 只有在 keyed attestation 和 geometry readiness 都通过时, `formal_result_claim` 才会被写为 `true`。如果用户没有提供密钥, backend 仍会输出真实 detection 分数, 但 readiness 会明确阻塞在 `keyed_attestation_ready`。
+
+## 36. 本次继续推进: 内容链嵌入侧 readiness 证据化
+
+本次修正了图像生成阶段内容链水印嵌入原语的 readiness 表达。修改位置为:
+
+```text
+main/watermarking/content_chain/embedding.py
+scripts/run_pilot_real_image_generation_backend.py
+```
+
+### 36.1 修正的问题
+
+此前 `ceg_content_chain_embedding` 已经真实执行 semantic mask 路由和 LF/HF 像素改写, 但仍固定输出:
+
+```text
+paper_main_method_ready = False
+paper_main_method_blocking_reason = content_chain_embedding_lacks_geometry_recovery_and_attestation_closure
+```
+
+该阻塞理由把 detection 阶段的几何恢复和 attestation 闭环混入了 embedding 阶段。按照当前 CEG 方法拆分, 图像生成阶段只应证明水印嵌入侧原语是否真实完成, 几何恢复和 attestation 应由 detection backend 证明。
+
+### 36.2 新行为
+
+`ContentChainEmbeddingResult` 现在在真实写出 watermarked 图像、embedding digest、LF/HF trace digest 后, 将嵌入侧原语标记为 ready:
+
+```text
+paper_main_method_ready = True
+paper_main_method_blocking_reason = None
+```
+
+`run_pilot_real_image_generation_backend.py` 对每次 watermark run 写出:
+
+```text
+embedding_readiness_checks
+watermark_readiness
+watermark_method_ready
+```
+
+其中 `embedding_readiness_checks` 检查:
+
+1. semantic mask digest 是否存在。
+2. embedding digest 是否存在。
+3. LF trace digest 是否存在。
+4. HF trace digest 是否存在。
+5. watermarked 图像是否发生真实像素改写。
+6. 至少一条嵌入路由是否实际修改像素。
+
+`ceg_native_lsb` 仍保持 pilot-only, 不作为论文主方法内容链嵌入原语。

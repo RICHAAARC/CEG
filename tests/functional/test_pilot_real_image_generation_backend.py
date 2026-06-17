@@ -114,4 +114,9 @@ def test_content_chain_watermark_backend_writes_real_outputs(tmp_path: Path) -> 
     assert report["changed_pixel_count"] > 0
     assert len(report["embedding_digest"]) == 64
     assert len(report["semantic_mask_digest"]) == 64
-    assert report["paper_main_method_ready"] is False
+    assert report["paper_main_method_ready"] is True
+    assert report["paper_main_method_blocking_reason"] is None
+    assert report["embedding_readiness_checks"]["overall_decision"] == "pass"
+    readiness = backend._summarize_watermark_readiness([report])
+    assert readiness["overall_decision"] == "pass"
+    assert readiness["ready_count"] == 1

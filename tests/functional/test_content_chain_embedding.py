@@ -83,7 +83,8 @@ def test_content_chain_embedding_writes_real_watermarked_image(tmp_path: Path) -
     assert record["changed_channel_count"] > 0
     assert record["lf_modified_pixel_count"] > 0
     assert record["hf_modified_pixel_count"] > 0
-    assert record["paper_main_method_ready"] is False
+    assert record["paper_main_method_ready"] is True
+    assert record["paper_main_method_blocking_reason"] is None
     assert len(record["embedding_digest"]) == 64
 
 

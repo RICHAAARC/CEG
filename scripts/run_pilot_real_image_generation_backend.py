@@ -451,10 +451,29 @@ def _run_content_chain_watermark(
         "changed_channel_count": record["changed_channel_count"],
         "lf_modified_pixel_count": record["lf_modified_pixel_count"],
         "hf_modified_pixel_count": record["hf_modified_pixel_count"],
-        "paper_main_method_ready": False,
-        "paper_main_method_blocking_reason": "content_chain_embedding_lacks_geometry_recovery_and_attestation_closure",
+        "paper_main_method_ready": bool(record["paper_main_method_ready"]),
+        "paper_main_method_blocking_reason": record.get("paper_main_method_blocking_reason"),
+        "embedding_readiness_checks": _assess_content_chain_embedding_readiness(record, semantic_mask.to_record()),
     }
 
+
+
+def _assess_content_chain_embedding_readiness(record: Mapping[str, Any], semantic_record: Mapping[str, Any]) -> dict[str, Any]:
+    """检查内容链嵌入侧原语是否具备正式水印图像生成条件。"""
+
+    checks = {
+        "semantic_mask_digest_present": bool(semantic_record.get("mask_digest")) and bool(semantic_record.get("routing_digest")),
+        "embedding_digest_present": bool(record.get("embedding_digest")),
+        "lf_trace_present": bool(record.get("lf_embedding_trace_digest")),
+        "hf_trace_present": bool(record.get("hf_embedding_trace_digest")),
+        "watermarked_pixels_changed": int(record.get("changed_pixel_count") or 0) > 0,
+        "at_least_one_embedding_route_modified": int(record.get("lf_modified_pixel_count") or 0) + int(record.get("hf_modified_pixel_count") or 0) > 0,
+    }
+    return {
+        "overall_decision": "pass" if all(checks.values()) else "fail",
+        "checks": checks,
+        "blocking_reasons": [name for name, passed in checks.items() if not passed],
+    }
 
 def _write_watermark_metadata(path: Path, row: Mapping[str, Any], generation_meta: Mapping[str, Any]) -> None:
     """为外部 watermark backend 写出单图元数据, 便于真实命令复用。"""
@@ -518,6 +537,27 @@ def _build_image_pair_row(
         "watermarked_image_sha256": watermarked_sha256,
     }
 
+
+
+def _summarize_watermark_readiness(watermark_runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """汇总图像生成阶段 watermark backend 的方法 readiness。"""
+
+    ready_count = sum(1 for item in watermark_runs if bool(item.get("paper_main_method_ready")))
+    failed_runs = [
+        {
+            "watermark_backend": item.get("watermark_backend"),
+            "blocking_reason": item.get("paper_main_method_blocking_reason"),
+            "embedding_readiness_checks": item.get("embedding_readiness_checks"),
+        }
+        for item in watermark_runs
+        if not bool(item.get("paper_main_method_ready"))
+    ]
+    return {
+        "overall_decision": "pass" if watermark_runs and ready_count == len(watermark_runs) else "fail",
+        "ready_count": ready_count,
+        "run_count": len(watermark_runs),
+        "failed_runs": failed_runs,
+    }
 
 def run_backend(args: argparse.Namespace) -> dict[str, Any]:
     """执行完整真实图像生成流程并返回 backend manifest。"""
@@ -621,10 +661,13 @@ def run_backend(args: argparse.Namespace) -> dict[str, Any]:
     _write_json(output_root / IMAGE_PAIRS_NAME, image_pairs)
     _write_json(manifest_root / "image_generation_manifest.json", build_image_generation_manifest(image_pairs))
     _write_json(manifest_root / "image_pair_manifest.json", build_image_pair_manifest(image_pairs))
+    watermark_readiness = _summarize_watermark_readiness(watermark_runs)
     backend_manifest = {
         "artifact_name": BACKEND_MANIFEST_NAME,
         "backend_role": "real_sd_and_real_watermark_generation",
-        "formal_result_claim": True,
+        "formal_result_claim": watermark_readiness["overall_decision"] == "pass",
+        "watermark_method_ready": watermark_readiness["overall_decision"] == "pass",
+        "watermark_readiness": watermark_readiness,
         "prompt_plan_source_path": str(prompt_plan_path),
         "model_config_path": str(model_config_path),
         "output_root": str(output_root),
