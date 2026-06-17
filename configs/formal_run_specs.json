@@ -1,0 +1,54 @@
+{
+  "schema_version": "ceg_formal_run_specs_v1",
+  "default_profile": "paper_main_probe",
+  "profiles": {
+    "paper_main_probe": {
+      "purpose": "最小真实端到端探针运行, 用于确认 Colab GPU、真实 SD、水印、攻击、检测、校准和归档链路可闭环。",
+      "min_image_pair_count": 1,
+      "recommended_image_pair_count": 4,
+      "required_splits": ["calibration"],
+      "required_attack_families": ["brightness_contrast"],
+      "target_fpr": 0.01,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding",
+      "require_run_image_generation": true,
+      "require_evidence": false,
+      "require_image_examples": false,
+      "required_external_baselines": [],
+      "min_gpu_vram_gb": 16,
+      "recommended_gpu_vram_gb": 24
+    },
+    "paper_main_pilot": {
+      "purpose": "中等规模论文主线试运行, 用于确认 attack 和 baseline 对比表格在正式输入上稳定生成。",
+      "min_image_pair_count": 64,
+      "recommended_image_pair_count": 128,
+      "required_splits": ["calibration", "test"],
+      "required_attack_families": ["brightness_contrast", "gaussian_noise", "rotate", "resize", "jpeg"],
+      "target_fpr": 0.01,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding",
+      "require_run_image_generation": true,
+      "require_evidence": true,
+      "require_image_examples": true,
+      "required_external_baselines": ["tree_ring", "gaussian_shading", "shallow_diffuse", "stable_signature_dee"],
+      "min_gpu_vram_gb": 16,
+      "recommended_gpu_vram_gb": 24
+    },
+    "paper_main_full": {
+      "purpose": "论文主表正式运行, 用于产出论文表格、图像示例、攻击鲁棒性结论和外部 baseline 对比结果。",
+      "min_image_pair_count": 512,
+      "recommended_image_pair_count": 1000,
+      "required_splits": ["calibration", "test"],
+      "required_attack_families": ["brightness_contrast", "gaussian_noise", "rotate", "resize", "jpeg"],
+      "target_fpr": 0.01,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding",
+      "require_run_image_generation": true,
+      "require_evidence": true,
+      "require_image_examples": true,
+      "required_external_baselines": ["tree_ring", "gaussian_shading", "shallow_diffuse", "stable_signature_dee"],
+      "min_gpu_vram_gb": 24,
+      "recommended_gpu_vram_gb": 40
+    }
+  }
+}

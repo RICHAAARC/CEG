@@ -93,6 +93,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="校验 CEG Colab 端到端正式论文结果包运行。")
     parser.add_argument("--manifest", required=True, help="colab_end_to_end_paper_pipeline_manifest.json 路径。")
     parser.add_argument("--out", required=True, help="正式运行验收报告输出路径。")
+    parser.add_argument("--profile", default=None, help="正式运行规格 profile, 默认读取端到端 manifest 中的 paper pipeline profile。")
+    parser.add_argument("--formal-run-spec", default="configs/formal_run_specs.json", help="formal_run_specs.json 路径。")
     parser.add_argument("--allow-existing-image-generation", action="store_true", help="允许使用已存在图像生成产物续跑。正式 GPU 验收默认不允许。")
     parser.add_argument("--allow-incomplete-package", action="store_true", help="允许调试结果包未通过严格 readiness。")
     parser.add_argument("--allow-invalid-archive", action="store_true", help="允许调试归档未通过严格 package validation。")
@@ -116,11 +118,20 @@ def main() -> None:
     image_acceptance_report = output_root / "formal_image_generation_acceptance_report.json"
     package_acceptance_report = output_root / "formal_paper_results_package_acceptance_report.json"
     archive_acceptance_report = output_root / "formal_mydrive_archive_acceptance_report.json"
+    formal_run_spec_report = output_root / "formal_run_spec_validation_report.json"
 
     image_output_root = Path(str(manifest.get("image_output_root") or ""))
     paper_package_root = Path(str(manifest.get("paper_results_package_root") or ""))
     drive_root = Path(str(manifest.get("drive_root") or ""))
     run_id = str(manifest.get("run_id") or "")
+    paper_pipeline_result = manifest.get("paper_pipeline_result")
+    paper_pipeline_command = paper_pipeline_result.get("command", []) if isinstance(paper_pipeline_result, dict) else []
+    profile = args.profile
+    if profile is None and isinstance(paper_pipeline_command, list) and "--profile" in paper_pipeline_command:
+        profile_index = paper_pipeline_command.index("--profile")
+        if profile_index + 1 < len(paper_pipeline_command):
+            profile = str(paper_pipeline_command[profile_index + 1])
+    profile = profile or "paper_main_probe"
 
     checks: list[dict[str, Any]] = []
     command_results: dict[str, dict[str, Any]] = {}
@@ -138,6 +149,34 @@ def main() -> None:
             "status": "pass" if manifest.get("run_image_generation") is True or args.allow_existing_image_generation else "fail",
             "actual": manifest.get("run_image_generation"),
             "allow_existing_image_generation": bool(args.allow_existing_image_generation),
+        }
+    )
+
+    spec_command = [
+        sys.executable,
+        str(ROOT / "scripts" / "validate_formal_run_spec.py"),
+        "--manifest",
+        str(manifest_path),
+        "--profile",
+        profile,
+        "--spec",
+        str(args.formal_run_spec),
+        "--out",
+        str(formal_run_spec_report),
+        "--require-pass",
+    ]
+    if args.allow_existing_image_generation:
+        spec_command.insert(-1, "--allow-existing-image-generation")
+    command_results["formal_run_spec_validation"] = _run_command(spec_command)
+    spec_decision, spec_report, spec_error = _read_report_decision(formal_run_spec_report)
+    checks.append(
+        {
+            "check_name": "formal_run_spec_validation_pass",
+            "status": "pass" if spec_decision == "pass" else "fail",
+            "overall_decision": spec_decision,
+            "error": spec_error,
+            "profile": profile,
+            "failing_check_count": spec_report.get("summary", {}).get("failing_check_count") if spec_report else None,
         }
     )
 
@@ -231,7 +270,9 @@ def main() -> None:
         "source_manifest_path": str(manifest_path),
         "workspace": manifest.get("workspace"),
         "run_id": run_id,
+        "profile": profile,
         "run_image_generation": manifest.get("run_image_generation"),
+        "formal_run_spec": str(args.formal_run_spec),
         "allow_existing_image_generation": bool(args.allow_existing_image_generation),
         "allow_incomplete_package": bool(args.allow_incomplete_package),
         "allow_invalid_archive": bool(args.allow_invalid_archive),
@@ -241,6 +282,7 @@ def main() -> None:
         "paper_results_package_root": str(paper_package_root),
         "drive_root": str(drive_root),
         "subreport_paths": {
+            "formal_run_spec_validation": str(formal_run_spec_report),
             "image_generation_acceptance": str(image_acceptance_report),
             "paper_results_package_acceptance": str(package_acceptance_report),
             "mydrive_archive_acceptance": str(archive_acceptance_report),
@@ -250,6 +292,7 @@ def main() -> None:
         "summary": {
             "check_count": len(checks),
             "failing_check_count": len(failing_checks),
+            "formal_run_spec_decision": spec_decision,
             "image_pair_count": image_report.get("summary", {}).get("image_pair_count") if image_report else None,
             "package_blocking_issue_count": package_report.get("summary", {}).get("blocking_issue_count") if package_report else None,
             "archive_blocking_issue_count": archive_report.get("summary", {}).get("blocking_issue_count") if archive_report else None,

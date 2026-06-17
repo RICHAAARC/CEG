@@ -1423,3 +1423,94 @@ acceptance_digest
 ```
 
 该报告用于判断当前 Google Drive 中的结果包是否已经可以作为论文写作与对比实验表格的数据来源。
+
+## 31. 本次继续推进: formal run specs 与规模验收
+
+本次补充了正式运行规格配置与校验入口:
+
+```text
+configs/formal_run_specs.json
+experiments/formal_run_spec.py
+scripts/validate_formal_run_spec.py
+```
+
+### 31.1 为什么需要 formal run specs
+
+此前项目已经具备端到端 Colab 流水线和正式验收脚本, 但 `paper_main_probe`、`paper_main_pilot` 和 `paper_main_full` 的运行规模主要依赖人工理解。对于论文结果包而言, 这会导致两个风险:
+
+1. 最小探针运行可能被误认为正式论文主表运行。
+2. full 运行是否覆盖足够样本、攻击族、baseline 和 evidence 缺少机器可读判断。
+
+因此本次把正式运行要求落成配置文件, 由验收脚本读取并生成结构化报告。
+
+### 31.2 新增规格字段
+
+`configs/formal_run_specs.json` 为每个 profile 声明:
+
+```text
+min_image_pair_count
+recommended_image_pair_count
+required_splits
+required_attack_families
+target_fpr
+sd_model_id
+watermark_backend
+require_run_image_generation
+require_evidence
+require_image_examples
+required_external_baselines
+min_gpu_vram_gb
+recommended_gpu_vram_gb
+```
+
+当前主线规格为:
+
+```text
+paper_main_probe: 最小真实端到端探针, min_image_pair_count=1
+paper_main_pilot: 中等规模正式试运行, min_image_pair_count=64
+paper_main_full: 论文主表正式运行, min_image_pair_count=512
+```
+
+该配置不会改变 CEG 主方法, 只用于判断一次 Colab 运行结果是否满足论文交付级别。
+
+### 31.3 与正式验收脚本的关系
+
+`validate_colab_end_to_end_formal_run.py` 现在会调用:
+
+```text
+scripts/validate_formal_run_spec.py
+```
+
+并把其报告路径写入:
+
+```text
+subreport_paths.formal_run_spec_validation
+```
+
+这意味着最终正式验收报告不仅检查文件是否存在, 还会检查当前运行是否满足所选 profile 的最小规模和覆盖要求。
+
+### 31.4 典型用法
+
+检查最小 probe 运行:
+
+```bash
+python scripts/validate_colab_end_to_end_formal_run.py \
+  --manifest /content/drive/MyDrive/CEG/.../colab_end_to_end_paper_pipeline_manifest.json \
+  --profile paper_main_probe \
+  --out /content/drive/MyDrive/CEG/.../colab_end_to_end_formal_run_acceptance_report.json \
+  --require-pass
+```
+
+检查论文主表 full 运行:
+
+```bash
+python scripts/validate_colab_end_to_end_formal_run.py \
+  --manifest /content/drive/MyDrive/CEG/.../colab_end_to_end_paper_pipeline_manifest.json \
+  --profile paper_main_full \
+  --out /content/drive/MyDrive/CEG/.../colab_end_to_end_formal_run_acceptance_report.json \
+  --require-evidence \
+  --require-image-examples \
+  --require-pass
+```
+
+若只有 1 个 image pair 的 probe 结果被指定为 `paper_main_full`, 规格验收会失败。这可以防止把调试探针误作为正式论文结果包。
