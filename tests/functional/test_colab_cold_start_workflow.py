@@ -22,6 +22,13 @@ def test_colab_notebook_is_parseable_and_delegates_to_helpers() -> None:
     source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
 
     assert notebook["nbformat"] == 4
+    assert "run_p0_input_freeze_from_notebook" in source
+    assert "RUN_P0_INPUT_FREEZE" in source
+    assert "P0_DRY_RUN" in source
+    assert "P0_REQUIRE_PASS" in source
+    assert "PILOT_WORKSPACE_ROOT" in source
+    assert "pilot_p0_input_freeze_dry_run_report" in source
+    assert "pilot_p0_input_freeze_report" in source
     assert "run_colab_paper_outputs_from_notebook" in source
     assert "write_colab_formal_run_checklist_from_notebook" in source
     assert 'REPO_BRANCH = ""' in source
