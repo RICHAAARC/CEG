@@ -24,6 +24,7 @@ REQUIRED_VARIABLES = (
     "prompt_plan_path",
     "output_root",
     "model_config_path",
+    "external_backend_command_json_path",
 )
 
 
@@ -50,10 +51,12 @@ def build_launch_variables_template(*, workspace_root: str | Path) -> dict[str, 
         "prompt_plan_path": str(root / "inputs" / "prompts" / "prompt_plan.draft.json"),
         "output_root": str(root / "inputs" / "images"),
         "model_config_path": str(root / "configs" / "model_config.draft.json"),
+        "external_backend_command_json_path": str(root / "configs" / "p2_external_backend_command.draft.json"),
         "instructions": [
             "把 image_generation_root_placeholder 替换为 image_generation_root.",
             "确认 prompt_plan_path、output_root 和 model_config_path 均指向真实 pilot 工作区文件.",
             "执行前必须先让 pilot_execution_readiness_report.json 为 pass.",
+            "正式 Colab 执行前必须把 p2_external_backend_command.draft.json 中的 external_command_placeholder 替换为 external_command.",
         ],
     }
 

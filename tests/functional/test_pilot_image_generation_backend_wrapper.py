@@ -45,6 +45,45 @@ def test_pilot_image_generation_backend_wrapper_requires_external_command(tmp_pa
 
 
 @pytest.mark.quick
+def test_pilot_image_generation_backend_wrapper_rejects_placeholder_command_file(tmp_path) -> None:
+    """包装入口读取命令文件时, 必须拒绝尚未替换的 placeholder 草稿。"""
+    prompt_plan = tmp_path / "prompt_plan.json"
+    model_config = tmp_path / "model_config.json"
+    command_file = tmp_path / "p2_external_backend_command.draft.json"
+    output_root = tmp_path / "images"
+    prompt_plan.write_text(json.dumps({"prompts": []}), encoding="utf-8")
+    model_config.write_text(json.dumps({"model_id": "test"}), encoding="utf-8")
+    command_file.write_text(
+        json.dumps({"external_command_placeholder": ["python", "/content/replace_with_backend.py"]}),
+        encoding="utf-8",
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_pilot_image_generation_backend.py",
+            "--prompt-plan",
+            str(prompt_plan),
+            "--out",
+            str(output_root),
+            "--model-config",
+            str(model_config),
+            "--external-command-json-file",
+            str(command_file),
+            "--require-pass",
+        ],
+        cwd=".",
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    report = json.loads((output_root / "pilot_image_generation_backend_wrapper_report.json").read_text(encoding="utf-8"))
+    assert completed.returncode == 1
+    assert report["blocking_issue"] == "external_command_json_file_placeholder_not_replaced"
+
+
+@pytest.mark.quick
 def test_pilot_image_generation_backend_wrapper_accepts_real_backend_outputs(tmp_path) -> None:
     """真实 backend 写出契约文件后, 包装入口应运行 P2 接收门禁。"""
     prompt_plan = tmp_path / "prompt_plan.json"

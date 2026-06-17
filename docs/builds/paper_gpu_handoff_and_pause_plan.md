@@ -418,4 +418,4 @@ D:/Code/CEG/scripts/run_pilot_image_generation_backend.py
 3. Hugging Face token: 用户已确认在 Colab 环境定义, 仓库和落盘产物不得保存 token。
 4. 仓库内 P2 包装入口: `scripts/run_pilot_image_generation_backend.py`。
 5. 该入口不是模型实现, 只负责调用用户提供的真实外部 SD / watermark backend, 然后运行 P2 输出接收门禁。
-6. 当前 handoff 的 warning `external_backend_command_required` 表示正式执行前必须追加真实 backend 命令。
+6. 当前 handoff 的 warning `command_file_draft_placeholder` 表示正式执行前必须追加真实 backend 命令。

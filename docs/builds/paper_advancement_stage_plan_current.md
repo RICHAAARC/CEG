@@ -747,7 +747,7 @@ python /content/CEG/scripts/run_pilot_image_generation_backend.py --prompt-plan 
 当前命令计划已经不再缺少仓库入口, 但仍有一个执行前 warning:
 
 ```text
-external_backend_command_required
+command_file_draft_placeholder
 ```
 
 含义是: 正式 Colab 执行前, 需要通过 `--external-command-json` 或 `--external-command` 追加真实 SD / watermark backend 命令。该 backend 必须最终产出 P2 接收门禁要求的文件:
@@ -764,3 +764,29 @@ inputs/images/image_manifests/image_pair_manifest.json
 ### 28.4 阶段结论
 
 P0 和 P1 已通过。P2 已具备 Colab GPU handoff 和仓库内包装入口, 但尚未获得真实 GPU 生成的 clean / watermarked 图像与 manifests。因此当前阶段仍停留在 `p2_image_generation_outputs`, 不能进入 attack 或 TPR@FPR 统计阶段。
+
+## 29. 2026-06-17 P2 外部 backend 命令草稿落盘
+
+### 29.1 新增落盘文件
+
+真实工作区已生成外部 backend 命令草稿:
+
+```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/configs/p2_external_backend_command.draft.json
+```
+
+该文件目前仍包含 `external_command_placeholder`, 因此不能作为正式命令执行。用户在 Colab 中需要把该字段替换为 `external_command`, 值必须是真实 SD / watermark backend 的 argv 字符串列表。
+
+### 29.2 当前可复制 Colab 包装命令
+
+```text
+python /content/CEG/scripts/run_pilot_image_generation_backend.py --prompt-plan /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/prompts/prompt_plan.draft.json --out /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images --model-config /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/configs/model_config.draft.json --external-command-json-file /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/configs/p2_external_backend_command.draft.json
+```
+
+### 29.3 当前 warning 的精确定义
+
+```text
+command_file_draft_placeholder
+```
+
+含义是: 仓库内 P2 包装入口和命令文件路径均已具备, 但命令文件尚未替换为真实 GPU backend。该状态下仍不能进入 P3 attack, 也不能统计 TPR@FPR。

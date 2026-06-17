@@ -150,16 +150,58 @@ def _command_uses_backend_wrapper(command: Any) -> bool:
     return Path(str(entrypoint).replace("\\", "/")).name == "run_pilot_image_generation_backend.py"
 
 
-def _command_has_external_backend_argument(command: Any) -> bool:
-    """判断包装入口命令是否已经携带真实外部 backend 参数。
+def _from_colab_path(value: str) -> str:
+    """把已知 Colab 路径映射回本地 Windows 路径, 用于检查 MyDrive 草稿文件。"""
+    normalized = value.replace("\\", "/")
+    replacements = (
+        (COLAB_DRIVE_WORKSPACE_PREFIX, WINDOWS_DRIVE_WORKSPACE_PREFIX_ALT),
+        (COLAB_REPO_PREFIX, WINDOWS_REPO_PREFIX_ALT),
+    )
+    for source, target in replacements:
+        if normalized.startswith(source):
+            return target + normalized[len(source) :]
+    return value
 
-    该检查只做结构性提示, 不验证外部 backend 是否真实存在或是否能下载模型。
-    真实可用性必须在 Colab GPU 环境中执行命令后由 P2 接收门禁确认。
+
+def _argument_after(command: list[Any], flag: str) -> str | None:
+    """读取 argv 中某个 flag 后面的值。"""
+    values = [str(part) for part in command]
+    if flag not in values:
+        return None
+    index = values.index(flag)
+    if index + 1 >= len(values):
+        return None
+    return values[index + 1]
+
+
+def _external_backend_command_status(command: Any) -> str:
+    """判断包装入口命令是否已经指向真实外部 backend 命令。
+
+    该检查不会运行 backend, 只读取 argv 或 MyDrive JSON 草稿的结构。
+    真实可用性仍必须在 Colab GPU 环境中执行后由 P2 接收门禁确认。
     """
     if not isinstance(command, list):
-        return False
+        return "required_before_execution"
     arguments = {str(part) for part in command}
-    return "--external-command" in arguments or "--external-command-json" in arguments
+    if "--external-command" in arguments or "--external-command-json" in arguments:
+        return "provided_inline_unverified"
+    file_value = _argument_after(command, "--external-command-json-file")
+    if file_value is None:
+        return "required_before_execution"
+    local_path = Path(_from_colab_path(file_value))
+    if not local_path.is_file():
+        return "command_file_missing"
+    try:
+        payload = json.loads(local_path.read_text(encoding="utf-8-sig"))
+    except Exception:  # pragma: no cover - 具体错误由 JSON / IO 决定
+        return "command_file_unreadable"
+    if isinstance(payload, dict) and "external_command" in payload:
+        return "command_file_provided_unverified"
+    if isinstance(payload, list):
+        return "command_file_provided_unverified"
+    if isinstance(payload, dict) and "external_command_placeholder" in payload:
+        return "command_file_draft_placeholder"
+    return "command_file_missing_external_command"
 
 def _build_entrypoint_checks(*, repo_root: Path, colab_command_plan: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """检查 Colab 命令中的仓库内 Python 入口是否存在。
@@ -195,7 +237,7 @@ def _build_entrypoint_checks(*, repo_root: Path, colab_command_plan: list[dict[s
         exists = local_path.is_file()
         command = row.get("command")
         uses_wrapper = _command_uses_backend_wrapper(command)
-        has_external_backend_argument = _command_has_external_backend_argument(command)
+        external_backend_status = _external_backend_command_status(command) if uses_wrapper else "not_applicable"
         checks.append(
             {
                 "command_index": index,
@@ -204,11 +246,7 @@ def _build_entrypoint_checks(*, repo_root: Path, colab_command_plan: list[dict[s
                 "repo_relative_path": relative,
                 "local_path": str(local_path),
                 "uses_p2_backend_wrapper": uses_wrapper,
-                "external_backend_command_status": (
-                    "provided" if has_external_backend_argument else "required_before_execution"
-                )
-                if uses_wrapper
-                else "not_applicable",
+                "external_backend_command_status": external_backend_status,
                 "message": (
                     "仓库内入口存在, Colab 中 clone 或上传仓库后可定位该脚本。"
                     if exists
@@ -231,15 +269,29 @@ def _execution_warnings(entrypoint_checks: list[dict[str, Any]]) -> list[dict[st
                     "message": str(check.get("message")),
                 }
             )
-        if check.get("external_backend_command_status") == "required_before_execution":
+        external_status = check.get("external_backend_command_status")
+        if external_status == "required_before_execution":
             warnings.append(
                 {
                     "warning_type": "external_backend_command_required",
                     "entrypoint": str(check.get("entrypoint")),
                     "message": (
-                        "仓库内 P2 包装入口已经存在, 但命令计划尚未携带 --external-command-json "
-                        "或 --external-command。正式执行前需要在 Colab 中追加真实 SD / watermark backend 命令。"
+                        "仓库内 P2 包装入口已经存在, 但命令计划尚未携带 --external-command-json-file、"
+                        "--external-command-json 或 --external-command。正式执行前需要在 Colab 中追加真实 SD / watermark backend 命令。"
                     ),
+                }
+            )
+        elif external_status in {
+            "command_file_missing",
+            "command_file_unreadable",
+            "command_file_draft_placeholder",
+            "command_file_missing_external_command",
+        }:
+            warnings.append(
+                {
+                    "warning_type": str(external_status),
+                    "entrypoint": str(check.get("entrypoint")),
+                    "message": "外部 backend 命令文件尚未替换为真实可执行 SD / watermark backend 命令。",
                 }
             )
     return warnings

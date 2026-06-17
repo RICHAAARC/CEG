@@ -10,7 +10,9 @@
         "--out",
         "{output_root}",
         "--model-config",
-        "{model_config_path}"
+        "{model_config_path}",
+        "--external-command-json-file",
+        "{external_backend_command_json_path}"
       ],
       "output_path_template": "{output_root}",
       "working_directory_template": "{image_generation_root}",

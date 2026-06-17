@@ -36,11 +36,46 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _normalize_external_command_payload(loaded: Any, *, source_label: str) -> tuple[list[str] | None, str | None]:
+    """把 JSON payload 归一化为真实外部 backend argv。
+
+    payload 可以直接是字符串列表, 也可以是带 `external_command` 字段的对象。
+    若仍只有 `external_command_placeholder`, 说明用户尚未把草稿替换成真实命令。
+    """
+    if isinstance(loaded, dict):
+        if "external_command" in loaded:
+            loaded = loaded["external_command"]
+        elif "external_command_placeholder" in loaded:
+            return None, f"{source_label}_placeholder_not_replaced"
+        else:
+            return None, f"{source_label}_missing_external_command"
+    if not isinstance(loaded, list) or not all(isinstance(item, str) for item in loaded):
+        return None, f"{source_label}_must_be_string_list"
+    if not loaded:
+        return None, f"{source_label}_empty"
+    if any("replace_with" in item or "placeholder" in item for item in loaded):
+        return None, f"{source_label}_placeholder_not_replaced"
+    return list(loaded), None
+
+
+def _load_json_command_file(path: str) -> tuple[list[str] | None, str | None]:
+    """读取外部 backend argv JSON 文件。"""
+    command_path = Path(path)
+    if not command_path.is_file():
+        return None, "external_command_json_file_missing"
+    try:
+        loaded = json.loads(command_path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as exc:
+        return None, f"external_command_json_file_invalid_json: {exc}"
+    return _normalize_external_command_payload(loaded, source_label="external_command_json_file")
+
+
 def _load_external_command(args: argparse.Namespace) -> tuple[list[str] | None, str | None]:
     """从 CLI 参数中读取真实外部 backend 命令。
 
     `--external-command-json` 适合 notebook 或脚本生成稳定 argv 列表;
-    `--external-command` 适合人工在 Colab 中直接追加命令。二者都不会被 shell
+    `--external-command-json-file` 适合把用户填好的命令草稿放在 MyDrive 工作区;
+    `--external-command` 适合人工在 Colab 中直接追加命令。三者都不会被 shell
     拼接执行, 从而避免空格和特殊字符导致的命令注入或路径歧义。
     """
     if args.external_command_json:
@@ -48,11 +83,9 @@ def _load_external_command(args: argparse.Namespace) -> tuple[list[str] | None, 
             loaded = json.loads(args.external_command_json)
         except json.JSONDecodeError as exc:
             return None, f"external_command_json_invalid_json: {exc}"
-        if not isinstance(loaded, list) or not all(isinstance(item, str) for item in loaded):
-            return None, "external_command_json_must_be_string_list"
-        if not loaded:
-            return None, "external_command_json_empty"
-        return list(loaded), None
+        return _normalize_external_command_payload(loaded, source_label="external_command_json")
+    if args.external_command_json_file:
+        return _load_json_command_file(args.external_command_json_file)
     if args.external_command:
         command = list(args.external_command)
         if command and command[0] == "--":
@@ -77,6 +110,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="真实外部 backend argv 的 JSON 字符串列表, 例如 [\"python\", \"backend.py\"]。",
     )
     parser.add_argument(
+        "--external-command-json-file",
+        default=None,
+        help="真实外部 backend argv JSON 文件路径。该文件可以位于 MyDrive 工作区。",
+    )
+    parser.add_argument(
         "--external-command",
         nargs=argparse.REMAINDER,
         help="真实外部 backend argv。该参数后面的所有内容都会作为子进程 argv。",
@@ -93,6 +131,7 @@ def _base_report(args: argparse.Namespace, report_path: Path) -> dict[str, Any]:
         "output_root": str(Path(args.out)),
         "model_config_path": str(Path(args.model_config)),
         "watermark_config_path": str(Path(args.watermark_config)) if args.watermark_config else None,
+        "external_command_json_file": str(Path(args.external_command_json_file)) if args.external_command_json_file else None,
         "wrapper_report_path": str(report_path),
         "acceptance_report_path": str(Path(args.out) / ACCEPTANCE_REPORT_NAME),
         "implementation_boundary": {
@@ -119,7 +158,7 @@ def main() -> None:
                 "blocking_issue": command_error,
                 "message": (
                     "本仓库只提供 P2 包装入口和验收门禁, 不内置真实 SD / watermark backend。"
-                    "请在 Colab 中通过 --external-command-json 或 --external-command 提供真实生成命令。"
+                    "请在 Colab 中通过 --external-command-json-file、--external-command-json 或 --external-command 提供真实生成命令。"
                 ),
             }
         )

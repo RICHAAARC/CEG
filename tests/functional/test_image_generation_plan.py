@@ -106,6 +106,8 @@ def test_materialize_image_generation_command_template_outputs_plan(tmp_path) ->
             f"output_root={tmp_path / 'generated_images'}",
             "--var",
             "model_config_path=D:/data/model_config.json",
+            "--var",
+            "external_backend_command_json_path=D:/data/p2_external_backend_command.json",
         ],
         cwd=".",
         check=True,

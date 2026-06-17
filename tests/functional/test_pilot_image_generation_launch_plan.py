@@ -53,6 +53,7 @@ def test_launch_plan_materializes_command_when_ready(tmp_path) -> None:
             "prompt_plan_path": "D:/pilot/prompt_plan.json",
             "output_root": str(tmp_path / "generated_images"),
             "model_config_path": "D:/pilot/model_config.json",
+            "external_backend_command_json_path": "D:/pilot/p2_external_backend_command.json",
         },
     )
 
