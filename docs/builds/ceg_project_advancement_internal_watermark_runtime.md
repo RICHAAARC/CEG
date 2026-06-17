@@ -695,3 +695,82 @@ python scripts/calibrate_detection_events_fixed_fpr.py \
 4. 外部 baseline 的同口径 calibrated events 或 observations。
 
 因此该步骤是从真实 backend 到论文 TPP@FPR 表格的必要桥梁, 但不是最终数据规模本身。
+
+
+## 20. 本次继续推进: fixed-FPR 校准后论文结果包一键构建入口
+
+在 detection events fixed-FPR 阈值回写能力之后, 本次继续新增了一个流水线入口:
+
+```text
+scripts/build_calibrated_paper_results_package.py
+```
+
+### 20.1 解决的问题
+
+在当前真实方法链路中, 从 detection backend 到论文结果包至少需要三个步骤:
+
+1. 对 `detection_events.json` 执行 fixed-FPR 阈值校准, 生成 `detection_events_calibrated.json`。
+2. 使用已校准事件运行 `build_paper_outputs.py`, 生成论文表格、图表、报告和 readiness 报告。
+3. 使用 `export_paper_results_package.py` 导出可交付结果包。
+
+如果这些步骤由人工手工拼接, 最容易出现的错误是: 校准了 thresholds, 但后续仍把未校准的
+`detection_events.json` 传给 paper protocol。这样 formal decision 会继续使用旧的
+`payload.thresholds.content_threshold`, 导致 fixed-FPR 统计与 formal decision 不一致。
+
+### 20.2 新入口行为
+
+新脚本会顺序执行:
+
+```text
+calibrate_detection_events_fixed_fpr.py
+build_paper_outputs.py
+export_paper_results_package.py
+```
+
+并固定把以下文件传给后续步骤:
+
+```text
+calibrated_detection/detection_events_calibrated.json
+calibrated_detection/detection_thresholds_calibrated.json
+calibrated_detection/detection_event_threshold_calibration_report.json
+```
+
+其中 calibration report 会作为 detection execution manifest 复制进入结果包 provenance。
+
+### 20.3 运行方式
+
+```bash
+python scripts/build_calibrated_paper_results_package.py \
+  --detection-events <detection_events.json> \
+  --out <package_run_dir> \
+  --target-fpr 0.01 \
+  --image-pairs <image_pairs.json> \
+  --attacked-image-manifest <attacked_image_manifest.json> \
+  --attack-shard-manifest <attack_shard_manifest.json>
+```
+
+可选参数可以继续传入 baseline、metric rows、experiment matrix 和 readiness requirements。
+
+### 20.4 输出目录
+
+```text
+<package_run_dir>/
+  calibrated_detection/
+  paper_outputs/
+  paper_results_package/
+  calibrated_paper_results_package_build_manifest.json
+```
+
+这使 Colab 或本地正式运行可以把结果直接保存到 Google Drive 的 CEG 目录下, 并且保留完整执行摘要。
+
+### 20.5 当前边界
+
+该脚本完成的是流程闭环, 不是替代真实实验规模。正式论文结果仍需要:
+
+1. 足够规模的 calibration clean negative。
+2. 独立 test split。
+3. attacked positive 测试集合。
+4. 外部 baseline 同口径输入。
+5. 更强 geometry 和 keyed / external attestation。
+
+但从工程闭环角度, 当前已经可以从真实 detection events 一条命令进入 fixed-FPR 校准后的论文结果包构建。
