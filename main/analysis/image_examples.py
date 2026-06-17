@@ -91,6 +91,10 @@ def build_image_generation_manifest(rows: Iterable[dict[str, Any]]) -> dict[str,
         "split",
         "sample_role",
         "method_name",
+        "attestation_key_env",
+        "attestation_key_id_digest",
+        "attestation_key_configured",
+        "attestation_secret_written_to_disk",
     )
     records = [
         {field: row[field] for field in generation_fields if field in row and row[field] not in {None, ""}}

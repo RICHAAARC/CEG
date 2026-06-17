@@ -507,6 +507,24 @@ def _write_watermark_metadata(path: Path, row: Mapping[str, Any], generation_met
     _write_json(path, payload)
 
 
+def _build_attestation_generation_provenance(args: argparse.Namespace) -> dict[str, Any]:
+    """构造图像生成阶段的 attestation provenance, 不泄露原始密钥。
+
+    detection 阶段会真正构造 keyed HMAC attestation。图像生成阶段记录的是运行前提:
+    使用哪个环境变量提供密钥、密钥是否已经配置、以及 key id 的稳定摘要。这样做可以让
+    `image_pairs.json` 与后续 detection events 在论文结果包中形成连续证据链。
+    """
+
+    key_env = _as_text(args.attestation_key_env, "CEG_ATTESTATION_KEY")
+    key_id = _as_text(args.attestation_key_id, key_env)
+    return {
+        "attestation_key_env": key_env,
+        "attestation_key_id_digest": build_stable_digest({"attestation_key_id": key_id}),
+        "attestation_key_configured": bool(os.environ.get(key_env)),
+        "attestation_secret_written_to_disk": False,
+    }
+
+
 def _assert_valid_watermarked(clean_path: Path, watermarked_path: Path) -> tuple[str, str]:
     """确认 watermarked 图像存在, 且不是 clean 文件的字节级复制。"""
     if not watermarked_path.is_file():
@@ -529,6 +547,7 @@ def _build_image_pair_row(
     clean_sha256: str,
     watermarked_sha256: str,
     model_id: str,
+    attestation_provenance: Mapping[str, Any],
 ) -> dict[str, Any]:
     """把 prompt row 和图像路径合并为 image_pairs.json 的一行。"""
     return {
@@ -555,6 +574,10 @@ def _build_image_pair_row(
         "watermarked_path": str(watermarked_path),
         "clean_image_sha256": clean_sha256,
         "watermarked_image_sha256": watermarked_sha256,
+        "attestation_key_env": attestation_provenance["attestation_key_env"],
+        "attestation_key_id_digest": attestation_provenance["attestation_key_id_digest"],
+        "attestation_key_configured": attestation_provenance["attestation_key_configured"],
+        "attestation_secret_written_to_disk": attestation_provenance["attestation_secret_written_to_disk"],
     }
 
 
@@ -612,6 +635,7 @@ def run_backend(args: argparse.Namespace) -> dict[str, Any]:
         except ImportError:
             device = "cpu"
     model_id = _resolve_model_id(args, config)
+    attestation_provenance = _build_attestation_generation_provenance(args)
     image_pairs: list[dict[str, Any]] = []
     watermark_runs: list[dict[str, Any]] = []
 
@@ -674,6 +698,7 @@ def run_backend(args: argparse.Namespace) -> dict[str, Any]:
                 clean_sha256=clean_sha256,
                 watermarked_sha256=watermarked_sha256,
                 model_id=model_id,
+                attestation_provenance=attestation_provenance,
             )
         )
 
@@ -698,6 +723,7 @@ def run_backend(args: argparse.Namespace) -> dict[str, Any]:
         "content_mask_backend": args.content_mask_backend,
         "inspyrenet_ckpt_env": args.inspyrenet_ckpt_env,
         "inspyrenet_ckpt_path_configured": bool(args.inspyrenet_ckpt_path or os.environ.get(args.inspyrenet_ckpt_env)),
+        "attestation_generation_provenance": attestation_provenance,
         "prompt_count": len(prompt_rows),
         "image_pair_count": len(image_pairs),
         "image_pairs_path": str(output_root / IMAGE_PAIRS_NAME),
@@ -724,6 +750,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--revision", default=None, help="可选 Hugging Face revision。")
     parser.add_argument("--cache-dir", default=None, help="可选 Hugging Face cache 目录。")
     parser.add_argument("--hf-token-env", default="HF_TOKEN", help="读取 Hugging Face token 的环境变量名。")
+    parser.add_argument(
+        "--attestation-key-env",
+        default="CEG_ATTESTATION_KEY",
+        help="图像生成阶段记录的 attestation 密钥环境变量名。只记录配置状态, 不落盘密钥。",
+    )
+    parser.add_argument(
+        "--attestation-key-id",
+        default="formal_colab_run_key",
+        help="图像生成阶段记录的 attestation key id。只落盘该标识符的 digest。",
+    )
     parser.add_argument("--torch-dtype", default=None, help="float16、bfloat16 或 float32。")
     parser.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"], help="运行设备。正式运行建议 auto/cuda。")
     parser.add_argument("--allow-cpu", action="store_true", help="仅调试使用: 允许无 CUDA 时在 CPU 运行。")

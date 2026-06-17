@@ -62,6 +62,8 @@ def test_real_image_generation_backend_defaults_to_content_chain_watermark(tmp_p
     assert args.watermark_backend == "ceg_content_chain_embedding"
     assert args.content_mask_backend == backend.INSPYRENET_BACKEND_ID
     assert args.inspyrenet_ckpt_env == "INSPYRENET_CKPT_PATH"
+    assert args.attestation_key_env == "CEG_ATTESTATION_KEY"
+    assert args.attestation_key_id == "formal_colab_run_key"
 
 
 def test_watermarked_file_cannot_equal_clean_file(tmp_path: Path) -> None:
@@ -72,6 +74,49 @@ def test_watermarked_file_cannot_equal_clean_file(tmp_path: Path) -> None:
     watermarked.write_bytes(b"same-bytes")
     with pytest.raises(RuntimeError, match="字节完全一致"):
         backend._assert_valid_watermarked(clean, watermarked)
+
+
+
+def test_image_pair_row_records_attestation_generation_provenance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """图像生成阶段应记录 attestation key 配置状态, 但不得写出原始密钥。"""
+
+    monkeypatch.setenv("CEG_ATTESTATION_KEY", "unit-test-secret")
+    args = backend.build_parser().parse_args(
+        [
+            "--prompt-plan",
+            str(tmp_path / "prompt_plan.json"),
+            "--out",
+            str(tmp_path / "images"),
+            "--model-config",
+            str(tmp_path / "model_config.json"),
+        ]
+    )
+    provenance = backend._build_attestation_generation_provenance(args)
+    row = backend._build_image_pair_row(
+        {"method_name": "ceg", "sample_role": "positive"},
+        {
+            "prompt_text": "a cat",
+            "seed": 3,
+            "num_inference_steps": 4,
+            "guidance_scale": 1.0,
+            "height": 32,
+            "width": 32,
+        },
+        image_id="img_001",
+        prompt_id="prompt_001",
+        clean_path=tmp_path / "clean.png",
+        watermarked_path=tmp_path / "watermarked.png",
+        clean_sha256="0" * 64,
+        watermarked_sha256="1" * 64,
+        model_id="test-model",
+        attestation_provenance=provenance,
+    )
+
+    assert row["attestation_key_env"] == "CEG_ATTESTATION_KEY"
+    assert row["attestation_key_configured"] is True
+    assert row["attestation_secret_written_to_disk"] is False
+    assert len(row["attestation_key_id_digest"]) == 64
+    assert "unit-test-secret" not in str(row)
 
 
 def _write_backend_test_image(path: Path) -> None:
