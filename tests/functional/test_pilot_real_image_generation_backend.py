@@ -1,4 +1,4 @@
-﻿"""测试真实图像生成 backend 的轻量治理逻辑。
+"""测试真实图像生成 backend 的轻量治理逻辑。
 
 这些测试不加载 SD 模型, 不调用 GPU, 只覆盖命令模板、prompt plan 解析和 watermark
 安全边界。正式 GPU 运行应在 Colab 中执行, 不进入默认 pytest 路径。
@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from PIL import Image
 import pytest
 
 from scripts import run_pilot_real_image_generation_backend as backend
@@ -52,3 +53,65 @@ def test_watermarked_file_cannot_equal_clean_file(tmp_path: Path) -> None:
     watermarked.write_bytes(b"same-bytes")
     with pytest.raises(RuntimeError, match="字节完全一致"):
         backend._assert_valid_watermarked(clean, watermarked)
+
+
+def _write_backend_test_image(path: Path) -> None:
+    """写出内容链 backend 测试用小图像。"""
+
+    image = Image.new("RGB", (32, 32), color=(40, 40, 40))
+    for x in range(8, 24):
+        for y in range(8, 24):
+            image.putpixel((x, y), (215, 215, 215))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(path)
+
+
+@pytest.mark.quick
+def test_content_chain_watermark_backend_writes_real_outputs(tmp_path: Path) -> None:
+    """真实图像生成 backend 的内容链水印路径应写出 watermarked 图像和 mask provenance。"""
+
+    clean = tmp_path / "clean.png"
+    watermarked = tmp_path / "watermarked.png"
+    mask = tmp_path / "mask.png"
+    _write_backend_test_image(clean)
+    args = backend.build_parser().parse_args(
+        [
+            "--prompt-plan",
+            str(tmp_path / "unused_prompt.json"),
+            "--out",
+            str(tmp_path / "unused_out"),
+            "--model-config",
+            str(tmp_path / "unused_config.json"),
+            "--watermark-backend",
+            "ceg_content_chain_embedding",
+        ]
+    )
+
+    report = backend._run_content_chain_watermark(
+        clean_path=clean,
+        watermarked_path=watermarked,
+        mask_path=mask,
+        row={"image_id": "img_001", "prompt_id": "prompt_001"},
+        generation_meta={
+            "prompt_text": "a bright square",
+            "seed": 5,
+            "num_inference_steps": 4,
+            "guidance_scale": 1.0,
+            "height": 32,
+            "width": 32,
+        },
+        model_id="test-model",
+        image_id="img_001",
+        prompt_id="prompt_001",
+        args=args,
+    )
+
+    assert watermarked.is_file()
+    assert mask.is_file()
+    assert clean.read_bytes() != watermarked.read_bytes()
+    assert report["watermark_backend"] == "ceg_content_chain_embedding"
+    assert report["returncode"] == 0
+    assert report["changed_pixel_count"] > 0
+    assert len(report["embedding_digest"]) == 64
+    assert len(report["semantic_mask_digest"]) == 64
+    assert report["paper_main_method_ready"] is False

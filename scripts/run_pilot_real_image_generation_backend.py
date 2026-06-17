@@ -1,4 +1,4 @@
-﻿"""运行真实图像生成 backend, 产出 clean / watermarked 图像与 manifests。
+"""运行真实图像生成 backend, 产出 clean / watermarked 图像与 manifests。
 
 该脚本是 Colab 图像生成流程的正式仓库入口。它直接调用 Hugging Face diffusers
 加载 Stable Diffusion 或兼容的 text-to-image pipeline 生成 clean 图像, 然后使用 CEG 项目内的
@@ -34,7 +34,10 @@ from experiments.pilot_image_generation_output_acceptance import (  # noqa: E402
 )
 from main.analysis.image_examples import build_image_generation_manifest, build_image_pair_manifest  # noqa: E402
 from main.core.digest import build_stable_digest  # noqa: E402
+from main.watermarking.content_chain import ContentChainEmbeddingRequest, embed_content_chain_watermark  # noqa: E402
+from main.watermarking.interfaces import WatermarkPromptContext  # noqa: E402
 from main.watermarking.native_lsb import embed_native_lsb_watermark  # noqa: E402
+from main.watermarking.semantic_mask import GRADIENT_SALIENCY_BACKEND_ID, SemanticMaskRequest, extract_semantic_mask  # noqa: E402
 
 BACKEND_MANIFEST_NAME = "real_image_generation_backend_manifest.json"
 PROMPT_PLAN_NAME = "prompt_plan.json"
@@ -355,6 +358,104 @@ def _run_native_ceg_watermark(
     ).to_report()
 
 
+def _build_prompt_context(
+    row: Mapping[str, Any],
+    generation_meta: Mapping[str, Any],
+    *,
+    image_id: str,
+    prompt_id: str,
+    model_id: str,
+) -> WatermarkPromptContext:
+    """把 prompt row 与生成元数据转换为内容链方法通用上下文。"""
+
+    return WatermarkPromptContext(
+        image_id=image_id,
+        prompt_id=prompt_id,
+        prompt_text=_as_text(generation_meta.get("prompt_text")),
+        seed=int(generation_meta["seed"]) if generation_meta.get("seed") is not None else None,
+        model_id=_as_text(row.get("model_id"), model_id),
+        generation_params={
+            "negative_prompt": generation_meta.get("negative_prompt"),
+            "num_inference_steps": generation_meta.get("num_inference_steps"),
+            "guidance_scale": generation_meta.get("guidance_scale"),
+            "height": generation_meta.get("height"),
+            "width": generation_meta.get("width"),
+        },
+    )
+
+
+def _run_content_chain_watermark(
+    *,
+    clean_path: Path,
+    watermarked_path: Path,
+    mask_path: Path,
+    row: Mapping[str, Any],
+    generation_meta: Mapping[str, Any],
+    model_id: str,
+    image_id: str,
+    prompt_id: str,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    """调用 CEG 内容链 embedding 原语生成真实 watermarked 图像。
+
+    该路径会先从 clean 图像提取 semantic mask, 再按 `mask_false -> lf` 与 `mask_true -> hf`
+    执行像素级内容链嵌入。它是 CEG 项目内实现, 不调用 CEG-WM。
+    """
+
+    prompt_context = _build_prompt_context(
+        row,
+        generation_meta,
+        image_id=image_id,
+        prompt_id=prompt_id,
+        model_id=model_id,
+    )
+    semantic_mask = extract_semantic_mask(
+        SemanticMaskRequest(
+            image_path=clean_path,
+            output_mask_path=mask_path,
+            backend_id=GRADIENT_SALIENCY_BACKEND_ID,
+            threshold_quantile=float(args.content_mask_threshold_quantile),
+            open_iters=int(args.content_mask_open_iters),
+            close_iters=int(args.content_mask_close_iters),
+        )
+    )
+    result = embed_content_chain_watermark(
+        ContentChainEmbeddingRequest(
+            clean_image_path=clean_path,
+            watermarked_image_path=watermarked_path,
+            semantic_mask=semantic_mask,
+            prompt_context=prompt_context,
+            lf_grid_size=int(args.content_lf_grid_size),
+            lf_strength=float(args.content_lf_strength),
+            hf_strength=float(args.content_hf_strength),
+            config={
+                "watermark_backend": "ceg_content_chain_embedding",
+                "content_key": _as_text(row.get("content_key") or row.get("image_id") or row.get("event_id")),
+            },
+        )
+    )
+    record = result.to_record()
+    return {
+        "watermark_backend": "ceg_content_chain_embedding",
+        "watermark_backend_role": record["backend_role"],
+        "returncode": 0,
+        "watermarked_path": str(watermarked_path),
+        "semantic_mask_path": semantic_mask.mask_path,
+        "semantic_mask_digest": semantic_mask.mask_digest,
+        "semantic_routing_digest": semantic_mask.routing_digest,
+        "semantic_mask_stats": dict(semantic_mask.mask_stats),
+        "embedding_digest": record["embedding_digest"],
+        "lf_embedding_trace_digest": record["lf_embedding_trace_digest"],
+        "hf_embedding_trace_digest": record["hf_embedding_trace_digest"],
+        "changed_pixel_count": record["changed_pixel_count"],
+        "changed_channel_count": record["changed_channel_count"],
+        "lf_modified_pixel_count": record["lf_modified_pixel_count"],
+        "hf_modified_pixel_count": record["hf_modified_pixel_count"],
+        "paper_main_method_ready": False,
+        "paper_main_method_blocking_reason": "content_chain_embedding_lacks_geometry_recovery_and_attestation_closure",
+    }
+
+
 def _write_watermark_metadata(path: Path, row: Mapping[str, Any], generation_meta: Mapping[str, Any]) -> None:
     """为外部 watermark backend 写出单图元数据, 便于真实命令复用。"""
     payload = {
@@ -429,8 +530,9 @@ def run_backend(args: argparse.Namespace) -> dict[str, Any]:
     clean_root = output_root / "clean"
     watermarked_root = output_root / "watermarked"
     metadata_root = output_root / "watermark_metadata"
+    mask_root = output_root / "semantic_masks"
     manifest_root = output_root / "image_manifests"
-    for directory in (clean_root, watermarked_root, metadata_root, manifest_root):
+    for directory in (clean_root, watermarked_root, metadata_root, mask_root, manifest_root):
         directory.mkdir(parents=True, exist_ok=True)
 
     command_template = _load_command_template(
@@ -461,6 +563,7 @@ def run_backend(args: argparse.Namespace) -> dict[str, Any]:
         watermarked_path = watermarked_root / f"{file_stem}.png"
         generation_meta = _generate_clean_image(pipeline, row, config, clean_path, index=index, device=device)
         metadata_path = metadata_root / f"{file_stem}.json"
+        mask_path = mask_root / f"{file_stem}.png"
         _write_watermark_metadata(metadata_path, row, generation_meta)
 
         if args.watermark_backend == "ceg_native_lsb":
@@ -470,6 +573,18 @@ def run_backend(args: argparse.Namespace) -> dict[str, Any]:
                 row=row,
                 generation_meta=generation_meta,
                 bit_count=args.native_watermark_bits,
+            )
+        elif args.watermark_backend == "ceg_content_chain_embedding":
+            watermark_report = _run_content_chain_watermark(
+                clean_path=clean_path,
+                watermarked_path=watermarked_path,
+                mask_path=mask_path,
+                row=row,
+                generation_meta=generation_meta,
+                model_id=model_id,
+                image_id=image_id,
+                prompt_id=prompt_id,
+                args=args,
             )
         elif args.watermark_backend == "external_command":
             assert command_template is not None
@@ -550,10 +665,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--watermark-backend",
         default="ceg_native_lsb",
-        choices=["ceg_native_lsb", "external_command"],
+        choices=["ceg_native_lsb", "ceg_content_chain_embedding", "external_command"],
         help="真实水印 backend。默认使用 CEG 仓库内原生 LSB 图像水印原语。",
     )
     parser.add_argument("--native-watermark-bits", type=int, default=1024, help="CEG 原生水印嵌入 bit 数。")
+    parser.add_argument("--content-mask-threshold-quantile", type=float, default=0.80, help="内容链 semantic mask 分位数阈值。")
+    parser.add_argument("--content-mask-open-iters", type=int, default=1, help="内容链 semantic mask 开运算次数。")
+    parser.add_argument("--content-mask-close-iters", type=int, default=1, help="内容链 semantic mask 闭运算次数。")
+    parser.add_argument("--content-lf-grid-size", type=int, default=8, help="内容链 LF 嵌入网格大小。")
+    parser.add_argument("--content-lf-strength", type=float, default=3.0, help="内容链 LF 嵌入强度。")
+    parser.add_argument("--content-hf-strength", type=float, default=2.0, help="内容链 HF 嵌入强度。")
     parser.add_argument("--watermark-command-json", default=None, help="外部 watermark argv 模板 JSON list[str]。")
     parser.add_argument("--watermark-command-json-file", default=None, help="外部 watermark argv 模板 JSON 文件。")
     parser.add_argument("--watermark-timeout-seconds", type=int, default=3600, help="单张图像 watermark 命令超时时间。")

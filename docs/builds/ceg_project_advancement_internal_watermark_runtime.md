@@ -341,3 +341,82 @@ ceg_content_chain_embedding
 ```
 
 该 backend 应写出 `image_pairs.json`、`image_generation_manifest.json` 和 `image_pair_manifest.json` 中可追溯的 embedding provenance。
+
+## 15. 本次继续推进: 真实图像生成 backend 接入内容链 embedding
+
+在内容链 embedding 原语完成后, 本次继续将其接入真实图像生成入口:
+
+```text
+scripts/run_pilot_real_image_generation_backend.py
+```
+
+新增可选水印 backend:
+
+```text
+ceg_content_chain_embedding
+```
+
+同时保留原有 fallback:
+
+```text
+ceg_native_lsb
+```
+
+### 15.1 新 backend 行为
+
+当 CLI 使用:
+
+```bash
+--watermark-backend ceg_content_chain_embedding
+```
+
+脚本会对每张 clean 图像执行:
+
+1. 从 clean 图像提取 semantic mask。
+2. 将 mask 写入 `semantic_masks/`。
+3. 调用 `embed_content_chain_watermark` 执行真实 LF/HF 内容链像素改写。
+4. 写出 watermarked 图像。
+5. 在 backend manifest 的 `watermark_runs` 中记录:
+   - `semantic_mask_digest`
+   - `semantic_routing_digest`
+   - `embedding_digest`
+   - `lf_embedding_trace_digest`
+   - `hf_embedding_trace_digest`
+   - `changed_pixel_count`
+   - `changed_channel_count`
+   - LF/HF 修改像素数
+
+### 15.2 新增 CLI 参数
+
+新增参数包括:
+
+```text
+--content-mask-threshold-quantile
+--content-mask-open-iters
+--content-mask-close-iters
+--content-lf-grid-size
+--content-lf-strength
+--content-hf-strength
+```
+
+这些参数只控制 CEG 内容链方法原语, 不引入 CEG-WM 的 workflow 或门禁。
+
+### 15.3 当前边界
+
+当前 Colab / CLI 图像生成链路已经可以直接产出内容链 watermarked 图像。
+但该 backend 仍显式标记:
+
+```text
+paper_main_method_ready = false
+```
+
+原因是还缺:
+
+1. 攻击后几何同步与 recovery。
+2. Attestation 事件绑定。
+3. detection producer 对内容链 score 的正式接入。
+4. 固定 FPR 阈值校准与 TPP@FPR 统计闭环。
+
+### 15.4 下一步
+
+下一步应补充真实 detection backend, 读取 `image_pairs.json` 和 `watermark_runs` provenance, 对 clean / watermarked / attacked 图像运行 semantic mask 与内容链 scoring, 输出可进入固定 FPR 统计的 detection records。
