@@ -15,11 +15,13 @@ from experiments.pilot_input_replacement_checklist import write_pilot_input_repl
 from experiments.pilot_input_value_pack import build_pilot_input_value_pack_template
 from experiments.pilot_input_value_pack_sheet import export_pilot_input_value_pack_fill_sheet
 from experiments.pilot_user_handoff_bundle import (
+    P0_HANDOFF_ACCEPTANCE_REPORT_NAME,
     P0_HANDOFF_APPLY_REPORT_NAME,
     P0_HANDOFF_MANIFEST_NAME,
     P0_HANDOFF_README_NAME,
     apply_pilot_p0_input_handoff_bundle,
     build_pilot_p0_input_handoff_bundle,
+    validate_pilot_p0_input_handoff_bundle,
 )
 from tests.functional.test_pilot_input_value_pack import REAL_VALUES
 
@@ -161,3 +163,48 @@ def test_apply_p0_input_handoff_bundle_syncs_and_imports_on_pass(tmp_path) -> No
     assert report["value_pack_import_performed"] is True
     assert canonical_rows[0]["value_json"] == rows[0]["value_json"]
     assert all("value" in entry for entry in payload["value_entries"])
+
+
+@pytest.mark.quick
+def test_validate_p0_input_handoff_bundle_passes_when_ready_for_user(tmp_path) -> None:
+    """交接包文件完整时, 即使 CSV 仍待填写, handoff 验收也应通过。"""
+    _prepare_value_pack(tmp_path)
+    build_pilot_p0_input_handoff_bundle(workspace_root=tmp_path)
+    apply_pilot_p0_input_handoff_bundle(workspace_root=tmp_path, write_on_pass=False)
+
+    report = validate_pilot_p0_input_handoff_bundle(workspace_root=tmp_path, require_apply_report=True)
+
+    handoff_root = tmp_path / "user_handoff" / "p0_input_handoff"
+    assert report["overall_decision"] == "pass"
+    assert report["validation_summary"]["overall_decision"] == "fail"
+    assert report["validation_summary"]["blocking_item_count"] == 19
+    assert report["apply_summary"]["canonical_fill_sheet_updated"] is False
+    assert (handoff_root / P0_HANDOFF_ACCEPTANCE_REPORT_NAME).is_file()
+
+
+@pytest.mark.quick
+def test_validate_p0_input_handoff_bundle_cli_blocks_missing_file(tmp_path) -> None:
+    """缺少必要 handoff 文件时, 验收 CLI 应失败。"""
+    _prepare_value_pack(tmp_path)
+    build_pilot_p0_input_handoff_bundle(workspace_root=tmp_path)
+    handoff_root = tmp_path / "user_handoff" / "p0_input_handoff"
+    (handoff_root / "pilot_input_value_pack_fill_sheet.csv").unlink()
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_pilot_p0_input_handoff_bundle.py",
+            "--workspace",
+            str(tmp_path),
+            "--require-pass",
+        ],
+        cwd=".",
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    report = json.loads((handoff_root / P0_HANDOFF_ACCEPTANCE_REPORT_NAME).read_text(encoding="utf-8"))
+    assert completed.returncode == 1
+    assert report["overall_decision"] == "fail"
+    assert report["blocking_items"][0]["reason"] == "missing_required_handoff_file"

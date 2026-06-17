@@ -597,6 +597,12 @@ python scripts/build_pilot_p0_input_handoff_bundle.py --workspace D:/content/dri
 ```text
 python scripts/apply_pilot_p0_input_handoff_bundle.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-pass
 ```
+交接包本身可用以下命令验收。该命令只判断 handoff 文件是否完整和安全, 不代表 P0 已通过:
+
+```text
+python scripts/validate_pilot_p0_input_handoff_bundle.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-apply-report --require-pass
+```
+
 
 默认输出目录为:
 

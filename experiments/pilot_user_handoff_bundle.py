@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import shutil
 from pathlib import Path
@@ -32,6 +33,7 @@ P0_HANDOFF_DIR_NAME = "p0_input_handoff"
 P0_HANDOFF_MANIFEST_NAME = "p0_input_handoff_manifest.json"
 P0_HANDOFF_README_NAME = "p0_input_handoff_readme.md"
 P0_HANDOFF_APPLY_REPORT_NAME = "p0_input_handoff_apply_report.json"
+P0_HANDOFF_ACCEPTANCE_REPORT_NAME = "p0_input_handoff_acceptance_report.json"
 
 OPTIONAL_SOURCE_NAMES = (
     STATUS_REPORT_NAME,
@@ -42,10 +44,26 @@ OPTIONAL_SOURCE_NAMES = (
     "pilot_p0_input_freeze_report.md",
 )
 
+REQUIRED_HANDOFF_FILE_NAMES = (
+    FILL_SHEET_NAME,
+    GUIDANCE_MARKDOWN_NAME,
+    GUIDANCE_JSON_NAME,
+    VALIDATION_REPORT_NAME,
+    VALIDATION_MARKDOWN_NAME,
+    P0_HANDOFF_MANIFEST_NAME,
+    P0_HANDOFF_README_NAME,
+)
+
 
 def _read_json(path: str | Path) -> Any:
     """读取 JSON 文件。"""
     return json.loads(Path(path).read_text(encoding="utf-8-sig"))
+
+
+def _read_csv_rows(path: str | Path) -> list[dict[str, str]]:
+    """读取 CSV 行。"""
+    with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
+        return [dict(row) for row in csv.DictReader(handle)]
 
 
 def _write_json(path: str | Path, payload: Any) -> None:
@@ -306,3 +324,135 @@ def apply_pilot_p0_input_handoff_bundle(
     }
     _write_json(apply_report_path, report)
     return report
+
+
+def validate_pilot_p0_input_handoff_bundle(
+    *,
+    workspace_root: str | Path,
+    handoff_root: str | Path | None = None,
+    output_path: str | Path | None = None,
+    require_apply_report: bool = False,
+) -> dict[str, Any]:
+    """验证 P0 用户交接包是否完整且可安全交付。
+
+    该门禁只检查交接包自身的完整性和安全状态, 不要求 CSV 已经填写通过。
+    因此当前 P0 仍被 19 个真实输入值阻断时, 交接包验收仍可以通过。
+    """
+    workspace = Path(workspace_root)
+    handoff_dir = Path(handoff_root) if handoff_root is not None else workspace / HANDOFF_ROOT_NAME / P0_HANDOFF_DIR_NAME
+    blocking_items: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
+
+    for name in REQUIRED_HANDOFF_FILE_NAMES:
+        path = handoff_dir / name
+        if not path.is_file():
+            blocking_items.append({"item": name, "reason": "missing_required_handoff_file", "path": str(path)})
+
+    manifest: dict[str, Any] = {}
+    manifest_path = handoff_dir / P0_HANDOFF_MANIFEST_NAME
+    if manifest_path.is_file():
+        try:
+            manifest = _read_json(manifest_path)
+        except json.JSONDecodeError as exc:
+            blocking_items.append({"item": P0_HANDOFF_MANIFEST_NAME, "reason": f"json_decode_error: {exc}"})
+
+    validation_report: dict[str, Any] = {}
+    validation_path = handoff_dir / VALIDATION_REPORT_NAME
+    if validation_path.is_file():
+        try:
+            validation_report = _read_json(validation_path)
+        except json.JSONDecodeError as exc:
+            blocking_items.append({"item": VALIDATION_REPORT_NAME, "reason": f"json_decode_error: {exc}"})
+
+    fill_sheet_path = handoff_dir / FILL_SHEET_NAME
+    sheet_row_count = None
+    if fill_sheet_path.is_file():
+        rows = _read_csv_rows(fill_sheet_path)
+        sheet_row_count = len(rows)
+        required_columns = {"task_id", "replacement_key", "value_json"}
+        if rows and not required_columns.issubset(rows[0]):
+            blocking_items.append(
+                {
+                    "item": FILL_SHEET_NAME,
+                    "reason": "missing_required_csv_columns",
+                    "required_columns": sorted(required_columns),
+                }
+            )
+        if sheet_row_count != 19:
+            blocking_items.append({"item": FILL_SHEET_NAME, "reason": "unexpected_row_count", "row_count": sheet_row_count})
+
+    readme_path = handoff_dir / P0_HANDOFF_README_NAME
+    if readme_path.is_file():
+        readme_text = readme_path.read_text(encoding="utf-8")
+        if "apply_pilot_p0_input_handoff_bundle.py" not in readme_text:
+            blocking_items.append({"item": P0_HANDOFF_README_NAME, "reason": "missing_apply_command"})
+
+    apply_report_path = handoff_dir / P0_HANDOFF_APPLY_REPORT_NAME
+    apply_report: dict[str, Any] = {}
+    if apply_report_path.is_file():
+        try:
+            apply_report = _read_json(apply_report_path)
+        except json.JSONDecodeError as exc:
+            blocking_items.append({"item": P0_HANDOFF_APPLY_REPORT_NAME, "reason": f"json_decode_error: {exc}"})
+    elif require_apply_report:
+        blocking_items.append({"item": P0_HANDOFF_APPLY_REPORT_NAME, "reason": "missing_apply_report"})
+
+    if apply_report:
+        if apply_report.get("overall_decision") == "fail" and apply_report.get("canonical_fill_sheet_updated"):
+            blocking_items.append({"item": P0_HANDOFF_APPLY_REPORT_NAME, "reason": "failed_apply_updated_canonical_csv"})
+        if apply_report.get("overall_decision") == "fail" and apply_report.get("value_pack_import_performed"):
+            blocking_items.append({"item": P0_HANDOFF_APPLY_REPORT_NAME, "reason": "failed_apply_imported_value_pack"})
+
+    manifest_validation = manifest.get("validation_summary", {})
+    validation_summary = validation_report.get("summary", {})
+    if manifest and validation_report:
+        if manifest.get("overall_decision") != validation_report.get("overall_decision"):
+            warnings.append(
+                {
+                    "item": P0_HANDOFF_MANIFEST_NAME,
+                    "reason": "manifest_validation_decision_differs_from_latest_validation_report",
+                }
+            )
+        if manifest_validation.get("blocking_item_count") != validation_summary.get("blocking_item_count"):
+            warnings.append(
+                {
+                    "item": P0_HANDOFF_MANIFEST_NAME,
+                    "reason": "manifest_blocking_count_differs_from_latest_validation_report",
+                }
+            )
+
+    acceptance = {
+        "artifact_name": P0_HANDOFF_ACCEPTANCE_REPORT_NAME,
+        "workspace_root": str(workspace),
+        "handoff_root": str(handoff_dir),
+        "overall_decision": "pass" if not blocking_items else "fail",
+        "recommended_next_stage": (
+            "fill_handoff_csv_value_json"
+            if validation_report.get("overall_decision") != "pass"
+            else "apply_handoff_and_run_p0_input_freeze"
+        ),
+        "gpu_pause_status": "not_reached_p0_still_blocking",
+        "sheet_row_count": sheet_row_count,
+        "validation_summary": {
+            "overall_decision": validation_report.get("overall_decision"),
+            "blocking_item_count": validation_summary.get("blocking_item_count"),
+            "write_performed": validation_report.get("write_performed"),
+        },
+        "apply_summary": None
+        if not apply_report
+        else {
+            "overall_decision": apply_report.get("overall_decision"),
+            "canonical_fill_sheet_updated": apply_report.get("canonical_fill_sheet_updated"),
+            "value_pack_import_performed": apply_report.get("value_pack_import_performed"),
+        },
+        "blocking_items": blocking_items,
+        "warnings": warnings,
+        "checked_files": [str(handoff_dir / name) for name in REQUIRED_HANDOFF_FILE_NAMES],
+        "notes": [
+            "交接包验收通过只表示 handoff 文件完整且可交付, 不表示 P0 已经通过。",
+            "如果 validation_summary.overall_decision 为 fail, 下一步仍是填写 value_json。",
+        ],
+    }
+    target = Path(output_path) if output_path is not None else handoff_dir / P0_HANDOFF_ACCEPTANCE_REPORT_NAME
+    _write_json(target, acceptance)
+    return acceptance
