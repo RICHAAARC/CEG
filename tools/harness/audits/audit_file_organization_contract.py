@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -20,6 +21,19 @@ REQUIRED_PATHS = [
 FORBIDDEN_CHECKED_IN_DIRS = ["outputs"]
 
 
+def _is_git_tracked(root_path: Path, relative: str) -> bool:
+    """检查路径是否被 git 跟踪, 未跟踪的本地输出目录不应阻断 harness。"""
+
+    completed = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", relative],
+        cwd=root_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return completed.returncode == 0
+
+
 def run_audit(root: str | Path) -> dict:
     root_path = Path(root)
     violations = []
@@ -30,7 +44,7 @@ def run_audit(root: str | Path) -> dict:
             violations.append({"path": relative, "reason": "required_path_missing"})
     for relative in FORBIDDEN_CHECKED_IN_DIRS:
         checked_paths.append(relative)
-        if (root_path / relative).exists():
+        if _is_git_tracked(root_path, relative):
             violations.append({"path": relative, "reason": "checked_in_runtime_output_root_forbidden"})
     return build_report("audit_file_organization_contract", "fail" if violations else "pass", violations, checked_paths)
 
