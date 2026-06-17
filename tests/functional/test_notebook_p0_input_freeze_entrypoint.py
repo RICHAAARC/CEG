@@ -91,6 +91,10 @@ def test_notebook_p0_fill_sheet_validation_blocks_empty_sheet_without_rewrite(tm
     assert report["write_performed"] is False
     assert report["summary"]["blocking_item_count"] == 19
     assert (tmp_path / "pilot_input_value_pack_fill_sheet_validation_report.json").is_file()
+    assert (tmp_path / "pilot_input_value_pack_fill_sheet_validation_report.md").is_file()
+    markdown = (tmp_path / "pilot_input_value_pack_fill_sheet_validation_report.md").read_text(encoding="utf-8")
+    assert "阻断项" in markdown
+    assert "empty_value_json" in markdown
     assert all("value" not in entry for entry in payload["value_entries"])
 
 
@@ -110,6 +114,9 @@ def test_notebook_p0_fill_sheet_validation_can_pass_without_rewrite(tmp_path) ->
     assert report["write_on_pass"] is False
     assert report["write_performed"] is False
     assert report["summary"]["updated_entry_count"] == 19
+    assert (tmp_path / "pilot_input_value_pack_fill_sheet_validation_report.md").is_file()
+    markdown = (tmp_path / "pilot_input_value_pack_fill_sheet_validation_report.md").read_text(encoding="utf-8")
+    assert "CSV 填写表已经通过预检" in markdown
     assert all("value" not in entry for entry in payload["value_entries"])
 
 

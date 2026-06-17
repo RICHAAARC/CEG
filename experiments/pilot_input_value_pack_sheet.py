@@ -24,6 +24,7 @@ from experiments.pilot_input_value_pack_status import TYPE_HINT_BY_REPLACEMENT_K
 FILL_SHEET_NAME = "pilot_input_value_pack_fill_sheet.csv"
 IMPORT_REPORT_NAME = "pilot_input_value_pack_fill_sheet_import_report.json"
 VALIDATION_REPORT_NAME = "pilot_input_value_pack_fill_sheet_validation_report.json"
+VALIDATION_MARKDOWN_NAME = "pilot_input_value_pack_fill_sheet_validation_report.md"
 GUIDANCE_MARKDOWN_NAME = "pilot_input_value_pack_fill_sheet_guidance.md"
 GUIDANCE_JSON_NAME = "pilot_input_value_pack_fill_sheet_guidance.json"
 
@@ -330,11 +331,85 @@ def import_and_write_pilot_input_value_pack_fill_sheet(
     return report
 
 
+def render_pilot_input_value_pack_fill_sheet_validation_markdown(report: dict[str, Any]) -> str:
+    """把 CSV 填写表预检报告渲染为 Markdown。
+
+    该报告面向人工排错, 只描述 CSV 中哪些 `value_json` 需要修复。
+    它不包含正式实验结果, 也不能支撑论文性能声明。
+    """
+    summary = report.get("summary", {})
+    lines = [
+        "# pilot 输入 value_json 预检报告",
+        "",
+        f"- value pack: `{report.get('value_pack_path')}`",
+        f"- CSV 填写表: `{report.get('input_csv_path')}`",
+        f"- 总体结论: `{report.get('overall_decision')}`",
+        f"- 推荐下一阶段: `{report.get('recommended_next_stage')}`",
+        f"- 是否回写 value pack: `{report.get('write_performed', False)}`",
+        "",
+        "## 汇总",
+        "",
+        "```text",
+        f"sheet_row_count = {summary.get('sheet_row_count', 0)}",
+        f"value_entry_count = {summary.get('value_entry_count', 0)}",
+        f"updated_entry_count = {summary.get('updated_entry_count', 0)}",
+        f"blocking_item_count = {summary.get('blocking_item_count', 0)}",
+        "```",
+        "",
+    ]
+    blocking_items = report.get("blocking_items", [])
+    if blocking_items:
+        lines.extend(
+            [
+                "## 阻断项",
+                "",
+                "| 序号 | task_id | replacement_key | 原因 | 校验错误 |",
+                "|---:|---|---|---|---|",
+            ]
+        )
+        for index, item in enumerate(blocking_items, start=1):
+            errors = ", ".join(item.get("validation_errors", [])) or "-"
+            lines.append(
+                "| {index} | `{task_id}` | `{key}` | `{reason}` | `{errors}` |".format(
+                    index=index,
+                    task_id=item.get("task_id", ""),
+                    key=item.get("replacement_key", ""),
+                    reason=item.get("reason", ""),
+                    errors=errors,
+                )
+            )
+        lines.extend(
+            [
+                "",
+                "## 修复建议",
+                "",
+                "1. 打开 `pilot_input_value_pack_fill_sheet.csv`。",
+                "2. 只修改 `value_json` 列, 不修改 `task_id`、`replacement_key` 或定位列。",
+                "3. 空值需要补充真实 JSON 值。",
+                "4. JSON 解析错误需要按 JSON 格式修复引号、数组、对象或布尔值。",
+                "5. 类型错误需要按照填写指南中的 `type_hint` 修正。",
+                "6. 预检通过后, 再运行 P0 dry-run, 不要直接声明正式实验通过。",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "## 结论",
+                "",
+                "CSV 填写表已经通过预检。该结论只表示 `value_json` 可解析且基本类型合格。",
+                "下一步应运行 P0 dry-run, 确认 value pack 应用、输入模板预检和 execution readiness 全部通过。",
+            ]
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def validate_and_write_pilot_input_value_pack_fill_sheet(
     *,
     value_pack_path: str | Path,
     input_csv_path: str | Path,
     report_path: str | Path,
+    markdown_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """预检 CSV 填写表并写出报告, 不回写 value pack。
 
@@ -352,4 +427,11 @@ def validate_and_write_pilot_input_value_pack_fill_sheet(
         "run_p0_input_freeze_dry_run" if report["overall_decision"] == "pass" else "fix_value_pack_fill_sheet"
     )
     _write_json(report_path, report)
+    if markdown_report_path is not None:
+        markdown_path = Path(markdown_report_path)
+        markdown_path.parent.mkdir(parents=True, exist_ok=True)
+        markdown_path.write_text(
+            render_pilot_input_value_pack_fill_sheet_validation_markdown(report),
+            encoding="utf-8",
+        )
     return report

@@ -11,6 +11,7 @@ from experiments.pilot_input_value_pack_sheet import (
     FILL_SHEET_NAME,
     GUIDANCE_JSON_NAME,
     GUIDANCE_MARKDOWN_NAME,
+    VALIDATION_MARKDOWN_NAME,
     VALIDATION_REPORT_NAME,
     export_pilot_input_value_pack_fill_sheet,
     export_pilot_input_value_pack_fill_sheet_guidance,
@@ -146,6 +147,7 @@ def validate_p0_fill_sheet_from_notebook(
     value_pack_path: str | Path | None = None,
     fill_sheet_path: str | Path | None = None,
     output_json_path: str | Path | None = None,
+    output_markdown_path: str | Path | None = None,
     require_pass: bool = False,
 ) -> dict[str, Any]:
     """供 Notebook 预检 P0 CSV 填写表。
@@ -157,11 +159,16 @@ def validate_p0_fill_sheet_from_notebook(
     value_pack = Path(value_pack_path) if value_pack_path is not None else workspace / VALUE_PACK_NAME
     fill_sheet = Path(fill_sheet_path) if fill_sheet_path is not None else workspace / FILL_SHEET_NAME
     output_json = Path(output_json_path) if output_json_path is not None else workspace / VALIDATION_REPORT_NAME
+    output_markdown = (
+        Path(output_markdown_path) if output_markdown_path is not None else workspace / VALIDATION_MARKDOWN_NAME
+    )
     report = validate_and_write_pilot_input_value_pack_fill_sheet(
         value_pack_path=value_pack,
         input_csv_path=fill_sheet,
         report_path=output_json,
+        markdown_report_path=output_markdown,
     )
+    report["output_markdown_path"] = str(output_markdown)
     if require_pass and report["overall_decision"] != "pass":
         raise RuntimeError(f"P0 CSV 填写表预检未通过: {report['summary']['blocking_item_count']} 个阻断项")
     return report
