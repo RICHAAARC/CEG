@@ -1,4 +1,4 @@
-﻿"""校验 P2 真实外部图像生成 backend 命令文件。"""
+﻿"""校验真实图像生成 backend 命令文件。"""
 
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ from experiments.pilot_image_generation_backend_command import (  # noqa: E402
 
 def build_parser() -> argparse.ArgumentParser:
     """构造 CLI 参数解析器。"""
-    parser = argparse.ArgumentParser(description="校验 P2 外部 backend 命令文件。")
-    parser.add_argument("--command-file", required=True, help="p2_external_backend_command JSON 文件路径。")
+    parser = argparse.ArgumentParser(description="校验图像生成 backend 命令文件。")
+    parser.add_argument("--command-file", required=True, help="image_generation_backend_command JSON 文件路径。")
     parser.add_argument("--out", default=None, help="校验报告输出路径, 默认写到命令文件所在目录。")
     parser.add_argument("--require-ready", action="store_true", help="命令文件未就绪时返回非零退出码。")
     return parser

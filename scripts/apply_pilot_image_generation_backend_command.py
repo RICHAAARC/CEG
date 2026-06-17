@@ -1,4 +1,4 @@
-﻿"""把真实 P2 外部 backend 命令写入命令文件。"""
+﻿"""把真实图像生成 backend 命令写入命令文件。"""
 
 from __future__ import annotations
 
@@ -34,8 +34,8 @@ def _load_external_command(args: argparse.Namespace) -> list[str]:
 
 def build_parser() -> argparse.ArgumentParser:
     """构造 CLI 参数解析器。"""
-    parser = argparse.ArgumentParser(description="写入 P2 外部 backend 真实命令。")
-    parser.add_argument("--command-file", required=True, help="p2_external_backend_command JSON 文件路径。")
+    parser = argparse.ArgumentParser(description="写入图像生成 backend 真实命令。")
+    parser.add_argument("--command-file", required=True, help="image_generation_backend_command JSON 文件路径。")
     parser.add_argument("--out", default=None, help="输出命令文件路径, 默认覆盖 --command-file。")
     parser.add_argument("--validation-report", default=None, help="可选校验报告输出路径。")
     parser.add_argument("--external-command-json", default=None, help="真实 backend argv 的 JSON 字符串列表。")
@@ -50,7 +50,7 @@ def main() -> None:
     command = _load_external_command(args)
     output_file = Path(args.out) if args.out else Path(args.command_file)
     apply_external_command_to_file(args.command_file, command, output_file)
-    report_path = Path(args.validation_report) if args.validation_report else output_file.parent / "p2_external_backend_command_validation_report.json"
+    report_path = Path(args.validation_report) if args.validation_report else output_file.parent / "image_generation_backend_command_validation_report.json"
     report = write_backend_command_validation_report(output_file, report_path)
     print(
         json.dumps(

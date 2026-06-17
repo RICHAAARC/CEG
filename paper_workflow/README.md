@@ -228,3 +228,21 @@ python scripts/run_colab_acceptance_checks.py --bundle path\to\ceg_colab_run_bun
 8. 将图像生成产物打包为 zip, 保存回 Google Drive 的 `CEG/archives/image_generation_outputs/` 目录。
 
 该 Notebook 不直接手写正式 `prompt_plan.json`、`image_pairs.json` 或 image manifests。图像生成产物是否完成只以验收脚本是否通过为准。
+
+## 图像生成真实 backend 更新
+
+当前仓库已补充真实图像生成入口:
+
+```text
+scripts/run_pilot_real_image_generation_backend.py
+```
+
+该入口在 Colab 中承担以下职责:
+
+1. 读取 `prompt_plan.draft.json`。
+2. 通过 diffusers 加载真实 Stable Diffusion 或兼容 text-to-image 模型生成 clean 图像。
+3. 调用 CEG 项目内真实 watermark backend 生成 watermarked 图像。默认 backend 为 `ceg_native_lsb`, 不克隆也不调用其他项目。
+4. 写出 `prompt_plan.json`、`clean/`、`watermarked/`、`image_pairs.json`、`image_manifests/image_generation_manifest.json` 和 `image_manifests/image_pair_manifest.json`。
+5. 自动运行图像生成产物验收报告, 但最终是否完成仍以验收脚本结论为准。
+
+Notebook 只负责拉取 GitHub 仓库、安装运行依赖、从 Google Drive 加载前序产物、执行仓库脚本和归档 zip。`paper_workflow/colab_utils` 不承载真实 SD 采样、水印嵌入或主方法逻辑。

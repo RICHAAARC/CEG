@@ -648,7 +648,7 @@ recommended_next_action = 运行真实 SD / watermark backend, 写出 clean / wa
 当前暂停原因:
 
 ```text
-本地没有 GPU 环境, P2 需要用户在 Colab GPU 环境运行真实 SD3 / CEG-WM 水印图像生成。
+本地没有 GPU 环境, 图像生成阶段需要用户在 Colab GPU 环境运行真实 SD 图像生成与 CEG 项目内水印图像生成。
 ```
 
 P2 GPU 交接目录已经生成:
@@ -897,3 +897,40 @@ scripts/build_pilot_image_generation_resume_plan.py
 该 Notebook 仍然需要真实外部 SD / watermark backend。若 `RUN_IMAGE_GENERATION_OUTPUTS = False`, Notebook 只打印命令而不执行真实 GPU 生成。若要正式产出图像生成产物, 必须先让外部 backend 命令文件中的 `external_command` 指向真实 backend, 并使命令文件校验通过。
 
 图像生成产物是否完成只以 `pilot_image_generation_output_acceptance_report.json` 中 `overall_decision = pass` 为准。
+
+## 33. 2026-06-17 真实图像生成 backend 补充
+
+### 33.1 新增脚本
+
+已新增仓库内真实图像生成入口:
+
+```text
+D:/Code/CEG/scripts/run_pilot_real_image_generation_backend.py
+```
+
+该脚本不是 Notebook helper, 也不放在 `paper_workflow/colab_utils` 下。它属于 `scripts/` 层的正式运行入口, 负责读取 prompt plan、调用真实 SD backend、调用真实 watermark backend, 并写出图像生成阶段所需 manifests。
+
+### 33.2 与 CEG-WM 的对齐方式
+
+默认水印后端已改为 `ceg_native_lsb`, 即在 CEG 项目内对每张 clean 图像执行原生像素级水印嵌入。该方式不再克隆或调用 CEG-WM, 也不会用 mock、复制或可见叠字替代水印。
+
+Colab Notebook 当前只拉取 `CEG` 仓库, 并把命令文件中的 `external_command` 指向:
+
+```text
+/content/CEG/scripts/run_pilot_real_image_generation_backend.py
+```
+
+默认命令会传入:
+
+```text
+--watermark-backend ceg_native_lsb
+```
+
+### 33.3 仍然需要的运行条件
+
+正式运行仍需要 Colab GPU 环境、Hugging Face token 环境变量以及可下载的 SD 模型权重。脚本不会把 token 写入 Notebook、JSON、manifest 或日志。若 CEG 原生水印没有生成与 clean 文件不同的 watermarked 图像, 该脚本会直接失败, 防止把伪造输出带入论文结果包。
+
+
+## 34. 2026-06-17 运行时依赖修正
+
+已移除图像生成 Notebook 与真实 backend 对 `CEG-WM` 仓库的运行时依赖。正式 Colab 流程只克隆并运行 `CEG` 仓库。当前调用模型默认由 `scripts/run_pilot_real_image_generation_backend.py` 的 `--sd-model-id`、`model_config.draft.json` 的 `model_id` 或脚本默认值决定; 若都未显式指定, 默认值为 `stabilityai/stable-diffusion-3.5-medium`。默认 watermark backend 为 CEG 内部 `ceg_native_lsb`。

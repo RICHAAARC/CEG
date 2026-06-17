@@ -1,4 +1,4 @@
-﻿"""验证 P2 外部 backend 命令文件治理。"""
+﻿"""验证 图像生成 backend 命令文件治理。"""
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ from experiments.pilot_image_generation_backend_command import build_backend_com
 @pytest.mark.quick
 def test_backend_command_validation_rejects_placeholder(tmp_path) -> None:
     """校验器必须拒绝仍含 placeholder 的命令草稿。"""
-    command_file = tmp_path / "p2_external_backend_command.draft.json"
+    command_file = tmp_path / "image_generation_backend_command.draft.json"
     command_file.write_text(
-        json.dumps({"external_command_placeholder": ["python", "/content/replace_with_backend.py"]}),
+        json.dumps({"external_command_placeholder": ["python", "/content/placeholder_backend.py"]}),
         encoding="utf-8",
     )
 
@@ -29,9 +29,9 @@ def test_backend_command_validation_rejects_placeholder(tmp_path) -> None:
 @pytest.mark.quick
 def test_apply_backend_command_cli_writes_ready_command_file(tmp_path) -> None:
     """apply CLI 应把真实 argv 写成 external_command 并生成通过的校验报告。"""
-    command_file = tmp_path / "p2_external_backend_command.draft.json"
+    command_file = tmp_path / "image_generation_backend_command.draft.json"
     command_file.write_text(
-        json.dumps({"external_command_placeholder": ["python", "/content/replace_with_backend.py"]}),
+        json.dumps({"external_command_placeholder": ["python", "/content/placeholder_backend.py"]}),
         encoding="utf-8",
     )
     command = ["python", "/content/backend.py", "--out", "/content/drive/MyDrive/CEG/images"]
@@ -51,7 +51,7 @@ def test_apply_backend_command_cli_writes_ready_command_file(tmp_path) -> None:
     )
 
     payload = json.loads(command_file.read_text(encoding="utf-8"))
-    report = json.loads((tmp_path / "p2_external_backend_command_validation_report.json").read_text(encoding="utf-8"))
+    report = json.loads((tmp_path / "image_generation_backend_command_validation_report.json").read_text(encoding="utf-8"))
     assert payload["external_command"] == command
     assert "external_command_placeholder" not in payload
     assert payload["manifest_status"] == "ready_for_colab_gpu_execution_unverified"
@@ -61,7 +61,7 @@ def test_apply_backend_command_cli_writes_ready_command_file(tmp_path) -> None:
 @pytest.mark.quick
 def test_validate_backend_command_cli_fails_for_secret_like_value(tmp_path) -> None:
     """命令文件中不得直接写入疑似 Hugging Face token。"""
-    command_file = tmp_path / "p2_external_backend_command.json"
+    command_file = tmp_path / "image_generation_backend_command.json"
     command_file.write_text(json.dumps({"external_command": ["python", "backend.py", "hf_fake_secret_value"]}), encoding="utf-8")
 
     completed = subprocess.run(
@@ -79,5 +79,5 @@ def test_validate_backend_command_cli_fails_for_secret_like_value(tmp_path) -> N
     )
 
     assert completed.returncode == 1
-    report = json.loads((tmp_path / "p2_external_backend_command_validation_report.json").read_text(encoding="utf-8"))
+    report = json.loads((tmp_path / "image_generation_backend_command_validation_report.json").read_text(encoding="utf-8"))
     assert any(issue["issue_type"] == "possible_secret_written_to_command" for issue in report["blocking_issues"])

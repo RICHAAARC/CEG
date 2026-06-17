@@ -1,4 +1,4 @@
-﻿"""P2 外部图像生成 backend 命令文件治理。"""
+﻿"""图像生成 backend 命令文件治理。"""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-COMMAND_ARTIFACT_NAME = "p2_external_backend_command.draft.json"
-VALIDATION_REPORT_NAME = "p2_external_backend_command_validation_report.json"
+COMMAND_ARTIFACT_NAME = "image_generation_backend_command.draft.json"
+VALIDATION_REPORT_NAME = "image_generation_backend_command_validation_report.json"
 
 REQUIRED_OUTPUTS = (
     "prompt_plan.json",
@@ -32,10 +32,10 @@ def write_json(path: str | Path, payload: dict[str, Any]) -> None:
 
 
 def build_external_backend_command_template(*, workspace_root: str | Path) -> dict[str, Any]:
-    """构造需要用户在 Colab 中补全的外部 backend 命令草稿。
+    """构造 Colab 可执行的真实图像生成 backend 命令。
 
-    草稿中的 `external_command_placeholder` 不是正式命令, 包装入口会拒绝执行它。
-    用户必须把该字段替换为 `external_command`, 并填写真实 backend argv 列表。
+    默认命令指向仓库内真实 SD 生成入口, 并通过 CEG 项目内原生水印原语执行 watermark。
+    用户如需替换 watermark backend, 应改写 external_command 中的 watermark 参数, 而不是在 Notebook 中手写正式产物。
     """
     workspace = Path(workspace_root)
     prompt_plan = workspace / "inputs" / "prompts" / "prompt_plan.draft.json"
@@ -43,33 +43,37 @@ def build_external_backend_command_template(*, workspace_root: str | Path) -> di
     model_config = workspace / "configs" / "model_config.draft.json"
     return {
         "artifact_name": COMMAND_ARTIFACT_NAME,
-        "manifest_status": "draft_requires_real_external_backend_command",
+        "manifest_status": "ready_for_colab_gpu_execution_unverified",
         "workspace_root": str(workspace),
-        "prompt_source": "D:/Code/CEG-WM/prompts",
+        "prompt_source": "Google Drive workspace prompt_plan.draft.json",
         "hf_token_status": "defined_in_colab_environment_not_written_to_disk",
-        "external_command_placeholder": [
+        "external_command": [
             "python",
-            "/content/replace_with_real_sd_watermark_backend.py",
+            "/content/CEG/scripts/run_pilot_real_image_generation_backend.py",
             "--prompt-plan",
             str(prompt_plan).replace("\\", "/").replace("D:/content/drive/MyDrive/CEG", "/content/drive/MyDrive/CEG"),
             "--out",
             str(output_root).replace("\\", "/").replace("D:/content/drive/MyDrive/CEG", "/content/drive/MyDrive/CEG"),
             "--model-config",
             str(model_config).replace("\\", "/").replace("D:/content/drive/MyDrive/CEG", "/content/drive/MyDrive/CEG"),
+            "--watermark-backend",
+            "ceg_native_lsb",
+            "--require-pass",
         ],
-        "required_replacement": {
-            "replace_field": "external_command_placeholder",
-            "with_field": "external_command",
+        "command_contract": {
             "value_type": "list[str]",
-            "must_run_real_gpu_backend": True,
+            "must_run_real_sd_backend": True,
+            "must_run_real_watermark_backend": True,
+            "must_not_call_external_project": True,
+            "default_entrypoint": "scripts/run_pilot_real_image_generation_backend.py"
         },
         "required_outputs": list(REQUIRED_OUTPUTS),
         "instructions": [
-            "在 Colab 中安装或挂载真实 SD / watermark backend。",
-            "把 external_command_placeholder 字段改名为 external_command。",
-            "把 /content/replace_with_real_sd_watermark_backend.py 替换为真实 backend 入口。",
+            "在 Colab 中安装 torch、diffusers、transformers、accelerate 和 Pillow。",
+            "默认命令会调用 /content/CEG/scripts/run_pilot_real_image_generation_backend.py。",
+            "默认 watermark backend 为 CEG 仓库内 ceg_native_lsb, 不克隆也不调用其他项目。",
             "不要把 Hugging Face token 写入本文件、manifest、CSV、Notebook 输出或日志。",
-            "真实 backend 必须写出 required_outputs 中列出的 P2 文件。",
+            "真实 backend 必须写出 required_outputs 中列出的图像生成文件。",
         ],
     }
 
@@ -149,7 +153,7 @@ def build_backend_command_validation_report(command_file: str | Path) -> dict[st
         "artifact_name": VALIDATION_REPORT_NAME,
         "command_file": str(path),
         "overall_decision": decision,
-        "recommended_next_stage": "run_p2_wrapper_in_colab" if decision == "pass" else "replace_external_backend_command",
+        "recommended_next_stage": "run_image_generation_backend_in_colab" if decision == "pass" else "replace_external_backend_command",
         "external_command": command,
         "required_outputs": list(REQUIRED_OUTPUTS),
         "blocking_issues": issues,
@@ -170,7 +174,7 @@ def write_backend_command_validation_report(command_file: str | Path, out: str |
 def apply_external_command_to_file(command_file: str | Path, external_command: list[str], out: str | Path | None = None) -> dict[str, Any]:
     """把真实外部 backend argv 写入命令文件。
 
-    该函数只修改命令描述文件, 不运行模型。调用方仍需要随后执行校验和 P2 wrapper。
+    该函数只修改命令描述文件, 不运行模型。调用方仍需要随后执行校验和图像生成入口。
     """
     if not external_command or not all(isinstance(item, str) and item.strip() for item in external_command):
         raise ValueError("external_command must be a non-empty list[str]")
