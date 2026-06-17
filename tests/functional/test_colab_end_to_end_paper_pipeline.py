@@ -150,6 +150,11 @@ def test_colab_end_to_end_paper_pipeline_uses_existing_image_generation_outputs(
         assert manifest["run_image_generation"] is False
         assert Path(manifest["image_acceptance_report"]).is_file()
         assert Path(manifest["paper_pipeline_manifest"]).is_file()
+        assert Path(manifest["drive_result_inventory"]).is_file()
+        inventory = json.loads(Path(manifest["drive_result_inventory"]).read_text(encoding="utf-8"))
+        assert inventory["summary"]["package_archive_manifest_count"] == 1
+        assert inventory["summary"]["valid_image_generation_archive_count"] == 1
+        assert inventory["summary"]["valid_package_archive_count"] == 0
         assert any((drive_root / "archives" / "image_generation_outputs").glob("image_generation_outputs_*.zip"))
         assert any((drive_root / "package_archives").glob("paper_results_package_*.zip"))
     finally:

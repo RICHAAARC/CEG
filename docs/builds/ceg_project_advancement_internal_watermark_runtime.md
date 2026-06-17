@@ -1618,3 +1618,42 @@ python scripts/build_drive_result_inventory.py \
 ```
 
 若只有论文结果包而没有图像生成归档, 清单会判定为 `fail`。这是因为论文发表结果包原则上既需要指标表格和图表, 也需要示例水印图像及其生成证据。
+
+## 34. 本次继续推进: Colab 流水线自动生成 Drive 结果清单
+
+本次把 `build_drive_result_inventory.py` 接入 Colab 论文结果流水线, 修改位置为:
+
+```text
+scripts/run_colab_paper_results_pipeline.py
+scripts/run_colab_end_to_end_paper_pipeline.py
+```
+
+### 34.1 行为变化
+
+`run_colab_paper_results_pipeline.py` 在完成 `archive_paper_results_to_drive.py` 后, 会自动运行:
+
+```bash
+python scripts/build_drive_result_inventory.py \
+  --drive-root <drive_root> \
+  --out <drive_root>/result_inventories/drive_result_inventory_<run_id>.json
+```
+
+流水线 manifest 中新增字段:
+
+```text
+drive_result_inventory
+```
+
+端到端流水线 `run_colab_end_to_end_paper_pipeline.py` 会把该字段继续提升到端到端 manifest 中。
+
+### 34.2 对论文结果包的意义
+
+这样 Colab 正式运行结束后, 结果目录会同时包含:
+
+1. 图像生成产物 zip。
+2. 论文结果包 snapshot。
+3. 论文结果包 zip。
+4. 论文结果包 archive manifest。
+5. Drive 结果目录反查清单。
+
+该补充减少人工检查步骤, 使 `/content/drive/MyDrive/CEG` 本身成为可审计的论文结果交付目录。

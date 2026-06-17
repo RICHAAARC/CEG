@@ -282,6 +282,32 @@ def main() -> None:
         )
         raise SystemExit(int(archive_result["return_code"]))
 
+    effective_run_id = args.run_id or workspace.name
+    drive_inventory_path = Path(args.drive_root).resolve() / "result_inventories" / f"drive_result_inventory_{effective_run_id}.json"
+    drive_inventory_command = [
+        sys.executable,
+        str(ROOT / "scripts" / "build_drive_result_inventory.py"),
+        "--drive-root",
+        str(Path(args.drive_root).resolve()),
+        "--out",
+        str(drive_inventory_path),
+    ]
+    drive_inventory_result = _run_command(drive_inventory_command)
+    if drive_inventory_result["return_code"] != 0:
+        _fail(
+            output_root,
+            failed_step="build_drive_result_inventory",
+            results={
+                "attack_result": attack_result,
+                "detection_result": detection_result,
+                "baseline_result": baseline_result,
+                "package_result": package_result,
+                "archive_result": archive_result,
+                "drive_inventory_result": drive_inventory_result,
+            },
+        )
+        raise SystemExit(int(drive_inventory_result["return_code"]))
+
     stage_summary_result = None
     if args.refresh_stage_summary:
         summary_command = [sys.executable, str(ROOT / "scripts" / "build_pilot_stage_progress_summary.py"), "--workspace", str(workspace)]
@@ -316,6 +342,7 @@ def main() -> None:
         "package_run_root": str(package_run_root),
         "paper_results_package_root": str(package_run_root / "paper_results_package"),
         "drive_root": str(Path(args.drive_root).resolve()),
+        "drive_result_inventory": str(drive_inventory_path),
         "attack_result": attack_result,
         "detection_result": detection_result,
         "baseline_result": baseline_result,
@@ -330,6 +357,7 @@ def main() -> None:
                 "baseline_execution_manifest_path": baseline_execution_manifest_path,
                 "package_command": package_command,
                 "archive_command": archive_command,
+                "drive_inventory_command": drive_inventory_command,
             }
         ),
     }

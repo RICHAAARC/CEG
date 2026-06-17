@@ -158,6 +158,10 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
             out / "calibrated_paper_results_package" / "paper_results_package" / "paper_results_package_manifest.json"
         ).is_file()
         assert manifest["baseline_observations_path"].endswith("baseline_observations.json")
+        assert Path(manifest["drive_result_inventory"]).is_file()
+        inventory = json.loads(Path(manifest["drive_result_inventory"]).read_text(encoding="utf-8"))
+        assert inventory["summary"]["package_archive_manifest_count"] == 1
+        assert inventory["summary"]["valid_package_archive_count"] == 0
         assert any((drive_root / "package_archives").glob("paper_results_package_*.zip"))
     finally:
         if short_root.exists():
@@ -245,6 +249,7 @@ def test_colab_paper_results_pipeline_runs_formal_baseline_plan(tmp_path: Path) 
         assert baseline_manifest["formal_result_claim"] is True
         assert baseline_manifest["evidence_path_count"] == 1
         assert baseline_manifest["failed_command_count"] == 0
+        assert Path(manifest["drive_result_inventory"]).is_file()
     finally:
         if short_root.exists():
             shutil.rmtree(short_root)

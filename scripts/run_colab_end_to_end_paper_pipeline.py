@@ -353,6 +353,7 @@ def main() -> None:
         "paper_pipeline_root": str(paper_pipeline_root),
         "paper_pipeline_manifest": str(paper_pipeline_manifest_path),
         "paper_results_package_root": paper_pipeline_manifest.get("paper_results_package_root"),
+        "drive_result_inventory": paper_pipeline_manifest.get("drive_result_inventory"),
         "image_generation_result": image_generation_result,
         "image_acceptance_result": image_acceptance_result,
         "image_archive_manifest": image_archive_manifest,
