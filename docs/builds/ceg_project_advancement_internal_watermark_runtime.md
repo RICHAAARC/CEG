@@ -152,3 +152,63 @@ main/watermarking/interfaces.py
 5. `scripts/run_ceg_real_detection_backend.py`: 读取 `image_pairs.json`, 运行真实 detector, 写出可统计 TPP@FPR 的 detection records。
 
 这些实现应复用 `interfaces.py` 的请求和结果结构, 而不是把 notebook、Google Drive 打包或 harness 门禁逻辑写入方法模块。
+
+## 12. 本次继续推进: 真实图像驱动 semantic mask 原语
+
+在接口层之后, 本次继续补充了 CEG 内部真实方法原语:
+
+```text
+main/watermarking/semantic_mask.py
+```
+
+该模块的职责是把输入图像转换为可复现的二值 mask、mask 统计量、空间绑定和 digest。
+它不包含 Colab 调度、Google Drive 打包、harness 门禁或 CEG-WM 兼容逻辑。
+
+### 12.1 已实现能力
+
+1. `gradient_saliency` backend:
+   - 读取真实图像像素。
+   - 计算灰度梯度能量。
+   - 按分位数阈值生成高显著性区域 mask。
+   - 执行可配置开闭运算。
+   - 生成 `mask_digest` 与 `routing_digest`。
+   - 生成 `area_ratio`、`connected_components`、`largest_component_ratio`、`boundary_length`、`downsample_grid_digest` 等统计量。
+   - 可写出二值 mask 图像。
+
+2. `inspyrenet` backend:
+   - 提供真实 InSPyReNet 入口。
+   - 当运行环境安装 `transparent_background` 且具备权重时, 调用 `Remover.process(..., type="map")` 生成 saliency map。
+   - 当依赖不可用时显式失败, 不自动降级为 proxy, 防止正式实验误用。
+
+### 12.2 当前定位
+
+该模块是 CEG 论文方法中的一个原语, 对应 semantic mask / LF-HF routing 的输入侧能力。
+它仍然不是完整论文主方法, 因为尚未同时实现:
+
+1. LF / HF 内容链嵌入。
+2. LF / HF 内容链检测。
+3. 几何同步与 recovery。
+4. Attestation 绑定。
+5. 同口径 TPP@FPR detection records。
+
+因此模块输出继续保留:
+
+```text
+paper_main_method_ready = false
+```
+
+### 12.3 与 CEG-WM 的关系
+
+本次仅参考 CEG-WM 中 semantic mask provider 的方法思想:
+
+1. mask 应绑定图像分辨率。
+2. mask 应有 digest。
+3. mask 应有面积、连通域和低分辨率网格统计。
+4. saliency source 应显式记录。
+5. model backend 不可用时不应静默伪装为正式模型结果。
+
+没有迁入 CEG-WM 的复杂门禁、workflow、历史 archive 测试或项目运行时依赖。
+
+### 12.4 下一步
+
+下一步应在 `main/watermarking/content_chain/` 下补充 LF/HF 内容链, 使 semantic mask 的 `mask_true -> hf` 与 `mask_false -> lf` 路由真正进入 embedding 和 detection 分数生产路径。

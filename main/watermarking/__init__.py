@@ -14,9 +14,25 @@ from main.watermarking.interfaces import (
     WatermarkEmbeddingResult,
     WatermarkPromptContext,
 )
+from main.watermarking.semantic_mask import (
+    GRADIENT_SALIENCY_BACKEND_ID,
+    INSPYRENET_BACKEND_ID,
+    SemanticMaskRequest,
+    SemanticMaskResult,
+    build_gradient_saliency_mask,
+    build_inspyrenet_semantic_mask,
+    extract_semantic_mask,
+)
 from main.watermarking.native_lsb import NativeLsbWatermarkResult, embed_native_lsb_watermark
 
 __all__ = [
+    "GRADIENT_SALIENCY_BACKEND_ID",
+    "INSPYRENET_BACKEND_ID",
+    "SemanticMaskRequest",
+    "SemanticMaskResult",
+    "build_gradient_saliency_mask",
+    "build_inspyrenet_semantic_mask",
+    "extract_semantic_mask",
     "NativeLsbWatermarkResult",
     "WatermarkDetectionRequest",
     "WatermarkDetectionResult",
