@@ -19,9 +19,9 @@ import numpy as np
 from main.core.digest import build_stable_digest
 
 
-GEOMETRY_REGISTRATION_BACKEND_ID = "ceg_affine_grid_registration"
+GEOMETRY_REGISTRATION_BACKEND_ID = "ceg_affine_perspective_grid_registration"
 GEOMETRY_REGISTRATION_BACKEND_ROLE = "reference_frame_recovery_primitive"
-GEOMETRY_REGISTRATION_VERSION = "ceg_geometry_registration_v2"
+GEOMETRY_REGISTRATION_VERSION = "ceg_geometry_registration_v3"
 
 
 @dataclass(frozen=True)
@@ -55,6 +55,7 @@ class GeometryRegistrationResult:
     dy: int
     rotation_degrees: float
     scale: float
+    perspective_offset: float
     registration_confidence: float
     anchor_inlier_ratio: float
     recovered_sync_consistency: float
@@ -77,6 +78,7 @@ class GeometryRegistrationResult:
             "dy": self.dy,
             "rotation_degrees": self.rotation_degrees,
             "scale": self.scale,
+            "perspective_offset": self.perspective_offset,
             "registration_confidence": self.registration_confidence,
             "anchor_inlier_ratio": self.anchor_inlier_ratio,
             "recovered_sync_consistency": self.recovered_sync_consistency,
@@ -91,7 +93,7 @@ class GeometryRegistrationResult:
             "paper_main_method_ready": self.paper_main_method_ready,
             "paper_main_method_blocking_reason": None
             if self.paper_main_method_ready
-            else "affine_grid_registration_lacks_feature_or_perspective_recovery",
+            else "perspective_grid_registration_lacks_feature_matching_or_local_deformation_recovery",
         }
 
 
@@ -116,6 +118,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
     dy = int(best["dy"])
     rotation_degrees = round(float(best["rotation_degrees"]), 6)
     scale = round(float(best["scale"]), 6)
+    perspective_offset = round(float(best["perspective_offset"]), 6)
     transformed_target_gray = best["target_gray"]
     confidence = round(float(best["score"]), 8)
     alignment_residual = round(float(max(0.0, 1.0 - confidence)), 8)
@@ -131,6 +134,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
         dy=dy,
         rotation_degrees=rotation_degrees,
         scale=scale,
+        perspective_offset=perspective_offset,
     )
 
     reference_digest = build_stable_digest(_image_summary(reference_rgb, request.reference_image_path))
@@ -146,6 +150,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
         "affine_candidate_count": int(best["affine_candidate_count"]),
         "rotation_candidates": [float(v) for v in _rotation_candidates(request.config)],
         "scale_candidates": [float(v) for v in _scale_candidates(request.config)],
+        "perspective_offset_candidates": [float(v) for v in _perspective_offset_candidates(request.config)],
         "reference_shape": [int(v) for v in reference_rgb.shape],
         "target_shape": [int(v) for v in target_rgb.shape],
         "config": dict(request.config),
@@ -157,6 +162,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
             "dy": dy,
             "rotation_degrees": rotation_degrees,
             "scale": scale,
+            "perspective_offset": perspective_offset,
             "registration_confidence": confidence,
             "anchor_inlier_ratio": anchor_inlier_ratio,
             "recovered_sync_consistency": recovered_sync_consistency,
@@ -170,6 +176,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
         dy=dy,
         rotation_degrees=rotation_degrees,
         scale=scale,
+        perspective_offset=perspective_offset,
         registration_confidence=confidence,
         anchor_inlier_ratio=anchor_inlier_ratio,
         recovered_sync_consistency=recovered_sync_consistency,
@@ -279,24 +286,104 @@ def _scale_candidates(config: Mapping[str, Any]) -> list[float]:
     return candidates or [1.0]
 
 
+def _perspective_offset_candidates(config: Mapping[str, Any]) -> list[float]:
+    """读取轻量透视候选网格。
+
+    `perspective_offset` 表示上边两个角向中心收缩的比例。正值用于校正常见 top-keystone,
+    负值用于校正反向 keystone。该参数是项目特定的轻量透视原语, 不是完整单应性特征匹配。
+    """
+
+    values = config.get("perspective_offsets", [0.0])
+    if isinstance(values, str):
+        values = [item.strip() for item in values.split(",") if item.strip()]
+    candidates = sorted({round(float(value), 6) for value in values if abs(float(value)) < 0.45})
+    return candidates or [0.0]
+
+
+def _perspective_coefficients(source_points: list[tuple[float, float]], target_points: list[tuple[float, float]]) -> list[float]:
+    """计算 Pillow perspective transform 系数。
+
+    Pillow 的 perspective 系数把输出坐标映射回输入坐标。这里使用线性方程直接求解, 避免引入 OpenCV
+    依赖, 便于在 Colab 和最小测试环境中复用。
+    """
+
+    matrix = []
+    vector = []
+    for (src_x, src_y), (dst_x, dst_y) in zip(source_points, target_points):
+        matrix.append([dst_x, dst_y, 1.0, 0.0, 0.0, 0.0, -src_x * dst_x, -src_x * dst_y])
+        matrix.append([0.0, 0.0, 0.0, dst_x, dst_y, 1.0, -src_y * dst_x, -src_y * dst_y])
+        vector.extend([src_x, src_y])
+    solution = np.linalg.solve(np.asarray(matrix, dtype=np.float64), np.asarray(vector, dtype=np.float64))
+    return [float(value) for value in solution]
+
+
+def _perspective_source_quad(width: int, height: int, perspective_offset: float) -> list[tuple[float, float]]:
+    """构造用于轻量 keystone 校正的源四边形。"""
+
+    offset = float(width - 1) * float(perspective_offset)
+    return [
+        (offset, 0.0),
+        (float(width - 1) - offset, 0.0),
+        (float(width - 1), float(height - 1)),
+        (0.0, float(height - 1)),
+    ]
+
+
+def _apply_perspective_gray(array: np.ndarray, *, perspective_offset: float) -> np.ndarray:
+    """对灰度图执行轻量透视候选校正。"""
+
+    try:
+        from PIL import Image
+    except ImportError as exc:  # pragma: no cover - 由运行环境决定
+        raise RuntimeError("perspective geometry registration 需要安装 Pillow。") from exc
+    height, width = array.shape
+    rect = [(0.0, 0.0), (float(width - 1), 0.0), (float(width - 1), float(height - 1)), (0.0, float(height - 1))]
+    coeffs = _perspective_coefficients(_perspective_source_quad(width, height, perspective_offset), rect)
+    image = Image.fromarray(np.clip(array * 255.0, 0, 255).round().astype(np.uint8), mode="L")
+    transformed = image.transform((width, height), Image.Transform.PERSPECTIVE, coeffs, resample=Image.Resampling.BILINEAR)
+    return (np.asarray(transformed, dtype=np.float32) / 255.0).astype(np.float32)
+
+
+def _apply_perspective_rgb(array: np.ndarray, *, perspective_offset: float) -> np.ndarray:
+    """对 RGB 图执行轻量透视候选校正。"""
+
+    try:
+        from PIL import Image
+    except ImportError as exc:  # pragma: no cover - 由运行环境决定
+        raise RuntimeError("perspective geometry aligned image 写出需要安装 Pillow。") from exc
+    height, width, _ = array.shape
+    rect = [(0.0, 0.0), (float(width - 1), 0.0), (float(width - 1), float(height - 1)), (0.0, float(height - 1))]
+    coeffs = _perspective_coefficients(_perspective_source_quad(width, height, perspective_offset), rect)
+    image = Image.fromarray(np.clip(array, 0, 255).round().astype(np.uint8), mode="RGB")
+    transformed = image.transform((width, height), Image.Transform.PERSPECTIVE, coeffs, resample=Image.Resampling.BILINEAR)
+    return np.asarray(transformed.convert("RGB"), dtype=np.float32)
+
+
 def _search_affine_registration(reference: np.ndarray, target: np.ndarray, request: GeometryRegistrationRequest) -> dict[str, Any]:
     """在 affine 网格和整数平移窗口中搜索最优 registration。"""
 
     all_candidates: list[dict[str, Any]] = []
     for rotation_degrees in _rotation_candidates(request.config):
         for scale in _scale_candidates(request.config):
-            candidate_target = _apply_affine_gray(target, rotation_degrees=rotation_degrees, scale=scale)
-            if candidate_target.shape != reference.shape:
-                candidate_target = _resize_to_shape(candidate_target, reference.shape)
-            translation = _search_translation(reference, candidate_target, request.search_radius)
-            all_candidates.append(
-                {
-                    **translation,
-                    "rotation_degrees": rotation_degrees,
-                    "scale": scale,
-                    "target_gray": candidate_target,
-                }
-            )
+            for perspective_offset in _perspective_offset_candidates(request.config):
+                candidate_target = _apply_affine_gray(
+                    target,
+                    rotation_degrees=rotation_degrees,
+                    scale=scale,
+                    perspective_offset=perspective_offset,
+                )
+                if candidate_target.shape != reference.shape:
+                    candidate_target = _resize_to_shape(candidate_target, reference.shape)
+                translation = _search_translation(reference, candidate_target, request.search_radius)
+                all_candidates.append(
+                    {
+                        **translation,
+                        "rotation_degrees": rotation_degrees,
+                        "scale": scale,
+                        "perspective_offset": perspective_offset,
+                        "target_gray": candidate_target,
+                    }
+                )
     all_candidates.sort(reverse=True, key=lambda item: float(item["score"]))
     best = dict(all_candidates[0])
     second_score = float(all_candidates[1]["score"]) if len(all_candidates) > 1 else float(best["score"])
@@ -306,10 +393,12 @@ def _search_affine_registration(reference: np.ndarray, target: np.ndarray, reque
     return best
 
 
-def _apply_affine_gray(array: np.ndarray, *, rotation_degrees: float, scale: float) -> np.ndarray:
-    """对灰度图执行中心缩放和旋转, 输出尺寸保持不变。"""
+def _apply_affine_gray(array: np.ndarray, *, rotation_degrees: float, scale: float, perspective_offset: float = 0.0) -> np.ndarray:
+    """对灰度图执行中心缩放、透视候选校正和旋转, 输出尺寸保持不变。"""
 
     transformed = _center_scale_array(array, scale=scale)
+    if abs(perspective_offset) > 1e-9:
+        transformed = _apply_perspective_gray(transformed, perspective_offset=perspective_offset)
     if abs(rotation_degrees) <= 1e-9:
         return transformed.astype(np.float32)
     try:
@@ -321,10 +410,12 @@ def _apply_affine_gray(array: np.ndarray, *, rotation_degrees: float, scale: flo
     return (np.asarray(rotated, dtype=np.float32) / 255.0).astype(np.float32)
 
 
-def _apply_affine_rgb(array: np.ndarray, *, rotation_degrees: float, scale: float) -> np.ndarray:
-    """对 RGB 图执行中心缩放和旋转, 输出尺寸保持不变。"""
+def _apply_affine_rgb(array: np.ndarray, *, rotation_degrees: float, scale: float, perspective_offset: float = 0.0) -> np.ndarray:
+    """对 RGB 图执行中心缩放、透视候选校正和旋转, 输出尺寸保持不变。"""
 
     transformed = _center_scale_rgb(array, scale=scale)
+    if abs(perspective_offset) > 1e-9:
+        transformed = _apply_perspective_rgb(transformed, perspective_offset=perspective_offset)
     if abs(rotation_degrees) <= 1e-9:
         return transformed.astype(np.float32)
     try:
@@ -504,12 +595,18 @@ def _write_aligned_image(
     dy: int,
     rotation_degrees: float,
     scale: float,
+    perspective_offset: float = 0.0,
 ) -> str | None:
     """按需写出经过 affine 候选变换和平移恢复后的 target 图像。"""
 
     if output_path is None:
         return None
-    transformed = _apply_affine_rgb(target_rgb, rotation_degrees=rotation_degrees, scale=scale)
+    transformed = _apply_affine_rgb(
+        target_rgb,
+        rotation_degrees=rotation_degrees,
+        scale=scale,
+        perspective_offset=perspective_offset,
+    )
     aligned = _apply_shift_rgb(transformed, dx=dx, dy=dy)
     _write_rgb_array(output_path, aligned)
     return output_path.as_posix()

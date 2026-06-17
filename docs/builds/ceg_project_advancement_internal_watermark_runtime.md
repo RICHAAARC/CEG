@@ -1025,3 +1025,57 @@ img_001_brightness_contrast
 ```
 
 这保持了 CEG 项目的边界: baseline 算法实现可以存在于外部仓库, 但进入 CEG 结果包的必须是统一 observation 契约和可审计 provenance。
+
+
+## 25. 本次继续推进: perspective grid geometry registration
+
+在 affine grid geometry registration 之后, 本次继续补充轻量 perspective / keystone 搜索原语。实现位置为:
+
+```text
+main/watermarking/geometry/registration.py
+```
+
+### 25.1 方法变化
+
+几何搜索现在从:
+
+```text
+rotation candidates × scale candidates × integer translation window
+```
+
+扩展为:
+
+```text
+rotation candidates × scale candidates × perspective offsets × integer translation window
+```
+
+`perspective_offset` 表示上边两个角向中心收缩或反向扩张的比例, 用于覆盖常见的轻量 keystone / perspective 攻击。该实现使用 Pillow 的 perspective transform 和直接线性方程求解系数, 不引入 OpenCV 依赖, 因此可以在 Colab 和最小测试环境中运行。
+
+### 25.2 新增记录字段
+
+检测事件中的 geometry record 现在新增:
+
+```text
+perspective_offset
+perspective_offset_candidates
+```
+
+backend id 更新为:
+
+```text
+ceg_affine_perspective_grid_registration
+```
+
+### 25.3 CLI 参数
+
+真实 detection 入口新增:
+
+```bash
+--perspective-offsets 0.0,0.04,-0.04
+```
+
+Colab paper results pipeline 也会把该参数转发给 detection producer。
+
+### 25.4 当前边界
+
+该实现是真实像素级 perspective 候选搜索, 不是占位字段。它仍不是完整的 feature matching / RANSAC homography / local deformation backend。后续若要覆盖强透视、局部形变和复杂裁剪, 应在同一接口下补充基于特征点的 homography 或局部网格恢复。

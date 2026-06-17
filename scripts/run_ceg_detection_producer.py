@@ -71,6 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--geometry-anchor-grid-size", type=int, default=4, help="几何 registration 局部锚点网格大小。")
     parser.add_argument("--affine-rotation-degrees", default="-6,-3,0,3,6", help="affine rotation 搜索网格。")
     parser.add_argument("--affine-scales", default="0.95,1.0,1.05", help="affine scale 搜索网格。")
+    parser.add_argument("--perspective-offsets", default="0.0", help="轻量 perspective keystone 搜索网格。")
     parser.add_argument("--attestation-key-env", default=None, help="可选 HMAC attestation 密钥环境变量名。")
     parser.add_argument("--attestation-key-id", default=None, help="可选 HMAC attestation 密钥标识, 只写入 digest。")
     return parser
@@ -98,6 +99,7 @@ def main() -> None:
                     default=[-6.0, -3.0, 0.0, 3.0, 6.0],
                 ),
                 "affine_scales": _parse_float_list(args.affine_scales, default=[0.95, 1.0, 1.05]),
+                "perspective_offsets": _parse_float_list(args.perspective_offsets, default=[0.0]),
                 "attestation_key_env": args.attestation_key_env,
                 "attestation_key_id": args.attestation_key_id,
             },

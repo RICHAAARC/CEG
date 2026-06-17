@@ -62,6 +62,7 @@ DEFAULT_DETECTOR_CONFIG = {
     "geometry_anchor_grid_size": 4,
     "affine_rotation_degrees": [-6.0, -3.0, 0.0, 3.0, 6.0],
     "affine_scales": [0.95, 1.0, 1.05],
+    "perspective_offsets": [0.0],
     "attestation_key_env": None,
     "attestation_key_id": None,
 }
@@ -391,10 +392,11 @@ def _build_detection_event(
             downsample_size=int(config["geometry_downsample_size"]),
             anchor_grid_size=int(config["geometry_anchor_grid_size"]),
             config={
-                "detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID,
-                "affine_rotation_degrees": config.get("affine_rotation_degrees"),
-                "affine_scales": config.get("affine_scales"),
-            },
+                    "detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID,
+                    "affine_rotation_degrees": config.get("affine_rotation_degrees"),
+                    "affine_scales": config.get("affine_scales"),
+                    "perspective_offsets": config.get("perspective_offsets"),
+                },
         )
     )
     geometry_record = geometry_result.to_record()

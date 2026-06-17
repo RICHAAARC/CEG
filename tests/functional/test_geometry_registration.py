@@ -8,6 +8,7 @@ from PIL import Image
 import pytest
 
 from main.watermarking.geometry import GeometryRegistrationRequest, estimate_geometry_registration
+from main.watermarking.geometry.registration import _perspective_coefficients
 
 
 def _write_reference_image(path: Path) -> None:
@@ -45,6 +46,25 @@ def _write_rotated_shifted_image(reference: Path, target: Path, *, angle: float,
         shifted.paste(rotated, (dx, dy))
         target.parent.mkdir(parents=True, exist_ok=True)
         shifted.save(target)
+
+
+def _write_perspective_image(reference: Path, target: Path, *, perspective_offset: float) -> None:
+    """写出带轻量透视变形的 target 图像。"""
+
+    with Image.open(reference) as image:
+        rgb = image.convert("RGB")
+        width, height = rgb.size
+        rect = [(0.0, 0.0), (float(width - 1), 0.0), (float(width - 1), float(height - 1)), (0.0, float(height - 1))]
+        offset = float(width - 1) * perspective_offset
+        distorted = [
+            (offset, 0.0),
+            (float(width - 1) - offset, 0.0),
+            (float(width - 1), float(height - 1)),
+            (0.0, float(height - 1)),
+        ]
+        coeffs = _perspective_coefficients(rect, distorted)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        rgb.transform(rgb.size, Image.Transform.PERSPECTIVE, coeffs, resample=Image.Resampling.BILINEAR).save(target)
 
 
 @pytest.mark.quick
@@ -102,9 +122,40 @@ def test_affine_registration_records_rotation_and_scale_candidates(tmp_path: Pat
     record = result.to_record()
     assert result.status == "ok"
     assert aligned.is_file()
-    assert result.backend_id == "ceg_affine_grid_registration"
+    assert result.backend_id == "ceg_affine_perspective_grid_registration"
     assert result.paper_main_method_ready is True
     assert record["paper_main_method_blocking_reason"] is None
     assert result.rotation_degrees in {-3.0, 0.0, 3.0}
     assert result.diagnostics["affine_candidate_count"] == 3
     assert result.diagnostics["candidate_count"] == 3 * 81
+
+
+@pytest.mark.quick
+def test_perspective_registration_records_keystone_candidates(tmp_path: Path) -> None:
+    """registration 原语应真实搜索轻量 perspective 候选。"""
+
+    reference = tmp_path / "reference.png"
+    target = tmp_path / "target_perspective.png"
+    aligned = tmp_path / "aligned_perspective.png"
+    _write_reference_image(reference)
+    _write_perspective_image(reference, target, perspective_offset=0.08)
+
+    result = estimate_geometry_registration(
+        GeometryRegistrationRequest(
+            target_image_path=target,
+            reference_image_path=reference,
+            output_aligned_image_path=aligned,
+            search_radius=3,
+            downsample_size=64,
+            anchor_grid_size=3,
+            config={"affine_rotation_degrees": [0.0], "affine_scales": [1.0], "perspective_offsets": [0.0, 0.08]},
+        )
+    )
+
+    record = result.to_record()
+    assert result.status == "ok"
+    assert aligned.is_file()
+    assert record["perspective_offset"] in {0.0, 0.08}
+    assert result.diagnostics["perspective_offset_candidates"] == [0.0, 0.08]
+    assert result.diagnostics["affine_candidate_count"] == 2
+    assert result.diagnostics["candidate_count"] == 2 * 49

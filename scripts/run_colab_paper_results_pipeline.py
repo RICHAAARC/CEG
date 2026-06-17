@@ -81,6 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--attestation-key-id", default=None)
     parser.add_argument("--affine-rotation-degrees", default="-6,-3,0,3,6")
     parser.add_argument("--affine-scales", default="0.95,1.0,1.05")
+    parser.add_argument("--perspective-offsets", default="0.0")
     parser.add_argument("--baseline-plan", default=None, help="可选外部 baseline 命令计划。")
     parser.add_argument("--baseline-observations", default=None, help="可选已生成的 baseline observations 文件。")
     parser.add_argument("--baseline-execution-manifest", default=None, help="可选已生成的 baseline execution manifest。")
@@ -138,6 +139,8 @@ def main() -> None:
         str(args.affine_rotation_degrees),
         "--affine-scales",
         str(args.affine_scales),
+        "--perspective-offsets",
+        str(args.perspective_offsets),
     ]
     _append_optional(detection_command, "--attestation-key-env", args.attestation_key_env)
     _append_optional(detection_command, "--attestation-key-id", args.attestation_key_id)
