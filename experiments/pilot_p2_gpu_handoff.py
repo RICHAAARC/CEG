@@ -28,6 +28,12 @@ P2_GPU_HANDOFF_DIR = Path("gpu_handoff") / "p2_image_generation"
 P2_GPU_HANDOFF_CHECKLIST_NAME = "p2_image_generation_colab_execution_checklist.json"
 P2_GPU_HANDOFF_RUNBOOK_NAME = "p2_image_generation_colab_runbook.md"
 P2_OUTPUT_ACCEPTANCE_REPORT_NAME = "pilot_image_generation_output_acceptance_report.json"
+WINDOWS_DRIVE_WORKSPACE_PREFIX = "D:\\content\\drive\\MyDrive\\CEG"
+WINDOWS_DRIVE_WORKSPACE_PREFIX_ALT = "D:/content/drive/MyDrive/CEG"
+COLAB_DRIVE_WORKSPACE_PREFIX = "/content/drive/MyDrive/CEG"
+WINDOWS_REPO_PREFIX = "D:\\Code\\CEG"
+WINDOWS_REPO_PREFIX_ALT = "D:/Code/CEG"
+COLAB_REPO_PREFIX = "/content/CEG"
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -68,6 +74,51 @@ def _load_command_plan(path: Path) -> list[dict[str, Any]]:
     if not isinstance(payload, list):
         return []
     return [dict(item) for item in payload if isinstance(item, dict)]
+
+
+def _to_colab_path(value: Any) -> Any:
+    """把 Windows 本地路径转换为 Colab 可用路径。
+
+    该转换只处理当前项目已知的工作区和仓库前缀, 不猜测其他路径。这样可以
+    避免把任意字符串误改成路径, 同时让用户在 Colab 中能直接复制命令。
+    """
+    if not isinstance(value, str):
+        return value
+    normalized = value.replace("\\", "/")
+    replacements = (
+        (WINDOWS_DRIVE_WORKSPACE_PREFIX.replace("\\", "/"), COLAB_DRIVE_WORKSPACE_PREFIX),
+        (WINDOWS_DRIVE_WORKSPACE_PREFIX_ALT, COLAB_DRIVE_WORKSPACE_PREFIX),
+        (WINDOWS_REPO_PREFIX.replace("\\", "/"), COLAB_REPO_PREFIX),
+        (WINDOWS_REPO_PREFIX_ALT, COLAB_REPO_PREFIX),
+    )
+    for source, target in replacements:
+        if normalized.startswith(source):
+            return target + normalized[len(source) :]
+    return normalized
+
+
+def _to_colab_command_plan(command_plan: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """把 P1 生成的 Windows 命令计划转换为 Colab 命令计划。"""
+    converted: list[dict[str, Any]] = []
+    for row in command_plan:
+        converted_row = dict(row)
+        command = converted_row.get("command")
+        if isinstance(command, list):
+            converted_row["command"] = [_to_colab_path(part) for part in command]
+        elif isinstance(command, str):
+            converted_row["command"] = _to_colab_path(command)
+        for field_name in ("output_root", "working_directory"):
+            if field_name in converted_row:
+                converted_row[field_name] = _to_colab_path(converted_row[field_name])
+        converted.append(converted_row)
+    return converted
+
+
+def _command_to_shell(command: Any) -> str:
+    """把 argv 形式命令渲染为便于 Colab 复制的 shell 字符串。"""
+    if isinstance(command, list):
+        return " ".join(str(part) for part in command)
+    return str(command)
 
 
 def _required_output_rows(output_root: Path) -> list[dict[str, str]]:
@@ -116,6 +167,7 @@ def build_p2_image_generation_gpu_handoff_checklist(
     p0_status = _report_status(p0_report)
     p1_status = _report_status(p1_report)
     command_plan = _load_command_plan(command_plan_path)
+    colab_command_plan = _to_colab_command_plan(command_plan)
     blocking_items: list[dict[str, str]] = []
     if p0_status.get("overall_decision") != "pass":
         blocking_items.append({"gate": "p0_input_freeze", "reason": "p0_report_not_pass"})
@@ -152,10 +204,14 @@ def build_p2_image_generation_gpu_handoff_checklist(
             "windows_workspace_root": str(workspace),
             "colab_workspace_root": "/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500",
             "output_root": "/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images",
+            "windows_repo_root": "D:/Code/CEG",
+            "colab_repo_root": COLAB_REPO_PREFIX,
         },
         "command_plan": command_plan,
+        "colab_command_plan": colab_command_plan,
+        "colab_shell_commands": [_command_to_shell(row.get("command", "")) for row in colab_command_plan],
         "required_outputs": _required_output_rows(output_root),
-        "acceptance_commands": [
+        "local_acceptance_commands": [
             (
                 "python scripts/validate_pilot_image_generation_outputs.py "
                 "--output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images "
@@ -165,6 +221,18 @@ def build_p2_image_generation_gpu_handoff_checklist(
             (
                 "python scripts/build_pilot_stage_progress_summary.py "
                 "--workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500"
+            ),
+        ],
+        "colab_acceptance_commands": [
+            (
+                "python scripts/validate_pilot_image_generation_outputs.py "
+                "--output-root /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images "
+                "--out /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/"
+                f"{P2_OUTPUT_ACCEPTANCE_REPORT_NAME} --require-pass"
+            ),
+            (
+                "python scripts/build_pilot_stage_progress_summary.py "
+                "--workspace /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500"
             ),
         ],
         "blocking_items": blocking_items,
@@ -206,19 +274,58 @@ def render_p2_image_generation_gpu_handoff_runbook(checklist: dict[str, Any]) ->
         "",
         "```text",
         f"workspace = {checklist['colab_path_mapping']['colab_workspace_root']}",
+        f"repo_root = {checklist['colab_path_mapping']['colab_repo_root']}",
         f"output_root = {checklist['colab_path_mapping']['output_root']}",
         "```",
         "",
-        "## 5. 必须回传的 P2 输出",
+        "## 5. Colab 可复制命令",
+        "",
+        "以下命令已经把 Windows 路径转换为 Colab 路径。若你在 Colab 中使用 Notebook 直接调度模块,",
+        "也必须产出第 6 节列出的同名文件。",
+        "",
+        "```text",
+    ]
+    shell_commands = checklist.get("colab_shell_commands", [])
+    if shell_commands:
+        lines.extend(str(command) for command in shell_commands)
+    else:
+        lines.append("# 当前没有可复制命令, 请检查 image_generation_command_plan.json。")
+    lines.extend(
+        [
+            "```",
+            "",
+            "## 6. 必须回传的 P2 输出",
         "",
         "| 序号 | 相对路径 | 用途 |",
         "|---:|---|---|",
-    ]
+        ]
+    )
     for index, row in enumerate(checklist.get("required_outputs", []), start=1):
         lines.append(f"| {index} | `{row['relative_path']}` | {row['purpose']} |")
-    lines.extend(["", "## 6. 接收验收命令", "", "```text"])
-    lines.extend(str(command) for command in checklist.get("acceptance_commands", []))
-    lines.extend(["```", "", "## 7. 禁止事项", ""])
+    lines.extend(
+        [
+            "",
+            "## 7. Colab 自检命令",
+            "",
+            "这些命令可在 Colab 中执行, 用于确认 P2 输出已经满足接收门禁。",
+            "",
+            "```text",
+        ]
+    )
+    lines.extend(str(command) for command in checklist.get("colab_acceptance_commands", []))
+    lines.extend(
+        [
+            "```",
+            "",
+            "## 8. 回传后本地验收命令",
+            "",
+            "这些命令用于回到 Windows 本地后复核同一份 MyDrive 工作区。",
+            "",
+            "```text",
+        ]
+    )
+    lines.extend(str(command) for command in checklist.get("local_acceptance_commands", []))
+    lines.extend(["```", "", "## 9. 禁止事项", ""])
     lines.extend(
         [
             "1. 不能用 mock 图像替代真实 P2 图像。",

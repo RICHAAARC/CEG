@@ -377,3 +377,14 @@ python scripts/build_pilot_stage_progress_summary.py --workspace D:/content/driv
 ```text
 python scripts/build_pilot_p2_gpu_handoff.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-ready
 ```
+
+### P2 Colab 路径转换说明
+
+`build_pilot_p2_gpu_handoff.py` 现在会同时写出三类命令:
+
+1. `command_plan`: 保留 P1 生成的原始 Windows 命令计划, 用于审计来源。
+2. `colab_shell_commands`: 将 `D:/Code/CEG` 转换为 `/content/CEG`, 将 `D:/content/drive/MyDrive/CEG` 转换为 `/content/drive/MyDrive/CEG`, 可在 Colab 中复制执行。
+3. `colab_acceptance_commands`: 在 Colab 中自检 P2 输出是否满足接收门禁。
+4. `local_acceptance_commands`: 回到 Windows 本地后复核同一份 MyDrive 工作区。
+
+该设计避免用户在 Colab GPU 环境中手工改路径, 同时保留原始 Windows 命令计划作为 provenance。

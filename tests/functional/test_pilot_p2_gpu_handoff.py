@@ -36,9 +36,16 @@ def _prepare_ready_workspace(tmp_path) -> None:
         [
             {
                 "backend_id": "external_sd_watermark_backend",
-                "command": ["python", "run_image_generation.py"],
-                "output_root": str(tmp_path / "inputs" / "images"),
-                "working_directory": str(tmp_path),
+                "command": [
+                    "python",
+                    "D:/Code/CEG/run_image_generation.py",
+                    "--prompt-plan",
+                    "D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/prompts/prompt_plan.draft.json",
+                    "--out",
+                    "D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images",
+                ],
+                "output_root": "D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images",
+                "working_directory": "D:/Code/CEG",
                 "timeout_seconds": 7200,
             }
         ],
@@ -60,6 +67,17 @@ def test_p2_gpu_handoff_checklist_requires_prompt_plan_output(tmp_path) -> None:
     assert "image_manifests/image_generation_manifest.json" in required
     assert "image_manifests/image_pair_manifest.json" in required
     assert checklist["secret_handling"]["requires_huggingface_token"] is True
+    assert checklist["colab_command_plan"][0]["working_directory"] == "/content/CEG"
+    assert checklist["colab_command_plan"][0]["output_root"].startswith(
+        "/content/drive/MyDrive/CEG/pilot_runs/"
+    )
+    assert checklist["colab_shell_commands"]
+    assert "D:/" not in checklist["colab_shell_commands"][0]
+    assert "D:\\" not in checklist["colab_shell_commands"][0]
+    assert checklist["colab_acceptance_commands"][0].startswith(
+        "python scripts/validate_pilot_image_generation_outputs.py --output-root /content/drive/"
+    )
+    assert "D:/" in checklist["local_acceptance_commands"][0]
     assert (handoff_root / P2_GPU_HANDOFF_CHECKLIST_NAME).is_file()
     assert (handoff_root / P2_GPU_HANDOFF_RUNBOOK_NAME).is_file()
     assert "不能用 mock 图像替代真实 P2 图像" in (handoff_root / P2_GPU_HANDOFF_RUNBOOK_NAME).read_text(encoding="utf-8")
