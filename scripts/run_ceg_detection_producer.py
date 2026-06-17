@@ -41,6 +41,14 @@ def _load_manifest(path: str | None) -> dict[str, object] | None:
     return dict(payload)
 
 
+def _parse_float_list(value: str | None, *, default: list[float]) -> list[float]:
+    """解析逗号分隔的浮点数列表, 用于向方法原语传递 affine 搜索网格。"""
+
+    if value is None or value.strip() == "":
+        return list(default)
+    return [float(item.strip()) for item in value.split(",") if item.strip()]
+
+
 def build_parser() -> argparse.ArgumentParser:
     """构造命令行参数解析器。"""
     parser = argparse.ArgumentParser(description="生成 CEG detection 协议事件。")
@@ -61,6 +69,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--geometry-search-radius", type=int, default=8, help="几何 registration 平移搜索半径。")
     parser.add_argument("--geometry-downsample-size", type=int, default=96, help="几何 registration 下采样最长边。")
     parser.add_argument("--geometry-anchor-grid-size", type=int, default=4, help="几何 registration 局部锚点网格大小。")
+    parser.add_argument("--affine-rotation-degrees", default="-6,-3,0,3,6", help="affine rotation 搜索网格。")
+    parser.add_argument("--affine-scales", default="0.95,1.0,1.05", help="affine scale 搜索网格。")
     parser.add_argument("--attestation-key-env", default=None, help="可选 HMAC attestation 密钥环境变量名。")
     parser.add_argument("--attestation-key-id", default=None, help="可选 HMAC attestation 密钥标识, 只写入 digest。")
     return parser
@@ -83,6 +93,11 @@ def main() -> None:
                 "geometry_search_radius": args.geometry_search_radius,
                 "geometry_downsample_size": args.geometry_downsample_size,
                 "geometry_anchor_grid_size": args.geometry_anchor_grid_size,
+                "affine_rotation_degrees": _parse_float_list(
+                    args.affine_rotation_degrees,
+                    default=[-6.0, -3.0, 0.0, 3.0, 6.0],
+                ),
+                "affine_scales": _parse_float_list(args.affine_scales, default=[0.95, 1.0, 1.05]),
                 "attestation_key_env": args.attestation_key_env,
                 "attestation_key_id": args.attestation_key_id,
             },

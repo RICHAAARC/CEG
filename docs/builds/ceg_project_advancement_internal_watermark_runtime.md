@@ -816,3 +816,52 @@ signature_verified = true
 ```
 
 当前整体论文主方法仍不会因此直接标记为完成, 因为 geometry 仍是平移搜索版本, 尚未实现更强 affine / feature-based recovery。
+
+
+## 22. 本次继续推进: affine grid geometry registration
+
+在整数平移 registration 之后, 本次继续把几何恢复原语推进为轻量 affine 网格搜索。实现位置为:
+
+```text
+main/watermarking/geometry/registration.py
+```
+
+### 22.1 方法变化
+
+原实现只搜索 `dx / dy` 平移, 适合裁剪或轻微偏移诊断, 但不能覆盖常见 rotate / resize 攻击。本次实现改为两层搜索:
+
+```text
+rotation candidates × scale candidates × integer translation window
+```
+
+默认搜索网格为:
+
+```text
+rotation = [-6, -3, 0, 3, 6]
+scale = [0.95, 1.0, 1.05]
+```
+
+每个 affine 候选都会先把 target 图像变换到 reference 坐标近似空间, 再运行原有归一化互相关平移搜索。最终 detection record 会新增:
+
+```text
+rotation_degrees
+scale
+affine_candidate_count
+rotation_candidates
+scale_candidates
+```
+
+### 22.2 运行入口
+
+`run_ceg_detection_producer.py` 新增参数:
+
+```bash
+--affine-rotation-degrees -6,-3,0,3,6
+--affine-scales 0.95,1.0,1.05
+```
+
+这些参数属于方法原语配置, 不是 harness 门禁。Colab 正式运行可以根据 attack 族扩展搜索网格, 但需要记录在结果包 provenance 中。
+
+### 22.3 当前边界
+
+该实现已经是真实像素级 affine 恢复, 不是占位字段。它仍不是完整 feature / perspective registration: 对透视变换、局部形变和大角度旋转, 仍需要后续补充特征匹配或更强几何 backend。因此整体论文主流程仍需继续推进, 不能因为该步骤完成就声明方法完全闭环。

@@ -4,8 +4,7 @@
 执行真实图像像素驱动的 semantic mask 与 LF/HF 内容链 scoring, 并写出下游协议可消费的
 `detection_events.json`、`detection_thresholds.json` 和 `ceg_detection_producer_manifest.json`。
 
-该实现属于项目方法推进中的真实检测入口, 但仍不是完整论文主方法: 当前尚未实现几何恢复与
-attestation 绑定, 因此所有输出均显式标记 `formal_result_claim = False` 和
+该实现属于项目方法推进中的真实检测入口, 但仍不是完整论文主方法: 当前已经接入 affine 网格几何恢复与 attestation 绑定, 但仍需要完整 fixed-FPR 校准集和外部 baseline, 因此所有输出均显式标记 `formal_result_claim = False` 和
 `paper_main_method_ready = False`。这样可以让 TPP@FPR 统计链路先消费真实内容链分数,
 同时避免把未完成闭环误声明为顶会论文最终结果。
 """
@@ -61,6 +60,8 @@ DEFAULT_DETECTOR_CONFIG = {
     "geometry_search_radius": 8,
     "geometry_downsample_size": 96,
     "geometry_anchor_grid_size": 4,
+    "affine_rotation_degrees": [-6.0, -3.0, 0.0, 3.0, 6.0],
+    "affine_scales": [0.95, 1.0, 1.05],
     "attestation_key_env": None,
     "attestation_key_id": None,
 }
@@ -158,7 +159,7 @@ def write_content_chain_detection_inputs(
         "formal_result_claim": False,
         "paper_main_method_ready": False,
         "paper_main_method_blocking_reasons": [
-            "full_affine_or_feature_geometry_recovery_not_implemented",
+            "feature_or_perspective_geometry_recovery_not_implemented",
             "public_digest_attestation_lacks_keyed_or_external_verifier",
             "fixed_fpr_threshold_requires_full_calibration_set",
         ],
@@ -389,7 +390,11 @@ def _build_detection_event(
             search_radius=int(config["geometry_search_radius"]),
             downsample_size=int(config["geometry_downsample_size"]),
             anchor_grid_size=int(config["geometry_anchor_grid_size"]),
-            config={"detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID},
+            config={
+                "detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID,
+                "affine_rotation_degrees": config.get("affine_rotation_degrees"),
+                "affine_scales": config.get("affine_scales"),
+            },
         )
     )
     geometry_record = geometry_result.to_record()
@@ -479,7 +484,7 @@ def _build_detection_event(
             "formal_result_claim": False,
             "paper_main_method_ready": False,
             "paper_main_method_blocking_reasons": [
-                "full_affine_or_feature_geometry_recovery_not_implemented",
+                "feature_or_perspective_geometry_recovery_not_implemented",
                 "public_digest_attestation_lacks_keyed_or_external_verifier",
             ],
         },
