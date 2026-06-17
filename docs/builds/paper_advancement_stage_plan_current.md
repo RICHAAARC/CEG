@@ -585,3 +585,15 @@ docs/builds/paper_gpu_handoff_and_pause_plan.md
 ```
 
 当前尚未到 GPU 暂停点, 因为 P0 真实输入冻结仍未通过。当前下一步仍是补齐 `pilot_input_value_pack_fill_sheet.csv` 中的 19 个 `value_json`。
+
+P0 用户交接包可通过以下命令生成:
+
+```text
+python scripts/build_pilot_p0_input_handoff_bundle.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+```
+
+默认输出目录为:
+
+```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/user_handoff/p0_input_handoff/
+```

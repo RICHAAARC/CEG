@@ -114,6 +114,21 @@ D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_0345
 | 18 | `backend_command` | string | 外部命令或内部 backend 标识 |
 | 19 | `evidence_path` | string | backend 日志或运行 manifest 路径 |
 
+
+也可以直接生成一个可交付的 P0 用户交接包:
+
+```text
+python scripts/build_pilot_p0_input_handoff_bundle.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+```
+
+该命令默认写入:
+
+```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/user_handoff/p0_input_handoff/
+```
+
+该交接包会复制填写表、填写指南、只读预检报告和阶段状态报告, 默认不覆盖已经存在的 CSV 填写表。
+
 填写完成后, 先运行只读预检:
 
 ```text
