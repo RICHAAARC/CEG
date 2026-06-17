@@ -1,0 +1,37 @@
+{
+  "schema_version": "ceg_prompt_plan_manifest_v1",
+  "profiles": {
+    "paper_main_probe": {
+      "prompt_plan_path": "prompts\\prompt_plans\\paper_main_probe_prompt_plan.json",
+      "prompt_count": 4,
+      "split_counts": {
+        "calibration": 4
+      },
+      "target_fpr": 0.01,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    "paper_main_pilot": {
+      "prompt_plan_path": "prompts\\prompt_plans\\paper_main_pilot_prompt_plan.json",
+      "prompt_count": 600,
+      "split_counts": {
+        "calibration": 300,
+        "test": 300
+      },
+      "target_fpr": 0.01,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    "paper_main_full": {
+      "prompt_plan_path": "prompts\\prompt_plans\\paper_main_full_prompt_plan.json",
+      "prompt_count": 6000,
+      "split_counts": {
+        "calibration": 3000,
+        "test": 3000
+      },
+      "target_fpr": 0.001,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    }
+  }
+}

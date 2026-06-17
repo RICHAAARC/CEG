@@ -1,0 +1,77 @@
+{
+  "schema_version": "ceg_prompt_plan_v1",
+  "profile": "paper_main_probe",
+  "purpose": "端到端流程探针运行, 用于确认 Colab、SD 生成、水印、攻击、检测和统计链路可闭环。",
+  "source": {
+    "source_file": "paper_main_pilot_prompts.txt",
+    "source_path": "prompts\\sources\\paper_main_pilot_prompts.txt",
+    "source_prompt_count": 600,
+    "selected_prompt_count": 4
+  },
+  "generation_defaults": {
+    "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+    "watermark_backend": "ceg_content_chain_embedding",
+    "target_fpr": 0.01
+  },
+  "split_policy": {
+    "calibration_count": 4,
+    "test_count": 0,
+    "split_counts": {
+      "calibration": 4
+    }
+  },
+  "prompts": [
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000001",
+      "image_id": "paper_main_probe_image_000001",
+      "sample_index": 1,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 1,
+      "split": "calibration",
+      "prompt_text": "A brown dog standing in a shower looking miserable.",
+      "seed": 859497593,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000002",
+      "image_id": "paper_main_probe_image_000002",
+      "sample_index": 2,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 2,
+      "split": "calibration",
+      "prompt_text": "In a restroom there is a sink and mirror.",
+      "seed": 1373264278,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000003",
+      "image_id": "paper_main_probe_image_000003",
+      "sample_index": 3,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 3,
+      "split": "calibration",
+      "prompt_text": "A black and white scene of a kitchen.",
+      "seed": 803057089,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000004",
+      "image_id": "paper_main_probe_image_000004",
+      "sample_index": 4,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 4,
+      "split": "calibration",
+      "prompt_text": "The people are riding down the street on bikes.",
+      "seed": 1092205837,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    }
+  ]
+}
