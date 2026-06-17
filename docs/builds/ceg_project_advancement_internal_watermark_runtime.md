@@ -629,3 +629,69 @@ public_digest_attestation_lacks_keyed_or_external_verifier
 ### 18.4 下一步
 
 下一步应继续推进固定 FPR 校准和真实结果包闭环, 使 clean negative 集合能够校准阈值, positive / attacked 集合能够产出论文表格中的 TPP@FPR / TPR@FPR 指标。
+
+
+## 19. 本次继续推进: detection events 的 fixed FPR 阈值校准回写
+
+在真实 detection backend 已经具备 content、geometry 和 attestation 字段之后, 本次继续补齐 fixed FPR 校准与
+formal decision 的关键衔接:
+
+```text
+experiments/detection_event_thresholds.py
+scripts/calibrate_detection_events_fixed_fpr.py
+```
+
+### 19.1 为什么需要回写 detection events
+
+CEG 的 formal decision 读取的是每个事件中的:
+
+```text
+payload.thresholds.content_threshold
+```
+
+而不仅仅是外部传入的 thresholds JSON。外部 thresholds JSON 主要用于 artifact 审计和表格重建。若 fixed FPR
+校准只生成旁路 thresholds 文件, 但不更新 detection event, 则后续 `run_paper_protocol` 仍会按旧阈值执行
+`decide_ceg_event`。因此真实 fixed FPR 闭环必须生成一份:
+
+```text
+detection_events_calibrated.json
+```
+
+### 19.2 已实现能力
+
+新模块会执行以下步骤:
+
+1. 读取 `detection_events.json`。
+2. 优先使用 `split = calibration` 且 `sample_role = clean_negative` 的事件收集 negative scores。
+3. 若正式 calibration split 不存在, 显式退回到 `fallback_all_clean_negative`, 便于 pilot 阶段继续运行。
+4. 根据目标 FPR 计算内容阈值。
+5. 把阈值回写到每个事件的 `payload.thresholds.content_threshold`。
+6. 在 `payload.detection_source` 中记录 `fixed_fpr_calibrated = true` 和阈值来源。
+7. 写出:
+   - `detection_events_calibrated.json`
+   - `detection_thresholds_calibrated.json`
+   - `detection_event_threshold_calibration_report.json`
+
+### 19.3 运行入口
+
+```bash
+python scripts/calibrate_detection_events_fixed_fpr.py \
+  --events <detection_events.json> \
+  --out <calibrated_detection_dir> \
+  --target-fpr 0.01
+```
+
+后续构建论文结果包时, 应把 `detection_events_calibrated.json` 作为 `build_paper_outputs.py --events` 的输入,
+把 `detection_thresholds_calibrated.json` 作为 `--thresholds` 的输入。
+
+### 19.4 当前边界
+
+该能力已经把 fixed FPR 阈值校准接入真实 detection event, 但 pilot 数据规模仍可能不足以支撑正式论文声明。
+正式论文结果仍需要:
+
+1. 足够数量的 calibration clean negative 样本。
+2. 独立 test split。
+3. attacked positive 评测集合。
+4. 外部 baseline 的同口径 calibrated events 或 observations。
+
+因此该步骤是从真实 backend 到论文 TPP@FPR 表格的必要桥梁, 但不是最终数据规模本身。
