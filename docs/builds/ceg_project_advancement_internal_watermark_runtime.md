@@ -1,4 +1,4 @@
-﻿# CEG 项目推进补充记录: 内部水印运行时模块化
+# CEG 项目推进补充记录: 内部水印运行时模块化
 
 ## 1. 本次推进目标
 
@@ -108,3 +108,47 @@ main/watermarking/native_lsb.py
 3. 水印报告显式标记 `paper_main_method_ready = false`。
 4. CEG-WM 工作区没有任何改动。
 5. pytest、harness audit 和 completion audit 通过。
+
+## 9. 本次继续推进: 水印运行时接口层
+
+在移除旧分支提交引用后, 本次继续在 CEG 项目内部补充了:
+
+```text
+main/watermarking/interfaces.py
+```
+
+该文件定义以下通用方法契约:
+
+1. `WatermarkPromptContext`: 统一保存 `image_id`、`prompt_id`、prompt 文本、seed、模型标识和生成参数。
+2. `WatermarkEmbeddingRequest`: 统一描述 clean 图像输入、watermarked 图像输出和水印配置。
+3. `WatermarkEmbeddingResult`: 统一描述嵌入结果、backend 身份、backend 职责、正式论文可用性和 provenance。
+4. `WatermarkDetectionRequest`: 统一描述检测输入图像、prompt 上下文和 detector 配置。
+5. `WatermarkDetectionResult`: 统一描述检测分数、阈值、判定和检测 provenance。
+6. `WatermarkEmbedder` / `WatermarkDetector`: 定义后续 backend 可替换协议。
+
+该接口层属于通用工程写法, 其价值在于把不同水印 backend 的输入输出边界固定下来。
+但 `paper_main_method_ready` 属于 CEG 项目特定字段, 用于防止 pilot backend 被误纳入正式论文主方法结论。
+
+## 10. 本次没有迁入的 CEG-WM 内容
+
+本次只参考 CEG-WM 的方法边界, 没有迁入以下内容:
+
+1. CEG-WM 的复杂门禁规则。
+2. CEG-WM 的 workflow 框架。
+3. CEG-WM 的 GitNexus 或 harness 约束。
+4. CEG-WM 的项目目录结构。
+5. 对 CEG-WM 仓库的 import、clone 或 subprocess 调用。
+
+这些内容不属于 CEG 主方法实现, 如果放入 `main/` 会污染方法原语边界。
+
+## 11. 接口层之后的推进顺序
+
+后续应在上述接口契约下继续补充真实方法实现:
+
+1. `semantic_mask.py`: 接入 InSPyReNet 或等价 segmentation backend, 产出 semantic mask records。
+2. `content_chain/`: 实现 LF/HF 内容链嵌入与检测分数。
+3. `geometry/`: 实现 anchor、sync、registration 和 recovery。
+4. `attestation/`: 实现图像、prompt、方法配置和检测事件的绑定证明。
+5. `scripts/run_ceg_real_detection_backend.py`: 读取 `image_pairs.json`, 运行真实 detector, 写出可统计 TPP@FPR 的 detection records。
+
+这些实现应复用 `interfaces.py` 的请求和结果结构, 而不是把 notebook、Google Drive 打包或 harness 门禁逻辑写入方法模块。
