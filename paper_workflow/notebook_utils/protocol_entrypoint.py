@@ -11,8 +11,10 @@ from experiments.pilot_input_value_pack_sheet import (
     FILL_SHEET_NAME,
     GUIDANCE_JSON_NAME,
     GUIDANCE_MARKDOWN_NAME,
+    VALIDATION_REPORT_NAME,
     export_pilot_input_value_pack_fill_sheet,
     export_pilot_input_value_pack_fill_sheet_guidance,
+    validate_and_write_pilot_input_value_pack_fill_sheet,
 )
 from experiments.pilot_input_value_pack_status import (
     STATUS_MARKDOWN_NAME,
@@ -136,6 +138,33 @@ def prepare_p0_input_materials_from_notebook(
             "overwrite_existing": overwrite_existing,
         },
     }
+
+
+def validate_p0_fill_sheet_from_notebook(
+    workspace_root: str | Path,
+    *,
+    value_pack_path: str | Path | None = None,
+    fill_sheet_path: str | Path | None = None,
+    output_json_path: str | Path | None = None,
+    require_pass: bool = False,
+) -> dict[str, Any]:
+    """供 Notebook 预检 P0 CSV 填写表。
+
+    该入口只检查 `value_json` 是否可解析并满足 value pack 的基本类型要求。
+    它不会回写 value pack, 因此适合在运行 P0 dry-run 前快速定位填写错误。
+    """
+    workspace = Path(workspace_root)
+    value_pack = Path(value_pack_path) if value_pack_path is not None else workspace / VALUE_PACK_NAME
+    fill_sheet = Path(fill_sheet_path) if fill_sheet_path is not None else workspace / FILL_SHEET_NAME
+    output_json = Path(output_json_path) if output_json_path is not None else workspace / VALIDATION_REPORT_NAME
+    report = validate_and_write_pilot_input_value_pack_fill_sheet(
+        value_pack_path=value_pack,
+        input_csv_path=fill_sheet,
+        report_path=output_json,
+    )
+    if require_pass and report["overall_decision"] != "pass":
+        raise RuntimeError(f"P0 CSV 填写表预检未通过: {report['summary']['blocking_item_count']} 个阻断项")
+    return report
 
 
 def run_p0_input_freeze_from_notebook(

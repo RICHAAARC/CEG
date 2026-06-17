@@ -28,6 +28,10 @@ def test_colab_notebook_is_parseable_and_delegates_to_helpers() -> None:
     assert "pilot_input_value_pack_fill_sheet" in source
     assert "pilot_input_value_pack_fill_sheet_guidance" in source
     assert "pilot_input_value_pack_status_report" in source
+    assert "validate_p0_fill_sheet_from_notebook" in source
+    assert "RUN_P0_FILL_SHEET_VALIDATION" in source
+    assert "P0_FILL_SHEET_REQUIRE_PASS" in source
+    assert "pilot_input_value_pack_fill_sheet_validation_report" in source
     assert "run_p0_input_freeze_from_notebook" in source
     assert "RUN_P0_INPUT_FREEZE" in source
     assert "P0_DRY_RUN" in source

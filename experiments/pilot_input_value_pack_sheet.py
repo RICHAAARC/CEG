@@ -23,6 +23,7 @@ from experiments.pilot_input_value_pack_status import TYPE_HINT_BY_REPLACEMENT_K
 
 FILL_SHEET_NAME = "pilot_input_value_pack_fill_sheet.csv"
 IMPORT_REPORT_NAME = "pilot_input_value_pack_fill_sheet_import_report.json"
+VALIDATION_REPORT_NAME = "pilot_input_value_pack_fill_sheet_validation_report.json"
 GUIDANCE_MARKDOWN_NAME = "pilot_input_value_pack_fill_sheet_guidance.md"
 GUIDANCE_JSON_NAME = "pilot_input_value_pack_fill_sheet_guidance.json"
 
@@ -253,11 +254,13 @@ def import_pilot_input_value_pack_fill_sheet(
     value_pack_path: str | Path,
     input_csv_path: str | Path,
     output_value_pack_path: str | Path | None = None,
+    write_on_pass: bool = True,
 ) -> dict[str, Any]:
     """把 CSV 填写表中的 value_json 安全回写到 value pack。
 
     导入器会先在内存中模拟回写, 再复用 value pack status 的类型和取值校验。
     只有全部条目都解析成功且校验通过时, 才会写入目标 value pack。
+    当 `write_on_pass` 为 False 时, 该函数只做预检并返回报告, 不回写任何 value pack。
     """
     value_pack = _read_json(value_pack_path)
     candidate_value_pack = copy.deepcopy(value_pack)
@@ -285,13 +288,15 @@ def import_pilot_input_value_pack_fill_sheet(
     decision = "pass" if not blocking_items else "fail"
     target_path = Path(output_value_pack_path) if output_value_pack_path is not None else Path(value_pack_path)
     updated_entries = candidate_updated_entries if decision == "pass" else []
-    if decision == "pass":
+    if decision == "pass" and write_on_pass:
         _write_json(target_path, candidate_value_pack)
     return {
         "artifact_name": IMPORT_REPORT_NAME,
         "value_pack_path": str(value_pack_path),
         "input_csv_path": str(input_csv_path),
         "output_value_pack_path": str(target_path),
+        "write_on_pass": write_on_pass,
+        "write_performed": bool(decision == "pass" and write_on_pass),
         "overall_decision": decision,
         "recommended_next_stage": (
             "run_value_pack_status_validation" if decision == "pass" else "fix_value_pack_fill_sheet"
@@ -319,6 +324,32 @@ def import_and_write_pilot_input_value_pack_fill_sheet(
         value_pack_path=value_pack_path,
         input_csv_path=input_csv_path,
         output_value_pack_path=output_value_pack_path,
+        write_on_pass=True,
+    )
+    _write_json(report_path, report)
+    return report
+
+
+def validate_and_write_pilot_input_value_pack_fill_sheet(
+    *,
+    value_pack_path: str | Path,
+    input_csv_path: str | Path,
+    report_path: str | Path,
+) -> dict[str, Any]:
+    """预检 CSV 填写表并写出报告, 不回写 value pack。
+
+    该函数用于 Notebook 或人工填写后的安全检查。它复用正式导入器的 JSON 解析、
+    类型校验和阻断项生成逻辑, 但即使所有行都通过也不会写入真实 value pack。
+    """
+    report = import_pilot_input_value_pack_fill_sheet(
+        value_pack_path=value_pack_path,
+        input_csv_path=input_csv_path,
+        output_value_pack_path=None,
+        write_on_pass=False,
+    )
+    report["artifact_name"] = VALIDATION_REPORT_NAME
+    report["recommended_next_stage"] = (
+        "run_p0_input_freeze_dry_run" if report["overall_decision"] == "pass" else "fix_value_pack_fill_sheet"
     )
     _write_json(report_path, report)
     return report
