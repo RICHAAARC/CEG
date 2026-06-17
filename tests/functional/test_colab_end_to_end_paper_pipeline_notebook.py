@@ -46,6 +46,7 @@ def test_colab_end_to_end_notebook_uses_formal_generation_defaults() -> None:
     assert "--semantic-mask-backend" in source
     assert "--detection-formal-result-claim" in source
     assert "CEG-WM" not in source
+    assert 'PROMPT_PLAN = REPO_DIR / "prompts" / "prompt_plans" / f"{PROFILE}_prompt_plan.json"' in source
 
 
 @pytest.mark.quick

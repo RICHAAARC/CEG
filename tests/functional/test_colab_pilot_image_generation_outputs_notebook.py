@@ -79,7 +79,9 @@ def test_colab_pilot_image_generation_outputs_notebook_enforces_local_runtime_an
     assert "shutil.copytree(DRIVE_INPUT_WORKSPACE_ROOT, PILOT_WORKSPACE_ROOT)" in source
     assert "archives" in source
     assert "ZipFile" in source
-    assert "Colab 本地运行工作区缺少图像生成前置文件" in source
+    assert 'PROMPT_PLAN = REPO_ROOT / "prompts" / "prompt_plans" / f"{PROMPT_PLAN_PROFILE}_prompt_plan.json"' in source
+    assert 'PROMPT_PLAN_PROFILE = "paper_main_probe"' in source
+    assert "仓库内置 prompt plan 缺少图像生成前置文件" in source
 
 
 @pytest.mark.quick
