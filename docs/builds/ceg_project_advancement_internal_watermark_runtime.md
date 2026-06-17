@@ -1212,3 +1212,73 @@ Colab paper results pipeline 会转发 `--local-deformation-enabled`。正式论
 ### 27.4 当前边界
 
 当前 local deformation 是块级平移网格, 尚不是稠密 optical flow 或可微局部形变模型。它已经能覆盖轻量局部错位和块级非刚性扰动, 后续若需要更强攻击鲁棒性, 可在同一接口下加入 optical-flow 或 thin-plate-spline backend。
+
+## 28. 本次继续推进: Colab 端到端论文结果包单入口
+
+本次补充了一个新的实验编排入口:
+
+```text
+scripts/run_colab_end_to_end_paper_pipeline.py
+paper_workflow/colab_end_to_end_paper_pipeline.ipynb
+```
+
+该入口解决的问题是: Colab 不再需要人工分别运行图像生成 Notebook、攻击脚本、检测脚本、校准脚本、论文结果包脚本和归档脚本。正式流程可以从一个 Notebook 单元调用一个仓库脚本完成。
+
+### 28.1 端到端数据流
+
+当前端到端流水线的数据流为:
+
+```text
+Google Drive workspace
+  -> prompt_plan.draft.json / model_config.draft.json
+  -> scripts/run_pilot_real_image_generation_backend.py
+  -> clean / watermarked 图像 + image_pairs.json + image manifests
+  -> scripts/validate_pilot_image_generation_outputs.py
+  -> Google Drive archives/image_generation_outputs/*.zip
+  -> scripts/run_colab_paper_results_pipeline.py
+  -> attack outputs
+  -> CEG content-chain detection events
+  -> fixed-FPR calibrated results
+  -> paper outputs / paper results package
+  -> Google Drive package_archives/*.zip
+  -> colab_end_to_end_paper_pipeline_manifest.json
+```
+
+其中真实方法仍位于项目主方法与实验层已有入口中。新增脚本只负责调度, 不复制 SD、watermark、attack、detection 或指标算法实现。
+
+### 28.2 正式图像生成配置
+
+新增 Notebook 的正式默认配置为:
+
+```python
+RUN_IMAGE_GENERATION = True
+SD_MODEL_ID = "stabilityai/stable-diffusion-3.5-medium"
+HF_TOKEN_ENV = "HF_TOKEN"
+WATERMARK_BACKEND = "ceg_content_chain_embedding"
+```
+
+这表示 Colab 会读取 Hugging Face token 环境变量, 调用 CEG 项目内 `scripts/run_pilot_real_image_generation_backend.py`, 使用真实 SD 模型生成 clean 图像, 再使用 CEG 内容链水印生成 watermarked 图像。该流程不调用 CEG-WM 项目。
+
+### 28.3 可复用边界
+
+该实现属于通用工程编排写法。可复用部分包括:
+
+1. `--run-image-generation` 控制是否重新生成图像, 便于正式运行和断点续跑共用同一入口。
+2. 图像生成产物验收后统一打包到 `archives/image_generation_outputs`。
+3. 论文结果包继续归档到 `package_archives`。
+4. 统一 manifest 记录每个子命令、退出码、输出路径和 execution digest。
+
+项目特定部分包括:
+
+1. 默认水印 backend 是 `ceg_content_chain_embedding`。
+2. 默认检测流程由 `run_colab_paper_results_pipeline.py` 调用 `ceg_content_chain_detection`。
+3. 默认 fixed-FPR 目标为 `0.01`, 对应论文中 TPR@FPR 统计口径。
+
+### 28.4 当前仍需继续推进的事项
+
+新增端到端入口已经使 Colab 从图像生成到论文结果包形成单一调度闭环。但完整顶会论文结果包仍需要继续补充:
+
+1. 正式外部 baseline 的真实命令计划和证据样例。
+2. 大规模正式运行 profile, 包括 prompt 数量、attack 条件、baseline 列表和显存配置说明。
+3. 对正式 Colab 运行后的结果包进行一次真实 GPU 验收。
+4. 若论文需要更强攻击鲁棒性, 可继续加入 optical-flow 或 thin-plate-spline 局部形变恢复 backend。
