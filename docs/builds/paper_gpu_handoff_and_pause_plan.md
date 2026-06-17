@@ -419,3 +419,13 @@ D:/Code/CEG/scripts/run_pilot_image_generation_backend.py
 4. 仓库内 P2 包装入口: `scripts/run_pilot_image_generation_backend.py`。
 5. 该入口不是模型实现, 只负责调用用户提供的真实外部 SD / watermark backend, 然后运行 P2 输出接收门禁。
 6. 当前 handoff 的 warning `command_file_draft_placeholder` 表示正式执行前必须追加真实 backend 命令。
+
+## 10. P2 外部 backend 命令校验
+
+正式运行 GPU backend 前, 先运行命令文件校验:
+
+```text
+python scripts/validate_pilot_image_generation_backend_command.py --command-file /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/configs/p2_external_backend_command.draft.json --require-ready
+```
+
+如果该命令失败, 说明 `external_command_placeholder` 尚未替换为真实 `external_command`, 或命令文件中存在 placeholder / 疑似密钥值。此时不能运行 P2 包装命令, 更不能进入 attack。

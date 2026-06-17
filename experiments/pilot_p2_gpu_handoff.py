@@ -297,6 +297,26 @@ def _execution_warnings(entrypoint_checks: list[dict[str, Any]]) -> list[dict[st
     return warnings
 
 
+def _external_command_file_rows(command_plan: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """从命令计划中提取外部 backend 命令文件路径。"""
+    rows: list[dict[str, str]] = []
+    for index, row in enumerate(command_plan):
+        command = row.get("command")
+        if not isinstance(command, list):
+            continue
+        file_path = _argument_after(command, "--external-command-json-file")
+        if file_path is None:
+            continue
+        rows.append(
+            {
+                "command_index": str(index),
+                "windows_path": file_path,
+                "colab_path": str(_to_colab_path(file_path)),
+            }
+        )
+    return rows
+
+
 def _required_output_rows(output_root: Path) -> list[dict[str, str]]:
     """构造 P2 必需输出路径列表。"""
     rows = [
@@ -347,6 +367,7 @@ def build_p2_image_generation_gpu_handoff_checklist(
     repo_root = Path(__file__).resolve().parents[1]
     entrypoint_checks = _build_entrypoint_checks(repo_root=repo_root, colab_command_plan=colab_command_plan)
     execution_warnings = _execution_warnings(entrypoint_checks)
+    external_command_files = _external_command_file_rows(command_plan)
     blocking_items: list[dict[str, str]] = []
     if p0_status.get("overall_decision") != "pass":
         blocking_items.append({"gate": "p0_input_freeze", "reason": "p0_report_not_pass"})
@@ -389,6 +410,21 @@ def build_p2_image_generation_gpu_handoff_checklist(
         "command_plan": command_plan,
         "colab_command_plan": colab_command_plan,
         "colab_shell_commands": [_command_to_shell(row.get("command", "")) for row in colab_command_plan],
+        "external_backend_command_files": external_command_files,
+        "colab_backend_command_validation_commands": [
+            (
+                "python scripts/validate_pilot_image_generation_backend_command.py "
+                f"--command-file {row['colab_path']} --require-ready"
+            )
+            for row in external_command_files
+        ],
+        "local_backend_command_validation_commands": [
+            (
+                "python scripts/validate_pilot_image_generation_backend_command.py "
+                f"--command-file {row['windows_path']} --require-ready"
+            )
+            for row in external_command_files
+        ],
         "entrypoint_checks": entrypoint_checks,
         "execution_warnings": execution_warnings,
         "required_outputs": _required_output_rows(output_root),
@@ -507,7 +543,23 @@ def render_p2_image_generation_gpu_handoff_runbook(checklist: dict[str, Any]) ->
     lines.extend(
         [
             "",
-            "## 8. Colab 自检命令",
+            "## 8. 外部 backend 命令文件校验",
+            "",
+            "在真正运行 GPU backend 前, 先确认命令文件已经从 placeholder 替换为 external_command。",
+            "",
+            "```text",
+        ]
+    )
+    backend_validation_commands = checklist.get("colab_backend_command_validation_commands", [])
+    if backend_validation_commands:
+        lines.extend(str(command) for command in backend_validation_commands)
+    else:
+        lines.append("# 当前没有检测到 --external-command-json-file。")
+    lines.extend(
+        [
+            "```",
+            "",
+            "## 9. Colab 自检命令",
             "",
             "这些命令可在 Colab 中执行, 用于确认 P2 输出已经满足接收门禁。",
             "",
@@ -519,7 +571,7 @@ def render_p2_image_generation_gpu_handoff_runbook(checklist: dict[str, Any]) ->
         [
             "```",
             "",
-            "## 9. 回传后本地验收命令",
+            "## 10. 回传后本地验收命令",
             "",
             "这些命令用于回到 Windows 本地后复核同一份 MyDrive 工作区。",
             "",
@@ -527,7 +579,7 @@ def render_p2_image_generation_gpu_handoff_runbook(checklist: dict[str, Any]) ->
         ]
     )
     lines.extend(str(command) for command in checklist.get("local_acceptance_commands", []))
-    lines.extend(["```", "", "## 10. 禁止事项", ""])
+    lines.extend(["```", "", "## 11. 禁止事项", ""])
     lines.extend(
         [
             "1. 不能用 mock 图像替代真实 P2 图像。",

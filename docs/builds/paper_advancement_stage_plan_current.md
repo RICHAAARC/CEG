@@ -790,3 +790,48 @@ command_file_draft_placeholder
 ```
 
 含义是: 仓库内 P2 包装入口和命令文件路径均已具备, 但命令文件尚未替换为真实 GPU backend。该状态下仍不能进入 P3 attack, 也不能统计 TPR@FPR。
+
+## 30. 2026-06-17 P2 外部 backend 命令校验器
+
+### 30.1 新增能力
+
+为了减少用户在 Colab 中手工修改 JSON 出错, 当前项目新增两个辅助入口:
+
+```text
+scripts/apply_pilot_image_generation_backend_command.py
+scripts/validate_pilot_image_generation_backend_command.py
+```
+
+`apply_pilot_image_generation_backend_command.py` 用于把真实 SD / watermark backend 的 argv 写入 `p2_external_backend_command.draft.json` 的 `external_command` 字段。该脚本只写命令文件, 不运行模型。
+
+`validate_pilot_image_generation_backend_command.py` 用于检查命令文件是否仍含 placeholder、是否缺少 `external_command`、是否把疑似 Hugging Face token 或 OpenAI token 直接写入命令文件。该脚本也不运行模型。
+
+### 30.2 当前真实工作区校验状态
+
+当前工作区命令文件仍为草稿, 校验报告已落盘:
+
+```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/configs/p2_external_backend_command_validation_report.json
+```
+
+当前结论:
+
+```text
+overall_decision = fail
+recommended_next_stage = replace_external_backend_command
+```
+
+这是预期状态, 因为真实 backend 命令尚未由用户在 Colab 中填写。
+
+### 30.3 Colab 中推荐顺序
+
+1. 准备真实 SD / watermark backend。
+2. 使用 `apply_pilot_image_generation_backend_command.py` 写入真实 argv, 或手工把 `external_command_placeholder` 改为 `external_command`。
+3. 运行:
+
+```text
+python scripts/validate_pilot_image_generation_backend_command.py --command-file /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/configs/p2_external_backend_command.draft.json --require-ready
+```
+
+4. 校验通过后, 再运行 P2 包装命令生成真实 clean / watermarked 图像。
+5. P2 接收门禁通过后, 才能进入 attack 和 TPR@FPR 统计。
