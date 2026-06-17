@@ -835,3 +835,38 @@ python scripts/validate_pilot_image_generation_backend_command.py --command-file
 
 4. 校验通过后, 再运行 P2 包装命令生成真实 clean / watermarked 图像。
 5. P2 接收门禁通过后, 才能进入 attack 和 TPR@FPR 统计。
+
+## 31. 2026-06-17 P2 回传后的 P3 / P4 接续计划
+
+### 31.1 新增接续计划产物
+
+为了避免 P2 真实 GPU 图像回传后再次手工推导后续命令, 当前已生成接续计划:
+
+```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/gpu_handoff/post_p2_resume/pilot_post_p2_resume_plan.json
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/gpu_handoff/post_p2_resume/pilot_post_p2_resume_runbook.md
+```
+
+该计划当前状态为:
+
+```text
+overall_decision = blocked_until_p2_pass
+```
+
+这是正确状态, 因为 P2 图像生成输出尚未通过接收门禁。
+
+### 31.2 P2 通过后的接续顺序
+
+P2 接收门禁通过后, 接续计划会提供以下命令顺序:
+
+1. `run_image_attack_workflow.py`: 基于 `inputs/images/image_pairs.json` 生成 attacked 图像和 attack manifests。
+2. `validate_pilot_attack_outputs.py`: 验收 P3 attack 输出。
+3. `run_ceg_detection_producer.py`: 生成 detection events / thresholds / producer manifest。
+4. `validate_pilot_detection_outputs.py`: 验收 P4 detection 输出。
+5. `build_pilot_stage_progress_summary.py`: 刷新阶段进度。
+
+### 31.3 边界说明
+
+`run_ceg_detection_producer.py` 是契约 dry-run producer, 不是正式检测模型。它用于验证 detection records、fixed-FPR 前置字段和结果包链路。正式论文结果仍需要真实 detector 或经认可的正式 detection backend 输出。
+
+如果 P2 `image_pairs.json` 未覆盖 calibration clean negative、test clean negative 和 test positive, 后续 P4 / P7 仍会阻断。这不是脚本错误, 而是 fixed-FPR 统计所需样本角色不足。

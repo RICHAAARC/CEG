@@ -429,3 +429,13 @@ python scripts/validate_pilot_image_generation_backend_command.py --command-file
 ```
 
 如果该命令失败, 说明 `external_command_placeholder` 尚未替换为真实 `external_command`, 或命令文件中存在 placeholder / 疑似密钥值。此时不能运行 P2 包装命令, 更不能进入 attack。
+
+## 11. P2 回传后的接续计划
+
+P2 输出通过后, 可以读取以下文件继续 P3 / P4:
+
+```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/gpu_handoff/post_p2_resume/pilot_post_p2_resume_runbook.md
+```
+
+当前该计划被标记为 `blocked_until_p2_pass`, 因为真实 GPU 图像和 image manifests 尚未通过 P2 接收门禁。P2 通过前不能执行 attack 并声明鲁棒性结果。
