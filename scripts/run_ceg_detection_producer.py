@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from experiments.ceg_detection_producer import write_detection_inputs_from_image_manifests
 from experiments.ceg_real_detection_backend import write_content_chain_detection_inputs
+from main.watermarking.semantic_mask import GRADIENT_SALIENCY_BACKEND_ID, INSPYRENET_BACKEND_ID
 
 
 def _load_rows(path: Path) -> list[dict[str, object]]:
@@ -67,6 +68,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="contract_dry_run",
         help="检测 backend。contract_dry_run 保留旧协议演练, ceg_content_chain_detection 运行真实内容链 scoring。",
     )
+    parser.add_argument(
+        "--semantic-mask-backend",
+        default=GRADIENT_SALIENCY_BACKEND_ID,
+        choices=[GRADIENT_SALIENCY_BACKEND_ID, INSPYRENET_BACKEND_ID],
+        help="detection 使用的 semantic mask backend。",
+    )
     parser.add_argument("--mask-threshold-quantile", type=float, default=0.80, help="semantic mask 分位数阈值。")
     parser.add_argument("--mask-open-iters", type=int, default=1, help="semantic mask 开运算次数。")
     parser.add_argument("--mask-close-iters", type=int, default=1, help="semantic mask 闭运算次数。")
@@ -99,6 +106,7 @@ def main() -> None:
             args.out,
             attacked_image_manifest_path=args.attacked_image_manifest,
             detector_config={
+                "semantic_mask_backend_id": args.semantic_mask_backend,
                 "mask_threshold_quantile": args.mask_threshold_quantile,
                 "mask_open_iters": args.mask_open_iters,
                 "mask_close_iters": args.mask_close_iters,

@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from main.core.digest import build_stable_digest
+from main.watermarking.semantic_mask import GRADIENT_SALIENCY_BACKEND_ID, INSPYRENET_BACKEND_ID
 
 
 PIPELINE_MANIFEST_NAME = "colab_paper_results_pipeline_manifest.json"
@@ -80,6 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--attestation-key-env", default=None)
     parser.add_argument("--attestation-key-id", default=None)
     parser.add_argument("--detection-formal-result-claim", action="store_true", help="当 detection backend readiness 通过时声明正式方法结果。")
+    parser.add_argument("--semantic-mask-backend", default=GRADIENT_SALIENCY_BACKEND_ID, choices=[GRADIENT_SALIENCY_BACKEND_ID, INSPYRENET_BACKEND_ID], help="detection 使用的 semantic mask backend。")
     parser.add_argument("--affine-rotation-degrees", default="-6,-3,0,3,6")
     parser.add_argument("--affine-scales", default="0.95,1.0,1.05")
     parser.add_argument("--perspective-offsets", default="0.0")
@@ -139,6 +141,8 @@ def main() -> None:
         str(detection_root),
         "--detection-backend",
         "ceg_content_chain_detection",
+        "--semantic-mask-backend",
+        str(args.semantic_mask_backend),
         "--affine-rotation-degrees",
         str(args.affine_rotation_degrees),
         "--affine-scales",

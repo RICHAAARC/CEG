@@ -45,6 +45,24 @@ def test_load_prompt_rows_accepts_prompt_list(tmp_path: Path) -> None:
     assert rows[0]["prompt_text"] == "a cat"
 
 
+def test_real_image_generation_backend_defaults_to_content_chain_watermark(tmp_path: Path) -> None:
+    """真实图像生成 CLI 默认应使用 CEG 主方法水印, 而不是 pilot-only LSB fallback。"""
+
+    args = backend.build_parser().parse_args(
+        [
+            "--prompt-plan",
+            str(tmp_path / "prompt_plan.json"),
+            "--out",
+            str(tmp_path / "images"),
+            "--model-config",
+            str(tmp_path / "model_config.json"),
+        ]
+    )
+
+    assert args.watermark_backend == "ceg_content_chain_embedding"
+    assert args.content_mask_backend == backend.GRADIENT_SALIENCY_BACKEND_ID
+
+
 def test_watermarked_file_cannot_equal_clean_file(tmp_path: Path) -> None:
     """真实 watermarked 图像不能是 clean 图像的字节级复制。"""
     clean = tmp_path / "clean.png"

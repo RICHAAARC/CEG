@@ -37,7 +37,12 @@ from main.core.digest import build_stable_digest  # noqa: E402
 from main.watermarking.content_chain import ContentChainEmbeddingRequest, embed_content_chain_watermark  # noqa: E402
 from main.watermarking.interfaces import WatermarkPromptContext  # noqa: E402
 from main.watermarking.native_lsb import embed_native_lsb_watermark  # noqa: E402
-from main.watermarking.semantic_mask import GRADIENT_SALIENCY_BACKEND_ID, SemanticMaskRequest, extract_semantic_mask  # noqa: E402
+from main.watermarking.semantic_mask import (  # noqa: E402
+    GRADIENT_SALIENCY_BACKEND_ID,
+    INSPYRENET_BACKEND_ID,
+    SemanticMaskRequest,
+    extract_semantic_mask,
+)
 
 BACKEND_MANIFEST_NAME = "real_image_generation_backend_manifest.json"
 PROMPT_PLAN_NAME = "prompt_plan.json"
@@ -413,7 +418,7 @@ def _run_content_chain_watermark(
         SemanticMaskRequest(
             image_path=clean_path,
             output_mask_path=mask_path,
-            backend_id=GRADIENT_SALIENCY_BACKEND_ID,
+            backend_id=args.content_mask_backend,
             threshold_quantile=float(args.content_mask_threshold_quantile),
             open_iters=int(args.content_mask_open_iters),
             close_iters=int(args.content_mask_close_iters),
@@ -707,11 +712,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--disable-progress-bar", action="store_true", help="关闭 diffusers 进度条, 减少 notebook 日志噪声。")
     parser.add_argument(
         "--watermark-backend",
-        default="ceg_native_lsb",
+        default="ceg_content_chain_embedding",
         choices=["ceg_native_lsb", "ceg_content_chain_embedding", "external_command"],
-        help="真实水印 backend。默认使用 CEG 仓库内原生 LSB 图像水印原语。",
+        help="真实水印 backend。默认使用 CEG 内容链水印嵌入, ceg_native_lsb 仅保留为 smoke fallback。",
     )
     parser.add_argument("--native-watermark-bits", type=int, default=1024, help="CEG 原生水印嵌入 bit 数。")
+    parser.add_argument(
+        "--content-mask-backend",
+        default=GRADIENT_SALIENCY_BACKEND_ID,
+        choices=[GRADIENT_SALIENCY_BACKEND_ID, INSPYRENET_BACKEND_ID],
+        help="内容链嵌入使用的 semantic mask backend。",
+    )
     parser.add_argument("--content-mask-threshold-quantile", type=float, default=0.80, help="内容链 semantic mask 分位数阈值。")
     parser.add_argument("--content-mask-open-iters", type=int, default=1, help="内容链 semantic mask 开运算次数。")
     parser.add_argument("--content-mask-close-iters", type=int, default=1, help="内容链 semantic mask 闭运算次数。")

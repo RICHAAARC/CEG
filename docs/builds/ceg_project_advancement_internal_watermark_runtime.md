@@ -1858,3 +1858,81 @@ clean_image_path / watermarked_image_path
 如果输入来自正式图像生成 backend, 通常会使用 `clean_image_path` 和 `watermarked_image_path`。如果输入来自独立指标实验, 可以使用更通用的 `reference_path` 和 `watermarked_path`。
 
 当 `image_pairs.json` 没有显式 `event_id` 时, CEG 会把图像质量指标挂接到 `image_id__positive_source`, 并默认 `method_name=ceg`。这样做的主要考虑在于: 图像质量指标描述的是原始 clean 图像与 watermarked 图像之间的失真, 它应当绑定到 CEG 正样本源图像, 而不是绑定到攻击后的派生样本。
+
+
+## 38. 本次继续推进: Colab 正式图像生成默认配置修正
+
+本次修正集中在 Colab 运行层, 不改变 `main/` 主方法代码的职责边界。
+
+### 38.1 单独图像生成 Notebook 默认水印
+
+`paper_workflow/colab_pilot_image_generation_outputs.ipynb` 的默认图像生成命令已从 pilot-only 的 `ceg_native_lsb` 改为论文主方法水印:
+
+```text
+--watermark-backend ceg_content_chain_embedding
+```
+
+同时保留 `ceg_native_lsb` 作为脚本可选 fallback, 但它不应作为论文主结果 claim 的水印来源。
+
+### 38.2 CEG_ATTESTATION_KEY
+
+Colab Notebook 会定义 `CEG_ATTESTATION_KEY`。实现方式是:
+
+1. 优先读取 Colab secrets 或已有环境变量。
+2. 如果不存在, 为本次运行生成临时密钥。
+3. 只将密钥放入环境变量, 不写入任何仓库文件、manifest 或日志。
+
+该密钥由 detection 阶段通过 `--attestation-key-env CEG_ATTESTATION_KEY` 消费, 用于 keyed HMAC attestation readiness。
+
+### 38.3 InSPyReNet 权重准备
+
+InSPyReNet 权重准备被放在 Colab Notebook 中, 不进入 `main/` 主方法。Notebook 优先使用:
+
+```text
+/content/drive/MyDrive/CEG/Models/inspyrenet/ckpt_base.pth
+```
+
+如果不存在, 可从以下地址下载:
+
+```text
+https://huggingface.co/plemeri/InSPyReNet/resolve/main/ckpt_base.pth
+```
+
+Notebook 会把权重复制到 `transparent-background` 常见缓存目录, 并设置 `INSPYRENET_CKPT_PATH`。主方法仍只通过 semantic mask backend 接口消费 mask 结果。
+
+### 38.4 semantic mask backend 透传
+
+以下脚本新增或透传 semantic mask backend 参数:
+
+```text
+scripts/run_pilot_real_image_generation_backend.py --content-mask-backend
+scripts/run_ceg_detection_producer.py --semantic-mask-backend
+scripts/run_colab_paper_results_pipeline.py --semantic-mask-backend
+scripts/run_colab_end_to_end_paper_pipeline.py --semantic-mask-backend
+```
+
+这样 Colab 可以选择 `ceg_inspyrenet_semantic_mask`, 而本地轻量测试仍可使用默认 `ceg_gradient_saliency_mask`。
+
+
+## 39. 本次继续推进: 外部 baseline Colab 产物入口
+
+为支持论文结果包中的外部 baseline 对比, 本次新增:
+
+```text
+paper_workflow/colab_external_baseline_outputs.ipynb
+```
+
+该 Notebook 只负责运行 `scripts/run_baseline_plan.py`, 消费 Google Drive 工作区中的:
+
+```text
+external_baselines/baseline_plan.json
+```
+
+并写出:
+
+```text
+external_baselines/baseline_observations.json
+external_baselines/baseline_execution_manifest.json
+```
+
+这一路径不属于 CEG 主方法实现。外部 baseline 的第三方代码、环境、模型权重和命令都应由 `baseline_plan.json` 显式声明, CEG 只负责收集标准化 observations、执行证据 manifest 和后续论文表格合并。

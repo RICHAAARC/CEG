@@ -241,8 +241,51 @@ scripts/run_pilot_real_image_generation_backend.py
 
 1. 读取 `prompt_plan.draft.json`。
 2. 通过 diffusers 加载真实 Stable Diffusion 或兼容 text-to-image 模型生成 clean 图像。
-3. 调用 CEG 项目内真实 watermark backend 生成 watermarked 图像。默认 backend 为 `ceg_native_lsb`, 不克隆也不调用其他项目。
+3. 调用 CEG 项目内真实 watermark backend 生成 watermarked 图像。默认 backend 为 `ceg_content_chain_embedding`, 不克隆也不调用其他项目。
 4. 写出 `prompt_plan.json`、`clean/`、`watermarked/`、`image_pairs.json`、`image_manifests/image_generation_manifest.json` 和 `image_manifests/image_pair_manifest.json`。
 5. 自动运行图像生成产物验收报告, 但最终是否完成仍以验收脚本结论为准。
 
 Notebook 只负责拉取 GitHub 仓库、安装运行依赖、从 Google Drive 加载前序产物、执行仓库脚本和归档 zip。`paper_workflow/colab_utils` 不承载真实 SD 采样、水印嵌入或主方法逻辑。
+
+
+### Colab attestation 与 InSPyReNet 运行准备
+
+图像生成和端到端 Notebook 会在 Colab 会话中定义 `CEG_ATTESTATION_KEY`。该值只写入运行时环境变量, 不写入仓库文件、manifest 或 notebook 输出。如果 Colab secrets 中已经存在同名密钥, Notebook 会优先读取该密钥; 否则会为本次运行生成临时密钥。
+
+InSPyReNet 权重准备属于 Colab 环境准备逻辑, 不属于 `main/` 主方法实现。Notebook 会优先查找:
+
+```text
+/content/drive/MyDrive/CEG/Models/inspyrenet/ckpt_base.pth
+```
+
+如果该文件不存在, Notebook 可从以下地址下载并缓存到 Google Drive:
+
+```text
+https://huggingface.co/plemeri/InSPyReNet/resolve/main/ckpt_base.pth
+```
+
+随后 Notebook 会把权重复制到 `transparent-background` 常见缓存目录, 并设置 `INSPYRENET_CKPT_PATH`。主方法代码只消费 semantic mask backend 接口, 不包含 Google Drive 权重路径和下载逻辑。
+
+
+### 外部 baseline Notebook
+
+`paper_workflow/colab_external_baseline_outputs.ipynb` 用于在 Colab 中运行外部 baseline command plan。它只调用:
+
+```text
+scripts/run_baseline_plan.py
+```
+
+输入是 Google Drive 工作区中的:
+
+```text
+external_baselines/baseline_plan.json
+```
+
+输出是:
+
+```text
+external_baselines/baseline_observations.json
+external_baselines/baseline_execution_manifest.json
+```
+
+该 Notebook 不实现 CEG 主方法, 不生成 CEG 水印图像, 不运行 detection, 也不调用 CEG-WM。外部 baseline 如果需要专用环境、额外 GPU 或第三方代码, 应通过 `baseline_plan.json` 中的命令声明, 并把运行证据通过 `--evidence-path` 进入 baseline execution manifest。

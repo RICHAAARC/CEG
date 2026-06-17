@@ -40,6 +40,11 @@ def test_colab_end_to_end_notebook_uses_formal_generation_defaults() -> None:
     assert 'SD_MODEL_ID = "stabilityai/stable-diffusion-3.5-medium"' in source
     assert 'HF_TOKEN_ENV = "HF_TOKEN"' in source
     assert 'WATERMARK_BACKEND = "ceg_content_chain_embedding"' in source
+    assert 'SEMANTIC_MASK_BACKEND = "ceg_inspyrenet_semantic_mask"' in source
+    assert 'ATTESTATION_KEY_ENV = "CEG_ATTESTATION_KEY"' in source
+    assert "ckpt_base.pth" in source
+    assert "--semantic-mask-backend" in source
+    assert "--detection-formal-result-claim" in source
     assert "CEG-WM" not in source
 
 

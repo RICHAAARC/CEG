@@ -28,6 +28,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from main.core.digest import build_stable_digest
+from main.watermarking.semantic_mask import GRADIENT_SALIENCY_BACKEND_ID, INSPYRENET_BACKEND_ID
 
 
 END_TO_END_MANIFEST_NAME = "colab_end_to_end_paper_pipeline_manifest.json"
@@ -168,6 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--content-hf-strength", type=float, default=2.0)
     parser.add_argument("--content-mask-threshold-quantile", type=float, default=0.80)
     parser.add_argument("--watermark-command-json-file", default=None, help="external_command watermark 模板 JSON 文件。")
+    parser.add_argument("--semantic-mask-backend", default=GRADIENT_SALIENCY_BACKEND_ID, choices=[GRADIENT_SALIENCY_BACKEND_ID, INSPYRENET_BACKEND_ID], help="图像生成和 detection 使用的 semantic mask backend。")
 
     parser.add_argument("--attack-families", default="brightness_contrast,gaussian_noise,rotate,resize,jpeg")
     parser.add_argument("--target-fpr", type=float, default=0.01)
@@ -222,6 +224,8 @@ def main() -> None:
             str(args.device),
             "--watermark-backend",
             str(args.watermark_backend),
+            "--content-mask-backend",
+            str(args.semantic_mask_backend),
             "--content-lf-strength",
             str(args.content_lf_strength),
             "--content-hf-strength",
@@ -294,6 +298,8 @@ def main() -> None:
         str(args.target_fpr),
         "--profile",
         str(args.profile),
+        "--semantic-mask-backend",
+        str(args.semantic_mask_backend),
         "--affine-rotation-degrees",
         str(args.affine_rotation_degrees),
         "--affine-scales",
