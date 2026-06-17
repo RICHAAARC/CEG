@@ -1,4 +1,4 @@
-﻿"""验证 P2 专用 Colab Notebook 边界。"""
+"""验证图像生成产物 Colab Notebook 边界。"""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def _notebook_source() -> str:
 
 @pytest.mark.quick
 def test_colab_pilot_image_generation_outputs_notebook_exists_and_calls_governed_scripts() -> None:
-    """P2 Notebook 必须调用仓库脚本, 而不是把正式协议逻辑写在 cell 中。"""
+    """图像生成产物 Notebook 必须调用仓库脚本, 而不是把正式协议逻辑写在 cell 中。"""
     source = _notebook_source()
     required_scripts = [
         "scripts/apply_pilot_image_generation_backend_command.py",
@@ -27,17 +27,17 @@ def test_colab_pilot_image_generation_outputs_notebook_exists_and_calls_governed
         "scripts/run_pilot_image_generation_backend.py",
         "scripts/validate_pilot_image_generation_outputs.py",
         "scripts/build_pilot_stage_progress_summary.py",
-        "scripts/build_pilot_post_p2_resume_plan.py",
+        "scripts/build_pilot_image_generation_resume_plan.py",
     ]
     for script in required_scripts:
         assert script in source
-    assert "RUN_P2_IMAGE_GENERATION = False" in source
-    assert "P2 是否完成只以" in source
+    assert "RUN_IMAGE_GENERATION_OUTPUTS = False" in source
+    assert "图像生成产物是否完成只以" in source
 
 
 @pytest.mark.quick
 def test_colab_pilot_image_generation_outputs_notebook_does_not_write_formal_manifests_directly() -> None:
-    """Notebook 不得直接手写 P2 正式 manifest 或 image_pairs。"""
+    """Notebook 不得直接手写图像生成正式 manifest 或 image_pairs。"""
     source = _notebook_source()
     forbidden_snippets = [
         "image_pairs.json').write_text",
@@ -49,3 +49,12 @@ def test_colab_pilot_image_generation_outputs_notebook_does_not_write_formal_man
     ]
     for snippet in forbidden_snippets:
         assert snippet not in source
+
+
+@pytest.mark.quick
+def test_colab_pilot_image_generation_outputs_notebook_uses_semantic_stage_wording() -> None:
+    """Notebook 不得使用弱阶段编号描述图像生成任务。"""
+    source = _notebook_source()
+    forbidden_tokens = ["P" + "2", "p" + "2", "RUN_P" + "2"]
+    for token in forbidden_tokens:
+        assert token not in source
