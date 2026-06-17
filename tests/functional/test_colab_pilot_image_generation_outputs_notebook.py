@@ -58,3 +58,14 @@ def test_colab_pilot_image_generation_outputs_notebook_uses_semantic_stage_wordi
     forbidden_tokens = ["P" + "2", "p" + "2", "RUN_P" + "2"]
     for token in forbidden_tokens:
         assert token not in source
+
+
+@pytest.mark.quick
+def test_colab_pilot_image_generation_outputs_notebook_enforces_drive_workspace_and_archive() -> None:
+    """Notebook 必须以 Google Drive 工作区为正式运行和归档位置。"""
+    source = _notebook_source()
+    assert "STRICT_GOOGLE_DRIVE_PREFLIGHT = True" in source
+    assert "ARCHIVE_IMAGE_GENERATION_OUTPUTS = True" in source
+    assert "archives" in source
+    assert "ZipFile" in source
+    assert "Google Drive 工作区缺少图像生成前置文件" in source

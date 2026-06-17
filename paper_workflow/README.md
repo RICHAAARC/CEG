@@ -219,11 +219,13 @@ python scripts/run_colab_acceptance_checks.py --bundle path\to\ceg_colab_run_bun
 它的职责是:
 
 1. 挂载 Google Drive 并定位 `PILOT_WORKSPACE_ROOT`。
-2. 检查 `prompt_plan.draft.json`、`model_config.draft.json` 和 `image_generation_backend_command.draft.json`。
-3. 可选调用 `scripts/apply_pilot_image_generation_backend_command.py` 写入真实外部 SD / watermark backend 命令。
-4. 调用 `scripts/validate_pilot_image_generation_backend_command.py` 校验命令文件。
-5. 调用 `scripts/run_pilot_image_generation_backend.py` 执行真实外部 backend。
-6. 调用 `scripts/validate_pilot_image_generation_outputs.py` 验收图像生成输出。
-7. 调用 `scripts/build_pilot_stage_progress_summary.py` 刷新阶段进度。
+2. 严格检查 Google Drive 工作区是否包含 prompt、model config、前置验收报告和 backend 命令文件。
+3. 可选将历史 backend 命令文件迁移为语义化命令文件名。
+4. 可选调用 `scripts/apply_pilot_image_generation_backend_command.py` 写入真实外部 SD / watermark backend 命令。
+5. 调用 `scripts/validate_pilot_image_generation_backend_command.py` 校验命令文件。
+6. 调用 `scripts/run_pilot_image_generation_backend.py` 执行真实外部 backend。
+7. 调用 `scripts/validate_pilot_image_generation_outputs.py` 验收图像生成输出。
+8. 调用 `scripts/build_pilot_stage_progress_summary.py` 刷新阶段进度。
+9. 验收通过后, 将图像生成产物和关键报告打包为 zip 保存到 Google Drive 的 `archives/image_generation_outputs/`。
 
 该 Notebook 不直接手写正式 `prompt_plan.json`、`image_pairs.json` 或 image manifests。图像生成产物是否完成只以验收脚本是否通过为准。
