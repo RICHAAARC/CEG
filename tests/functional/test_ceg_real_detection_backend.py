@@ -108,10 +108,11 @@ def test_content_chain_detection_backend_writes_real_events(tmp_path: Path) -> N
         assert len(payload["content_chain"]["content_chain_digest"]) == 64
         assert len(payload["aligned_content_chain"]["content_chain_digest"]) == 64
         assert len(payload["geometry"]["geometry_record"]["alignment_digest"]) == 64
-        assert payload["geometry"]["geometry_record"]["backend_id"] == "ceg_affine_perspective_grid_registration"
+        assert payload["geometry"]["geometry_record"]["backend_id"] == "ceg_feature_homography_registration"
         assert "rotation_degrees" in payload["geometry"]["geometry_record"]
         assert "scale" in payload["geometry"]["geometry_record"]
         assert "perspective_offset" in payload["geometry"]["geometry_record"]
+        assert payload["geometry"]["geometry_record"]["diagnostics"]["feature_homography"]["enabled"] is True
         assert payload["geometry"]["geometry_record"]["paper_main_method_ready"] is True
         assert payload["attestation"]["attestation_score"] == 1.0
         assert len(payload["attestation"]["attestation_digest"]) == 64

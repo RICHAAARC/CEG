@@ -122,12 +122,13 @@ def test_affine_registration_records_rotation_and_scale_candidates(tmp_path: Pat
     record = result.to_record()
     assert result.status == "ok"
     assert aligned.is_file()
-    assert result.backend_id == "ceg_affine_perspective_grid_registration"
+    assert result.backend_id == "ceg_feature_homography_registration"
     assert result.paper_main_method_ready is True
     assert record["paper_main_method_blocking_reason"] is None
     assert result.rotation_degrees in {-3.0, 0.0, 3.0}
     assert result.diagnostics["affine_candidate_count"] == 3
     assert result.diagnostics["candidate_count"] == 3 * 81
+    assert result.diagnostics["feature_homography"]["enabled"] is True
 
 
 @pytest.mark.quick
@@ -159,3 +160,42 @@ def test_perspective_registration_records_keystone_candidates(tmp_path: Path) ->
     assert result.diagnostics["perspective_offset_candidates"] == [0.0, 0.08]
     assert result.diagnostics["affine_candidate_count"] == 2
     assert result.diagnostics["candidate_count"] == 2 * 49
+
+
+@pytest.mark.quick
+def test_feature_homography_registration_records_matches(tmp_path: Path) -> None:
+    """registration 原语应运行 feature matching homography refinement 并记录审计信息。"""
+
+    reference = tmp_path / "reference.png"
+    target = tmp_path / "target_feature.png"
+    aligned = tmp_path / "aligned_feature.png"
+    _write_reference_image(reference)
+    _write_shifted_image(reference, target, dx=2, dy=1)
+
+    result = estimate_geometry_registration(
+        GeometryRegistrationRequest(
+            target_image_path=target,
+            reference_image_path=reference,
+            output_aligned_image_path=aligned,
+            search_radius=4,
+            downsample_size=64,
+            anchor_grid_size=3,
+            config={
+                "affine_rotation_degrees": [0.0],
+                "affine_scales": [1.0],
+                "perspective_offsets": [0.0],
+                "feature_homography_enabled": True,
+                "feature_max_features": 32,
+                "homography_ransac_max_trials": 80,
+            },
+        )
+    )
+
+    feature = result.diagnostics["feature_homography"]
+    assert result.status == "ok"
+    assert feature["enabled"] is True
+    assert feature["status"] in {"ok", "insufficient_matches", "homography_not_found"}
+    if feature["status"] == "ok":
+        assert feature["match_count"] >= 4
+        assert feature["inlier_count"] >= 4
+        assert len(feature["homography_matrix"]) == 3

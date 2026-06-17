@@ -63,6 +63,9 @@ DEFAULT_DETECTOR_CONFIG = {
     "affine_rotation_degrees": [-6.0, -3.0, 0.0, 3.0, 6.0],
     "affine_scales": [0.95, 1.0, 1.05],
     "perspective_offsets": [0.0],
+    "feature_homography_enabled": True,
+    "feature_max_features": 48,
+    "homography_ransac_max_trials": 160,
     "attestation_key_env": None,
     "attestation_key_id": None,
 }
@@ -396,6 +399,9 @@ def _build_detection_event(
                     "affine_rotation_degrees": config.get("affine_rotation_degrees"),
                     "affine_scales": config.get("affine_scales"),
                     "perspective_offsets": config.get("perspective_offsets"),
+                    "feature_homography_enabled": config.get("feature_homography_enabled"),
+                    "feature_max_features": config.get("feature_max_features"),
+                    "homography_ransac_max_trials": config.get("homography_ransac_max_trials"),
                 },
         )
     )

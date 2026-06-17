@@ -1079,3 +1079,70 @@ Colab paper results pipeline 也会把该参数转发给 detection producer。
 ### 25.4 当前边界
 
 该实现是真实像素级 perspective 候选搜索, 不是占位字段。它仍不是完整的 feature matching / RANSAC homography / local deformation backend。后续若要覆盖强透视、局部形变和复杂裁剪, 应在同一接口下补充基于特征点的 homography 或局部网格恢复。
+
+
+## 26. 本次继续推进: feature matching homography refinement
+
+在 perspective grid registration 之后, 本次继续补充轻量 feature matching / RANSAC homography refinement。实现位置仍为:
+
+```text
+main/watermarking/geometry/registration.py
+```
+
+### 26.1 方法变化
+
+几何恢复现在包含两级机制:
+
+1. 网格搜索:
+
+```text
+rotation candidates × scale candidates × perspective offsets × integer translation window
+```
+
+2. 特征匹配 refinement:
+
+```text
+corner-like feature extraction
+→ normalized patch descriptor matching
+→ deterministic RANSAC homography
+→ homography warp
+→ post-homography translation scoring
+```
+
+如果 feature homography 的对齐分数不低于网格搜索结果, backend 会选择 homography-refined target 作为后续 aligned content chain scoring 的输入。否则只把 homography 诊断记录到 `diagnostics.feature_homography` 中, 不强行覆盖网格结果。
+
+### 26.2 记录字段
+
+geometry diagnostics 新增:
+
+```text
+feature_homography.enabled
+feature_homography.status
+feature_homography.match_count
+feature_homography.inlier_count
+feature_homography.inlier_ratio
+feature_homography.homography_matrix
+feature_homography.selected
+```
+
+backend id 更新为:
+
+```text
+ceg_feature_homography_registration
+```
+
+### 26.3 CLI 参数
+
+真实 detection 入口新增:
+
+```bash
+--feature-homography-enabled true
+--feature-max-features 48
+--homography-ransac-max-trials 160
+```
+
+Colab paper results pipeline 会转发 `--feature-homography-enabled`。正式论文运行建议保持启用, 因为它可以给强几何攻击提供更明确的 recovery evidence。
+
+### 26.4 当前边界
+
+该实现是真实特征点匹配和 RANSAC homography, 但仍是轻量实现: patch descriptor 不是 SIFT / ORB, RANSAC 采用确定性组合上限, 且尚未覆盖局部非刚性形变。后续若需要进一步提升强攻击鲁棒性, 应在同一接口下增加可选 OpenCV ORB / SIFT backend 或局部网格 deformation recovery。

@@ -49,6 +49,12 @@ def _parse_float_list(value: str | None, *, default: list[float]) -> list[float]
     return [float(item.strip()) for item in value.split(",") if item.strip()]
 
 
+def _bool_from_cli(value: str) -> bool:
+    """解析命令行布尔值, 避免把字符串 false 当作真值。"""
+
+    return value.strip().lower() not in {"false", "0", "no", "off"}
+
+
 def build_parser() -> argparse.ArgumentParser:
     """构造命令行参数解析器。"""
     parser = argparse.ArgumentParser(description="生成 CEG detection 协议事件。")
@@ -72,6 +78,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--affine-rotation-degrees", default="-6,-3,0,3,6", help="affine rotation 搜索网格。")
     parser.add_argument("--affine-scales", default="0.95,1.0,1.05", help="affine scale 搜索网格。")
     parser.add_argument("--perspective-offsets", default="0.0", help="轻量 perspective keystone 搜索网格。")
+    parser.add_argument("--feature-homography-enabled", default="true", help="是否启用 feature matching homography refinement。")
+    parser.add_argument("--feature-max-features", type=int, default=48, help="feature homography 最大特征点数。")
+    parser.add_argument("--homography-ransac-max-trials", type=int, default=160, help="homography RANSAC 最大采样次数。")
     parser.add_argument("--attestation-key-env", default=None, help="可选 HMAC attestation 密钥环境变量名。")
     parser.add_argument("--attestation-key-id", default=None, help="可选 HMAC attestation 密钥标识, 只写入 digest。")
     return parser
@@ -100,6 +109,9 @@ def main() -> None:
                 ),
                 "affine_scales": _parse_float_list(args.affine_scales, default=[0.95, 1.0, 1.05]),
                 "perspective_offsets": _parse_float_list(args.perspective_offsets, default=[0.0]),
+                "feature_homography_enabled": _bool_from_cli(args.feature_homography_enabled),
+                "feature_max_features": args.feature_max_features,
+                "homography_ransac_max_trials": args.homography_ransac_max_trials,
                 "attestation_key_env": args.attestation_key_env,
                 "attestation_key_id": args.attestation_key_id,
             },

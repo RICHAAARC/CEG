@@ -19,9 +19,9 @@ import numpy as np
 from main.core.digest import build_stable_digest
 
 
-GEOMETRY_REGISTRATION_BACKEND_ID = "ceg_affine_perspective_grid_registration"
+GEOMETRY_REGISTRATION_BACKEND_ID = "ceg_feature_homography_registration"
 GEOMETRY_REGISTRATION_BACKEND_ROLE = "reference_frame_recovery_primitive"
-GEOMETRY_REGISTRATION_VERSION = "ceg_geometry_registration_v3"
+GEOMETRY_REGISTRATION_VERSION = "ceg_geometry_registration_v4"
 
 
 @dataclass(frozen=True)
@@ -93,7 +93,7 @@ class GeometryRegistrationResult:
             "paper_main_method_ready": self.paper_main_method_ready,
             "paper_main_method_blocking_reason": None
             if self.paper_main_method_ready
-            else "perspective_grid_registration_lacks_feature_matching_or_local_deformation_recovery",
+            else "feature_homography_registration_lacks_local_deformation_recovery",
         }
 
 
@@ -114,6 +114,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
         target_gray_base = _resize_to_shape(target_gray_base, reference_gray.shape)
 
     best = _search_affine_registration(reference_gray, target_gray_base, request)
+    best = _maybe_refine_with_feature_homography(reference_gray, target_gray_base, best, request)
     dx = int(best["dx"])
     dy = int(best["dy"])
     rotation_degrees = round(float(best["rotation_degrees"]), 6)
@@ -151,6 +152,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
         "rotation_candidates": [float(v) for v in _rotation_candidates(request.config)],
         "scale_candidates": [float(v) for v in _scale_candidates(request.config)],
         "perspective_offset_candidates": [float(v) for v in _perspective_offset_candidates(request.config)],
+        "feature_homography": dict(best.get("feature_homography") or {}),
         "reference_shape": [int(v) for v in reference_rgb.shape],
         "target_shape": [int(v) for v in target_rgb.shape],
         "config": dict(request.config),
@@ -163,6 +165,7 @@ def estimate_geometry_registration(request: GeometryRegistrationRequest) -> Geom
             "rotation_degrees": rotation_degrees,
             "scale": scale,
             "perspective_offset": perspective_offset,
+            "feature_homography_digest": build_stable_digest(best.get("feature_homography") or {}),
             "registration_confidence": confidence,
             "anchor_inlier_ratio": anchor_inlier_ratio,
             "recovered_sync_consistency": recovered_sync_consistency,
@@ -357,6 +360,264 @@ def _apply_perspective_rgb(array: np.ndarray, *, perspective_offset: float) -> n
     image = Image.fromarray(np.clip(array, 0, 255).round().astype(np.uint8), mode="RGB")
     transformed = image.transform((width, height), Image.Transform.PERSPECTIVE, coeffs, resample=Image.Resampling.BILINEAR)
     return np.asarray(transformed.convert("RGB"), dtype=np.float32)
+
+
+def _feature_config(config: Mapping[str, Any]) -> dict[str, Any]:
+    """读取 feature homography refinement 配置。"""
+
+    return {
+        "enabled": str(config.get("feature_homography_enabled", "true")).lower() not in {"false", "0", "no"},
+        "max_features": int(config.get("feature_max_features", 48)),
+        "patch_radius": int(config.get("feature_patch_radius", 3)),
+        "ransac_max_trials": int(config.get("homography_ransac_max_trials", 160)),
+        "inlier_threshold": float(config.get("homography_inlier_threshold", 3.0)),
+        "min_inliers": int(config.get("homography_min_inliers", 4)),
+    }
+
+
+def _maybe_refine_with_feature_homography(
+    reference: np.ndarray,
+    target: np.ndarray,
+    current_best: dict[str, Any],
+    request: GeometryRegistrationRequest,
+) -> dict[str, Any]:
+    """使用轻量特征匹配和 RANSAC homography 对网格结果做可审计 refinement。"""
+
+    cfg = _feature_config(request.config)
+    if not cfg["enabled"]:
+        current_best["feature_homography"] = {"enabled": False, "status": "disabled"}
+        return current_best
+    try:
+        result = _estimate_feature_homography(reference, target, cfg)
+    except Exception as exc:  # pragma: no cover - 保护正式检测不中断
+        current_best["feature_homography"] = {"enabled": True, "status": "error", "error": str(exc)}
+        return current_best
+    if result["status"] != "ok":
+        current_best["feature_homography"] = result
+        return current_best
+    warped = result["warped_target"]
+    translation = _search_translation(reference, warped, request.search_radius)
+    feature_score = float(translation["score"])
+    result_record = {key: value for key, value in result.items() if key != "warped_target"}
+    result_record["post_homography_translation_score"] = round(feature_score, 8)
+    result_record["post_homography_dx"] = int(translation["dx"])
+    result_record["post_homography_dy"] = int(translation["dy"])
+    if feature_score >= float(current_best["score"]):
+        return {
+            **translation,
+            "rotation_degrees": 0.0,
+            "scale": 1.0,
+            "perspective_offset": 0.0,
+            "target_gray": warped,
+            "affine_candidate_count": int(current_best.get("affine_candidate_count", 0)),
+            "candidate_count": int(current_best.get("candidate_count", 0)) + int(translation.get("candidate_count", 0)),
+            "feature_homography": {**result_record, "selected": True},
+        }
+    current_best["feature_homography"] = {**result_record, "selected": False}
+    return current_best
+
+
+def _estimate_feature_homography(reference: np.ndarray, target: np.ndarray, cfg: Mapping[str, Any]) -> dict[str, Any]:
+    """估计 target 到 reference 的特征匹配 homography。"""
+
+    ref_points = _detect_feature_points(reference, max_points=int(cfg["max_features"]))
+    tgt_points = _detect_feature_points(target, max_points=int(cfg["max_features"]))
+    matches = _match_patch_descriptors(reference, target, ref_points, tgt_points, patch_radius=int(cfg["patch_radius"]))
+    if len(matches) < 4:
+        return {
+            "enabled": True,
+            "status": "insufficient_matches",
+            "reference_feature_count": len(ref_points),
+            "target_feature_count": len(tgt_points),
+            "match_count": len(matches),
+        }
+    homography = _ransac_homography(
+        matches,
+        max_trials=int(cfg["ransac_max_trials"]),
+        inlier_threshold=float(cfg["inlier_threshold"]),
+        min_inliers=int(cfg["min_inliers"]),
+    )
+    if homography is None:
+        return {
+            "enabled": True,
+            "status": "homography_not_found",
+            "reference_feature_count": len(ref_points),
+            "target_feature_count": len(tgt_points),
+            "match_count": len(matches),
+        }
+    matrix, inlier_indices = homography
+    warped = _warp_gray_homography(target, matrix, reference.shape)
+    return {
+        "enabled": True,
+        "status": "ok",
+        "reference_feature_count": len(ref_points),
+        "target_feature_count": len(tgt_points),
+        "match_count": len(matches),
+        "inlier_count": len(inlier_indices),
+        "inlier_ratio": round(float(len(inlier_indices) / max(1, len(matches))), 8),
+        "homography_matrix": np.round(matrix, 8).tolist(),
+        "warped_target": warped,
+    }
+
+
+def _detect_feature_points(gray: np.ndarray, *, max_points: int) -> list[tuple[float, float]]:
+    """用梯度角点响应提取轻量特征点。"""
+
+    if gray.shape[0] < 5 or gray.shape[1] < 5:
+        return []
+    gy, gx = np.gradient(gray.astype(np.float32))
+    response = gx * gx + gy * gy
+    candidates = []
+    for y in range(2, gray.shape[0] - 2):
+        for x in range(2, gray.shape[1] - 2):
+            value = float(response[y, x])
+            if value <= 1e-6:
+                continue
+            local = response[y - 1 : y + 2, x - 1 : x + 2]
+            if value >= float(np.max(local)):
+                candidates.append((value, float(x), float(y)))
+    candidates.sort(reverse=True, key=lambda item: item[0])
+    points: list[tuple[float, float]] = []
+    min_distance_sq = 16.0
+    for _, x, y in candidates:
+        if all((x - px) ** 2 + (y - py) ** 2 >= min_distance_sq for px, py in points):
+            points.append((x, y))
+        if len(points) >= max_points:
+            break
+    return points
+
+
+def _patch_descriptor(gray: np.ndarray, point: tuple[float, float], *, radius: int) -> np.ndarray | None:
+    """提取归一化 patch descriptor。"""
+
+    x, y = int(round(point[0])), int(round(point[1]))
+    if y - radius < 0 or y + radius + 1 > gray.shape[0] or x - radius < 0 or x + radius + 1 > gray.shape[1]:
+        return None
+    patch = gray[y - radius : y + radius + 1, x - radius : x + radius + 1].astype(np.float32).reshape(-1)
+    patch = patch - float(np.mean(patch))
+    norm = float(np.linalg.norm(patch))
+    if norm <= 1e-8:
+        return None
+    return patch / norm
+
+
+def _match_patch_descriptors(
+    reference: np.ndarray,
+    target: np.ndarray,
+    ref_points: list[tuple[float, float]],
+    tgt_points: list[tuple[float, float]],
+    *,
+    patch_radius: int,
+) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    """按 patch descriptor 最近邻匹配 target 点到 reference 点。"""
+
+    ref_desc = [(point, _patch_descriptor(reference, point, radius=patch_radius)) for point in ref_points]
+    tgt_desc = [(point, _patch_descriptor(target, point, radius=patch_radius)) for point in tgt_points]
+    ref_desc = [(point, desc) for point, desc in ref_desc if desc is not None]
+    tgt_desc = [(point, desc) for point, desc in tgt_desc if desc is not None]
+    matches = []
+    used_ref: set[int] = set()
+    for tgt_point, tgt_vector in tgt_desc:
+        distances = []
+        for index, (ref_point, ref_vector) in enumerate(ref_desc):
+            if index in used_ref:
+                continue
+            distances.append((float(np.linalg.norm(tgt_vector - ref_vector)), index, ref_point))
+        if not distances:
+            continue
+        distances.sort(key=lambda item: item[0])
+        best_distance, best_index, best_ref = distances[0]
+        second_distance = distances[1][0] if len(distances) > 1 else best_distance + 1.0
+        if best_distance <= 0.9 * max(second_distance, 1e-8):
+            matches.append((tgt_point, best_ref))
+            used_ref.add(best_index)
+    return matches
+
+
+def _homography_from_points(src: np.ndarray, dst: np.ndarray) -> np.ndarray | None:
+    """使用 DLT 从 4 对或更多点估计 homography, 方向为 src -> dst。"""
+
+    if src.shape[0] < 4 or dst.shape[0] < 4:
+        return None
+    rows = []
+    for (x, y), (u, v) in zip(src, dst):
+        rows.append([-x, -y, -1.0, 0.0, 0.0, 0.0, u * x, u * y, u])
+        rows.append([0.0, 0.0, 0.0, -x, -y, -1.0, v * x, v * y, v])
+    _, _, vh = np.linalg.svd(np.asarray(rows, dtype=np.float64))
+    h = vh[-1, :].reshape(3, 3)
+    if abs(float(h[2, 2])) <= 1e-12:
+        return None
+    return h / h[2, 2]
+
+
+def _ransac_homography(
+    matches: list[tuple[tuple[float, float], tuple[float, float]]],
+    *,
+    max_trials: int,
+    inlier_threshold: float,
+    min_inliers: int,
+) -> tuple[np.ndarray, list[int]] | None:
+    """对匹配点执行确定性 RANSAC homography。"""
+
+    src = np.asarray([match[0] for match in matches], dtype=np.float64)
+    dst = np.asarray([match[1] for match in matches], dtype=np.float64)
+    best_indices: list[int] = []
+    best_matrix: np.ndarray | None = None
+    trial_count = 0
+    n = len(matches)
+    for a in range(0, n - 3):
+        for b in range(a + 1, n - 2):
+            for c in range(b + 1, n - 1):
+                for d in range(c + 1, n):
+                    matrix = _homography_from_points(src[[a, b, c, d]], dst[[a, b, c, d]])
+                    trial_count += 1
+                    if matrix is None:
+                        continue
+                    projected = _project_points(src, matrix)
+                    errors = np.linalg.norm(projected - dst, axis=1)
+                    inliers = [int(index) for index, error in enumerate(errors) if float(error) <= inlier_threshold]
+                    if len(inliers) > len(best_indices):
+                        best_indices = inliers
+                        best_matrix = matrix
+                    if trial_count >= max_trials:
+                        break
+                if trial_count >= max_trials:
+                    break
+            if trial_count >= max_trials:
+                break
+        if trial_count >= max_trials:
+            break
+    if best_matrix is None or len(best_indices) < min_inliers:
+        return None
+    refined = _homography_from_points(src[best_indices], dst[best_indices])
+    if refined is None:
+        refined = best_matrix
+    return refined, best_indices
+
+
+def _project_points(points: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+    """应用 homography 投影点。"""
+
+    homogeneous = np.concatenate([points, np.ones((points.shape[0], 1), dtype=np.float64)], axis=1)
+    projected = homogeneous @ matrix.T
+    denom = np.clip(projected[:, 2:3], 1e-12, None)
+    return projected[:, :2] / denom
+
+
+def _warp_gray_homography(array: np.ndarray, matrix: np.ndarray, output_shape: tuple[int, int]) -> np.ndarray:
+    """使用 Pillow 将 target 图像按 homography warp 到 reference 坐标。"""
+
+    try:
+        from PIL import Image
+    except ImportError as exc:  # pragma: no cover - 由运行环境决定
+        raise RuntimeError("feature homography warp 需要安装 Pillow。") from exc
+    out_h, out_w = output_shape
+    inverse = np.linalg.inv(matrix)
+    inverse = inverse / inverse[2, 2]
+    coeffs = [float(inverse[0, 0]), float(inverse[0, 1]), float(inverse[0, 2]), float(inverse[1, 0]), float(inverse[1, 1]), float(inverse[1, 2]), float(inverse[2, 0]), float(inverse[2, 1])]
+    image = Image.fromarray(np.clip(array * 255.0, 0, 255).round().astype(np.uint8), mode="L")
+    warped = image.transform((out_w, out_h), Image.Transform.PERSPECTIVE, coeffs, resample=Image.Resampling.BILINEAR)
+    return (np.asarray(warped, dtype=np.float32) / 255.0).astype(np.float32)
 
 
 def _search_affine_registration(reference: np.ndarray, target: np.ndarray, request: GeometryRegistrationRequest) -> dict[str, Any]:
