@@ -11,6 +11,7 @@ from main.watermarking.semantic_mask import (
     GRADIENT_SALIENCY_BACKEND_ID,
     INSPYRENET_BACKEND_ID,
     SemanticMaskRequest,
+    _resolve_inspyrenet_weight_metadata,
     extract_semantic_mask,
 )
 
@@ -94,3 +95,26 @@ def test_inspyrenet_backend_fails_explicitly_without_optional_dependency(tmp_pat
         result = extract_semantic_mask(request)
         assert result.backend_id == INSPYRENET_BACKEND_ID
         assert result.mask.shape == (24, 24)
+
+
+@pytest.mark.quick
+def test_inspyrenet_weight_metadata_records_configured_checkpoint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """InSPyReNet 权重应被记录为可审计摘要, 但不由主方法负责下载。"""
+
+    ckpt = tmp_path / "ckpt_base.pth"
+    ckpt.write_bytes(b"unit-test-inspyrenet-weight")
+    monkeypatch.setenv("INSPYRENET_CKPT_PATH", str(ckpt))
+
+    metadata = _resolve_inspyrenet_weight_metadata({"inspyrenet_ckpt_env": "INSPYRENET_CKPT_PATH"})
+
+    assert metadata["inspyrenet_ckpt_configured"] is True
+    assert metadata["inspyrenet_ckpt_path"] == str(ckpt)
+    assert len(metadata["inspyrenet_ckpt_sha256"]) == 64
+
+
+@pytest.mark.quick
+def test_inspyrenet_weight_metadata_rejects_missing_checkpoint(tmp_path: Path) -> None:
+    """正式 InSPyReNet 配置引用不存在的权重时应显式失败。"""
+
+    with pytest.raises(FileNotFoundError, match="InSPyReNet 权重文件不存在"):
+        _resolve_inspyrenet_weight_metadata({"inspyrenet_ckpt_path": str(tmp_path / "missing.pth")})

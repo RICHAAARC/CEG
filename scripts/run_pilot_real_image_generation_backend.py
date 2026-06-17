@@ -422,6 +422,7 @@ def _run_content_chain_watermark(
             threshold_quantile=float(args.content_mask_threshold_quantile),
             open_iters=int(args.content_mask_open_iters),
             close_iters=int(args.content_mask_close_iters),
+            config=_build_semantic_mask_config(args),
         )
     )
     result = embed_content_chain_watermark(
@@ -460,6 +461,20 @@ def _run_content_chain_watermark(
         "paper_main_method_blocking_reason": record.get("paper_main_method_blocking_reason"),
         "embedding_readiness_checks": _assess_content_chain_embedding_readiness(record, semantic_mask.to_record()),
     }
+
+
+def _build_semantic_mask_config(args: argparse.Namespace) -> dict[str, Any]:
+    """构造 semantic mask 配置, 只传递方法原语需要的运行证据字段。
+
+    InSPyReNet 权重的下载、复制和缓存属于 Colab 环境准备步骤, 不属于主方法本身。
+    这里仅把权重路径或环境变量名传入 mask 原语, 使正式结果 manifest 能记录权重摘要,
+    从而证明没有静默退化到无模型 proxy。
+    """
+
+    config: dict[str, Any] = {"inspyrenet_ckpt_env": args.inspyrenet_ckpt_env}
+    if args.inspyrenet_ckpt_path:
+        config["inspyrenet_ckpt_path"] = args.inspyrenet_ckpt_path
+    return config
 
 
 
@@ -680,6 +695,9 @@ def run_backend(args: argparse.Namespace) -> dict[str, Any]:
         "hf_token_env": args.hf_token_env,
         "hf_token_written_to_disk": False,
         "watermark_backend": args.watermark_backend,
+        "content_mask_backend": args.content_mask_backend,
+        "inspyrenet_ckpt_env": args.inspyrenet_ckpt_env,
+        "inspyrenet_ckpt_path_configured": bool(args.inspyrenet_ckpt_path or os.environ.get(args.inspyrenet_ckpt_env)),
         "prompt_count": len(prompt_rows),
         "image_pair_count": len(image_pairs),
         "image_pairs_path": str(output_root / IMAGE_PAIRS_NAME),
@@ -719,9 +737,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--native-watermark-bits", type=int, default=1024, help="CEG 原生水印嵌入 bit 数。")
     parser.add_argument(
         "--content-mask-backend",
-        default=GRADIENT_SALIENCY_BACKEND_ID,
+        default=INSPYRENET_BACKEND_ID,
         choices=[GRADIENT_SALIENCY_BACKEND_ID, INSPYRENET_BACKEND_ID],
         help="内容链嵌入使用的 semantic mask backend。",
+    )
+    parser.add_argument(
+        "--inspyrenet-ckpt-env",
+        default="INSPYRENET_CKPT_PATH",
+        help="InSPyReNet 权重路径所在的环境变量名。Colab 会默认设置该变量。",
+    )
+    parser.add_argument(
+        "--inspyrenet-ckpt-path",
+        default=None,
+        help="可选: 直接指定 InSPyReNet 权重文件路径, 优先级高于环境变量。",
     )
     parser.add_argument("--content-mask-threshold-quantile", type=float, default=0.80, help="内容链 semantic mask 分位数阈值。")
     parser.add_argument("--content-mask-open-iters", type=int, default=1, help="内容链 semantic mask 开运算次数。")

@@ -60,7 +60,8 @@ def test_real_image_generation_backend_defaults_to_content_chain_watermark(tmp_p
     )
 
     assert args.watermark_backend == "ceg_content_chain_embedding"
-    assert args.content_mask_backend == backend.GRADIENT_SALIENCY_BACKEND_ID
+    assert args.content_mask_backend == backend.INSPYRENET_BACKEND_ID
+    assert args.inspyrenet_ckpt_env == "INSPYRENET_CKPT_PATH"
 
 
 def test_watermarked_file_cannot_equal_clean_file(tmp_path: Path) -> None:
@@ -102,6 +103,8 @@ def test_content_chain_watermark_backend_writes_real_outputs(tmp_path: Path) -> 
             str(tmp_path / "unused_config.json"),
             "--watermark-backend",
             "ceg_content_chain_embedding",
+            "--content-mask-backend",
+            backend.GRADIENT_SALIENCY_BACKEND_ID,
         ]
     )
 
