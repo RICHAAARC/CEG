@@ -7,3 +7,4 @@ audit_reports/
 outputs/
 release_packages/
 *.pyc
+*.egg-info/

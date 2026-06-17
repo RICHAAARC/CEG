@@ -1,3 +1,19 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ceg"
+version = "0.1.0"
+description = "CEG governed research runtime and paper artifact workflow"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["main*", "experiments*", "paper_workflow*", "tools*"]
+exclude = ["configs*", "docs*", "prompts*", "tests*", "audit_reports*", "outputs*"]
+namespaces = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
