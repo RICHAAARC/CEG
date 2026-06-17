@@ -573,3 +573,15 @@ docs/builds/paper_publication_stage_plan.md
 ```
 
 后续若需要回答“当前向论文推进的阶段顺序、阻断点、门禁和立即下一步是什么”, 优先读取该文档。本文档保留较完整的背景说明和历史推进记录。
+
+---
+
+## 11. GPU 交接与暂停计划
+
+由于当前本地没有 GPU 环境, 真实 SD / watermark / detector / baseline / 高级 metric 执行需要在到达对应阶段后暂停并交给用户运行。交接边界、需要交回的产物目录和恢复验收命令已经整理到:
+
+```text
+docs/builds/paper_gpu_handoff_and_pause_plan.md
+```
+
+当前尚未到 GPU 暂停点, 因为 P0 真实输入冻结仍未通过。当前下一步仍是补齐 `pilot_input_value_pack_fill_sheet.csv` 中的 19 个 `value_json`。

@@ -660,5 +660,6 @@ FID: 取决于样本量, GPU 更快, CPU 可小规模验证。
 | `docs/builds/paper_advancement_stage_plan_current.md` | 旧版当前推进计划和背景说明 |
 | `docs/builds/paper_publication_execution_stage_plan.md` | 旧版执行阶段计划 |
 | `docs/builds/paper_publication_result_package_plan.md` | 论文结果包结构计划 |
+| `docs/builds/paper_gpu_handoff_and_pause_plan.md` | 本地无 GPU 时的暂停点、真实 GPU 运行交接产物和恢复验收命令 |
 
 后续若出现阶段变化, 应优先更新本文档中的“当前真实状态”和“当前立即执行计划”。
