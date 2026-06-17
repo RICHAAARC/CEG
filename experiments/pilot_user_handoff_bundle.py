@@ -17,10 +17,12 @@ from experiments.pilot_input_value_pack_sheet import (
     FILL_SHEET_NAME,
     GUIDANCE_JSON_NAME,
     GUIDANCE_MARKDOWN_NAME,
+    IMPORT_REPORT_NAME,
     VALIDATION_MARKDOWN_NAME,
     VALIDATION_REPORT_NAME,
     export_pilot_input_value_pack_fill_sheet,
     export_pilot_input_value_pack_fill_sheet_guidance,
+    import_and_write_pilot_input_value_pack_fill_sheet,
     validate_and_write_pilot_input_value_pack_fill_sheet,
 )
 from experiments.pilot_input_value_pack_status import STATUS_MARKDOWN_NAME, STATUS_REPORT_NAME
@@ -29,6 +31,7 @@ HANDOFF_ROOT_NAME = "user_handoff"
 P0_HANDOFF_DIR_NAME = "p0_input_handoff"
 P0_HANDOFF_MANIFEST_NAME = "p0_input_handoff_manifest.json"
 P0_HANDOFF_README_NAME = "p0_input_handoff_readme.md"
+P0_HANDOFF_APPLY_REPORT_NAME = "p0_input_handoff_apply_report.json"
 
 OPTIONAL_SOURCE_NAMES = (
     STATUS_REPORT_NAME,
@@ -101,6 +104,14 @@ def _render_readme(manifest: dict[str, Any]) -> str:
         "python scripts/build_pilot_p0_input_freeze_report.py --workspace <workspace> --dry-run --require-pass",
         "python scripts/build_pilot_p0_input_freeze_report.py --workspace <workspace> --require-pass",
         "```",
+        "",
+        "如果你直接编辑的是本交接包内的 CSV, 可以先运行以下命令验证并应用交接包:",
+        "",
+        "```text",
+        "python scripts/apply_pilot_p0_input_handoff_bundle.py --workspace <workspace> --require-pass",
+        "```",
+        "",
+        "该命令只有在交接包内 CSV 预检通过后, 才会同步 canonical CSV 并导入 value pack。",
         "",
         "## 后续 GPU 暂停点",
         "",
@@ -217,3 +228,81 @@ def build_pilot_p0_input_handoff_bundle(
     manifest["readme_path"] = str(readme_path)
     _write_json(manifest_path, manifest)
     return manifest
+
+
+def apply_pilot_p0_input_handoff_bundle(
+    *,
+    workspace_root: str | Path,
+    handoff_root: str | Path | None = None,
+    write_on_pass: bool = True,
+) -> dict[str, Any]:
+    """验证并应用 P0 用户交接包中的填写表。
+
+    该函数面向用户已经在交接包内填写 `pilot_input_value_pack_fill_sheet.csv`
+    的场景。它先对交接包内 CSV 做只读预检。只有预检通过且 `write_on_pass`
+    为 True 时, 才会把该 CSV 同步回工作区 canonical 填写表, 并导入 value pack。
+    """
+    workspace = Path(workspace_root)
+    handoff_dir = Path(handoff_root) if handoff_root is not None else workspace / HANDOFF_ROOT_NAME / P0_HANDOFF_DIR_NAME
+    handoff_fill_sheet = handoff_dir / FILL_SHEET_NAME
+    canonical_fill_sheet = workspace / FILL_SHEET_NAME
+    value_pack = workspace / VALUE_PACK_NAME
+    handoff_validation_json = handoff_dir / VALIDATION_REPORT_NAME
+    handoff_validation_md = handoff_dir / VALIDATION_MARKDOWN_NAME
+    apply_report_path = handoff_dir / P0_HANDOFF_APPLY_REPORT_NAME
+
+    validation_report = validate_and_write_pilot_input_value_pack_fill_sheet(
+        value_pack_path=value_pack,
+        input_csv_path=handoff_fill_sheet,
+        report_path=handoff_validation_json,
+        markdown_report_path=handoff_validation_md,
+    )
+    decision = validation_report.get("overall_decision")
+    canonical_fill_sheet_updated = False
+    import_report: dict[str, Any] | None = None
+
+    if decision == "pass" and write_on_pass:
+        canonical_fill_sheet.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(handoff_fill_sheet, canonical_fill_sheet)
+        canonical_fill_sheet_updated = True
+        import_report = import_and_write_pilot_input_value_pack_fill_sheet(
+            value_pack_path=value_pack,
+            input_csv_path=canonical_fill_sheet,
+            output_value_pack_path=None,
+            report_path=workspace / IMPORT_REPORT_NAME,
+        )
+
+    report = {
+        "artifact_name": P0_HANDOFF_APPLY_REPORT_NAME,
+        "workspace_root": str(workspace),
+        "handoff_root": str(handoff_dir),
+        "handoff_fill_sheet_path": str(handoff_fill_sheet),
+        "canonical_fill_sheet_path": str(canonical_fill_sheet),
+        "value_pack_path": str(value_pack),
+        "write_on_pass": write_on_pass,
+        "canonical_fill_sheet_updated": canonical_fill_sheet_updated,
+        "value_pack_import_performed": bool(import_report and import_report.get("write_performed")),
+        "overall_decision": (
+            "pass"
+            if decision == "pass" and (not write_on_pass or (import_report and import_report.get("overall_decision") == "pass"))
+            else "fail"
+        ),
+        "recommended_next_stage": (
+            "run_p0_input_freeze_dry_run"
+            if decision == "pass"
+            else "fix_handoff_fill_sheet_value_json"
+        ),
+        "validation_summary": {
+            "overall_decision": validation_report.get("overall_decision"),
+            "blocking_item_count": validation_report.get("summary", {}).get("blocking_item_count"),
+            "updated_entry_count": validation_report.get("summary", {}).get("updated_entry_count"),
+            "write_performed": validation_report.get("write_performed"),
+        },
+        "import_summary": None if import_report is None else import_report.get("summary"),
+        "notes": [
+            "交接包应用入口只在 handoff CSV 预检通过后才同步 canonical CSV。",
+            "预检失败时不会回写 value pack, 也不会覆盖工作区 canonical CSV。",
+        ],
+    }
+    _write_json(apply_report_path, report)
+    return report

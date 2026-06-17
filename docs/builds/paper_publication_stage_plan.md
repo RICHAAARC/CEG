@@ -177,6 +177,12 @@ python scripts/export_pilot_input_value_pack_fill_sheet_guidance.py --workspace 
 python scripts/build_pilot_p0_input_handoff_bundle.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
 ```
 
+填写交接包内 CSV 后, 可直接运行以下命令验证并应用交接包。该命令只有在预检通过时才会同步 canonical CSV 并导入 value pack:
+
+```text
+python scripts/apply_pilot_p0_input_handoff_bundle.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-pass
+```
+
 填写 CSV 后先执行只读预检。只读预检不得回写 value pack:
 
 ```text
