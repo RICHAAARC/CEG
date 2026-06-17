@@ -212,3 +212,67 @@ paper_main_method_ready = false
 ### 12.4 下一步
 
 下一步应在 `main/watermarking/content_chain/` 下补充 LF/HF 内容链, 使 semantic mask 的 `mask_true -> hf` 与 `mask_false -> lf` 路由真正进入 embedding 和 detection 分数生产路径。
+
+## 13. 本次继续推进: LF/HF 内容链证据原语
+
+在 semantic mask 原语之后, 本次继续补充了 CEG 内部内容链原语:
+
+```text
+main/watermarking/content_chain/
+  __init__.py
+  scoring.py
+```
+
+该模块把 semantic mask 的空间路由转换为可复现的 LF/HF 内容链证据:
+
+1. `mask_false -> lf`:
+   - 从低显著性区域提取低频亮度块均值向量。
+   - 绑定 prompt、mask digest、routing digest 和配置派生 LF challenge。
+   - 计算 `lf_score`、`lf_trace_digest` 和 `lf_statistics_digest`。
+
+2. `mask_true -> hf`:
+   - 从高显著性区域提取梯度能量块向量。
+   - 绑定 prompt、mask digest、routing digest 和配置派生 HF challenge。
+   - 计算 `hf_score`、`hf_trace_digest` 和 `hf_statistics_digest`。
+
+3. 汇总路径:
+   - 按权重合成 `content_score`。
+   - 写出 `content_chain_digest`。
+   - 输出可进入 detection record 的 `score_parts` 和 `diagnostics`。
+
+### 13.1 当前实现的真实性边界
+
+该模块读取真实图像像素和真实 semantic mask, 因此不是 mock 或空实现。
+但它仍然只是内容链 evidence 生产路径, 不是完整论文主方法, 因为尚未实现:
+
+1. 内容链 embedding 侧图像改写。
+2. 几何攻击后的同步恢复。
+3. Attestation 绑定。
+4. 与真实 positive / negative 样本集合联动的固定 FPR 阈值校准。
+
+因此模块输出继续保留:
+
+```text
+paper_main_method_ready = false
+```
+
+### 13.2 与 CEG-WM 的关系
+
+本次仅参考 CEG-WM 的 LF/HF 内容链机制思想:
+
+1. 内容 evidence 应拆分 LF 与 HF 分支。
+2. 每个分支应有独立 trace digest。
+3. 分支分数应可合成为总 content score。
+4. 分支统计应绑定 mask digest 和 prompt 上下文。
+
+没有迁入 CEG-WM 的 LDPC 门禁、paper faithfulness gate、runtime resolver、workflow 或历史复杂约束。
+
+### 13.3 下一步
+
+下一步应补充内容链 embedding 原语, 使当前检测侧 LF/HF score 能够对应到真实 watermarked 图像中的可控改写。建议新增:
+
+```text
+main/watermarking/content_chain/embedding.py
+```
+
+该模块应基于 semantic mask 分区, 对 LF 区域和 HF 区域施加可控、可复现且有 provenance 的像素或频域扰动。

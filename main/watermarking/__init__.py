@@ -5,6 +5,13 @@
 CEG 自包含实现。
 """
 
+from main.watermarking.content_chain import (
+    CONTENT_CHAIN_BACKEND_ID,
+    CONTENT_CHAIN_BACKEND_ROLE,
+    ContentChainRequest,
+    ContentChainResult,
+    extract_content_chain_evidence,
+)
 from main.watermarking.interfaces import (
     WatermarkDetectionRequest,
     WatermarkDetectionResult,
@@ -26,6 +33,11 @@ from main.watermarking.semantic_mask import (
 from main.watermarking.native_lsb import NativeLsbWatermarkResult, embed_native_lsb_watermark
 
 __all__ = [
+    "CONTENT_CHAIN_BACKEND_ID",
+    "CONTENT_CHAIN_BACKEND_ROLE",
+    "ContentChainRequest",
+    "ContentChainResult",
+    "extract_content_chain_evidence",
     "GRADIENT_SALIENCY_BACKEND_ID",
     "INSPYRENET_BACKEND_ID",
     "SemanticMaskRequest",
