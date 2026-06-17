@@ -58,6 +58,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mask-close-iters", type=int, default=1, help="semantic mask 闭运算次数。")
     parser.add_argument("--lf-grid-size", type=int, default=8, help="LF 内容链网格大小。")
     parser.add_argument("--hf-grid-size", type=int, default=8, help="HF 内容链网格大小。")
+    parser.add_argument("--geometry-search-radius", type=int, default=8, help="几何 registration 平移搜索半径。")
+    parser.add_argument("--geometry-downsample-size", type=int, default=96, help="几何 registration 下采样最长边。")
+    parser.add_argument("--geometry-anchor-grid-size", type=int, default=4, help="几何 registration 局部锚点网格大小。")
     return parser
 
 
@@ -75,6 +78,9 @@ def main() -> None:
                 "mask_close_iters": args.mask_close_iters,
                 "lf_grid_size": args.lf_grid_size,
                 "hf_grid_size": args.hf_grid_size,
+                "geometry_search_radius": args.geometry_search_radius,
+                "geometry_downsample_size": args.geometry_downsample_size,
+                "geometry_anchor_grid_size": args.geometry_anchor_grid_size,
             },
         )
     else:

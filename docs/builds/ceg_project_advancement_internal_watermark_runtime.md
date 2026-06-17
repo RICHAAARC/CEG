@@ -490,3 +490,67 @@ paper_main_method_ready = false
 5. attacked positive 评测集合。
 
 项目才能稳定产出论文主表中的固定 FPR 下 TPP / TPR 结果。
+
+
+## 17. 本次继续推进: 几何 registration 与恢复评分接入
+
+在真实内容链 detection backend 之后, 本次继续补充了几何恢复方法原语:
+
+```text
+main/watermarking/geometry/
+  __init__.py
+  registration.py
+```
+
+### 17.1 已实现能力
+
+当前几何原语提供 `estimate_geometry_registration` 入口, 对 target 图像和 reference 图像执行真实像素级平移搜索:
+
+1. 读取 target / reference 图像像素。
+2. 转换为归一化灰度图。
+3. 在整数平移窗口内搜索最大归一化互相关。
+4. 计算 `registration_confidence`、`anchor_inlier_ratio`、`recovered_sync_consistency` 和 `alignment_residual`。
+5. 写出 aligned 图像, 供内容链 detector 重新计算恢复后分数。
+6. 生成 `alignment_digest`、reference digest 和 target digest, 便于记录审计。
+
+该能力已经接入:
+
+```text
+experiments/ceg_real_detection_backend.py
+```
+
+每个 detection event 现在包含:
+
+1. `payload.content.content_score_raw`: 原始 target 图像内容链分数。
+2. `payload.content.content_score_aligned`: 几何对齐图像内容链分数。
+3. `payload.geometry.geometry_record`: 几何 registration provenance。
+4. `payload.aligned_content_chain`: 对齐后内容链 provenance。
+5. `aligned_images/`: 对齐图像落盘目录。
+
+### 17.2 当前边界
+
+该几何模块属于真实方法原语, 但还不是完整顶会论文级几何恢复 backend。当前实现主要覆盖平移和轻量裁剪类偏移诊断, 尚未覆盖:
+
+1. 旋转恢复。
+2. 尺度恢复。
+3. 透视变换恢复。
+4. 局部非刚性形变恢复。
+5. 多锚点特征匹配和鲁棒估计。
+
+因此 detection backend 的 blocking reason 已从“完全没有几何恢复”推进为:
+
+```text
+full_affine_or_feature_geometry_recovery_not_implemented
+```
+
+这表示项目已经具备真实几何恢复原语, 但仍需增强到完整 affine / feature-based recovery 才能支撑正式论文主结果。
+
+### 17.3 下一步
+
+下一步建议继续补充 attestation 绑定模块:
+
+```text
+main/watermarking/attestation/
+```
+
+该模块应把图像、prompt、mask digest、content chain digest、geometry digest 和方法配置绑定为事件级证明, 并输出 `attestation_score`。只有 attestation 接入后, CEG formal decision 中的 `final_decision = evidence_decision AND attestation_pass` 才能从真实 backend 获得完整输入。

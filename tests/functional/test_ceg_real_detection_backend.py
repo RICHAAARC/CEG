@@ -106,6 +106,9 @@ def test_content_chain_detection_backend_writes_real_events(tmp_path: Path) -> N
         assert 0.0 <= payload["content"]["content_score_raw"] <= 1.0
         assert len(payload["semantic_mask"]["mask_digest"]) == 64
         assert len(payload["content_chain"]["content_chain_digest"]) == 64
+        assert len(payload["aligned_content_chain"]["content_chain_digest"]) == 64
+        assert len(payload["geometry"]["geometry_record"]["alignment_digest"]) == 64
+        assert payload["geometry"]["geometry_record"]["paper_main_method_ready"] is False
         assert payload["attestation"]["attestation_score"] == 0.0
 
 
@@ -139,4 +142,5 @@ def test_detection_cli_can_run_content_chain_backend(tmp_path: Path) -> None:
     manifest = json.loads((output_root / "ceg_detection_producer_manifest.json").read_text(encoding="utf-8"))
     assert manifest["producer_id"] == "ceg_content_chain_detection_backend"
     assert (output_root / "semantic_masks").is_dir()
+    assert (output_root / "aligned_images").is_dir()
     assert (output_root / "detection_events.json").is_file()

@@ -26,6 +26,13 @@ from main.watermarking.interfaces import (
     WatermarkEmbeddingResult,
     WatermarkPromptContext,
 )
+from main.watermarking.geometry import (
+    GEOMETRY_REGISTRATION_BACKEND_ID,
+    GEOMETRY_REGISTRATION_BACKEND_ROLE,
+    GeometryRegistrationRequest,
+    GeometryRegistrationResult,
+    estimate_geometry_registration,
+)
 from main.watermarking.semantic_mask import (
     GRADIENT_SALIENCY_BACKEND_ID,
     INSPYRENET_BACKEND_ID,
@@ -48,6 +55,11 @@ __all__ = [
     "ContentChainRequest",
     "ContentChainResult",
     "extract_content_chain_evidence",
+    "GEOMETRY_REGISTRATION_BACKEND_ID",
+    "GEOMETRY_REGISTRATION_BACKEND_ROLE",
+    "GeometryRegistrationRequest",
+    "GeometryRegistrationResult",
+    "estimate_geometry_registration",
     "GRADIENT_SALIENCY_BACKEND_ID",
     "INSPYRENET_BACKEND_ID",
     "SemanticMaskRequest",

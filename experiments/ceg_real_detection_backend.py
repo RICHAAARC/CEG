@@ -19,6 +19,7 @@ from typing import Any, Iterable, Mapping
 from main.core.digest import build_stable_digest
 from main.methods.ceg.ablations import CEG_ABLATIONS
 from main.watermarking.content_chain import ContentChainRequest, extract_content_chain_evidence
+from main.watermarking.geometry import GeometryRegistrationRequest, estimate_geometry_registration
 from main.watermarking.interfaces import WatermarkPromptContext
 from main.watermarking.semantic_mask import GRADIENT_SALIENCY_BACKEND_ID, SemanticMaskRequest, extract_semantic_mask
 
@@ -34,7 +35,7 @@ from experiments.ceg_detection_producer import (
 )
 
 CONTENT_CHAIN_DETECTION_BACKEND_ID = "ceg_content_chain_detection_backend"
-CONTENT_CHAIN_DETECTION_BACKEND_ROLE = "real_content_chain_detection_without_geometry_or_attestation"
+CONTENT_CHAIN_DETECTION_BACKEND_ROLE = "real_content_chain_detection_with_translation_geometry_without_attestation"
 
 
 DEFAULT_EVENT_THRESHOLDS = {
@@ -56,6 +57,9 @@ DEFAULT_DETECTOR_CONFIG = {
     "hf_grid_size": 8,
     "lf_weight": 0.5,
     "hf_weight": 0.5,
+    "geometry_search_radius": 8,
+    "geometry_downsample_size": 96,
+    "geometry_anchor_grid_size": 4,
 }
 
 
@@ -109,11 +113,12 @@ def write_content_chain_detection_inputs(
     attacked_manifest = load_optional_manifest(attacked_image_manifest_path)
     config = _merge_config(detector_config)
     mask_root = output_path / "semantic_masks"
+    aligned_root = output_path / "aligned_images"
 
     events: list[dict[str, Any]] = []
     records: list[dict[str, Any]] = []
     for index, row in enumerate(rows, start=1):
-        pair_events, pair_records = _events_from_image_pair(row, index, image_pair_path.parent, mask_root, config)
+        pair_events, pair_records = _events_from_image_pair(row, index, image_pair_path.parent, mask_root, aligned_root, config)
         events.extend(pair_events)
         records.extend(pair_records)
 
@@ -123,6 +128,7 @@ def write_content_chain_detection_inputs(
             rows,
             image_pair_path.parent,
             mask_root,
+            aligned_root,
             config,
         )
         events.extend(attack_events)
@@ -149,7 +155,7 @@ def write_content_chain_detection_inputs(
         "formal_result_claim": False,
         "paper_main_method_ready": False,
         "paper_main_method_blocking_reasons": [
-            "geometry_recovery_not_implemented",
+            "full_affine_or_feature_geometry_recovery_not_implemented",
             "attestation_binding_not_implemented",
             "fixed_fpr_threshold_requires_full_calibration_set",
         ],
@@ -182,6 +188,9 @@ def _merge_config(config: Mapping[str, Any] | None) -> dict[str, Any]:
     merged["hf_grid_size"] = int(merged["hf_grid_size"])
     merged["lf_weight"] = float(merged["lf_weight"])
     merged["hf_weight"] = float(merged["hf_weight"])
+    merged["geometry_search_radius"] = int(merged["geometry_search_radius"])
+    merged["geometry_downsample_size"] = int(merged["geometry_downsample_size"])
+    merged["geometry_anchor_grid_size"] = int(merged["geometry_anchor_grid_size"])
     return merged
 
 
@@ -190,6 +199,7 @@ def _events_from_image_pair(
     index: int,
     base_dir: Path,
     mask_root: Path,
+    aligned_root: Path,
     config: Mapping[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """从单个 image pair 生成 clean 负样本和 watermarked 正样本事件。"""
@@ -217,7 +227,9 @@ def _events_from_image_pair(
         attack_condition="clean_none",
         is_watermarked=False,
         source_image_id=image_id,
+        reference_image_path=clean_path,
         mask_root=mask_root,
+        aligned_root=aligned_root,
         config=config,
         suffix="clean",
     )
@@ -233,7 +245,9 @@ def _events_from_image_pair(
         attack_condition="clean_none",
         is_watermarked=True,
         source_image_id=image_id,
+        reference_image_path=clean_path,
         mask_root=mask_root,
+        aligned_root=aligned_root,
         config=config,
         suffix="watermarked",
     )
@@ -247,6 +261,7 @@ def _events_from_attack_manifest(
     rows: Iterable[dict[str, Any]],
     base_dir: Path,
     mask_root: Path,
+    aligned_root: Path,
     config: Mapping[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """从 attack manifest 生成 attacked detection 事件。"""
@@ -269,6 +284,13 @@ def _events_from_attack_manifest(
             field_name="attacked_image_path",
         )
         is_watermarked = _infer_attack_watermark_label(record, source_row)
+        reference_path = _resolve_existing_path(
+            _optional_string(record, "watermarked_image_path")
+            or _optional_string(source_row, "watermarked_image_path")
+            or _optional_string(source_row, "watermarked_path"),
+            base_dir,
+            field_name="reference_watermarked_image_path",
+        )
         event, detection_record = _build_detection_event(
             image_path=attacked_path,
             row={**source_row, **record},
@@ -281,7 +303,9 @@ def _events_from_attack_manifest(
             ),
             is_watermarked=is_watermarked,
             source_image_id=_optional_string(record, "source_image_id"),
+            reference_image_path=reference_path,
             mask_root=mask_root,
+            aligned_root=aligned_root,
             config=config,
             suffix="attacked",
         )
@@ -313,7 +337,9 @@ def _build_detection_event(
     attack_condition: str,
     is_watermarked: bool,
     source_image_id: str | None,
+    reference_image_path: Path,
     mask_root: Path,
+    aligned_root: Path,
     config: Mapping[str, Any],
     suffix: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -347,22 +373,67 @@ def _build_detection_event(
     )
     content_record = content_result.to_record()
     semantic_record = semantic_mask.to_record()
+    aligned_path = aligned_root / f"{safe_event_id}__{suffix}_aligned.png"
+    geometry_result = estimate_geometry_registration(
+        GeometryRegistrationRequest(
+            target_image_path=image_path,
+            reference_image_path=reference_image_path,
+            output_aligned_image_path=aligned_path,
+            search_radius=int(config["geometry_search_radius"]),
+            downsample_size=int(config["geometry_downsample_size"]),
+            anchor_grid_size=int(config["geometry_anchor_grid_size"]),
+            config={"detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID},
+        )
+    )
+    geometry_record = geometry_result.to_record()
+    aligned_image_path = Path(geometry_result.aligned_image_path) if geometry_result.aligned_image_path else image_path
+    aligned_mask = extract_semantic_mask(
+        SemanticMaskRequest(
+            image_path=aligned_image_path,
+            output_mask_path=mask_root / f"{safe_event_id}__{suffix}_aligned_semantic_mask.png",
+            backend_id=str(config["semantic_mask_backend_id"]),
+            threshold_quantile=float(config["mask_threshold_quantile"]),
+            open_iters=int(config["mask_open_iters"]),
+            close_iters=int(config["mask_close_iters"]),
+            config={"detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID, "geometry_aligned": True},
+        )
+    )
+    aligned_content_result = extract_content_chain_evidence(
+        ContentChainRequest(
+            image_path=aligned_image_path,
+            semantic_mask=aligned_mask,
+            prompt_context=prompt_context,
+            lf_grid_size=int(config["lf_grid_size"]),
+            hf_grid_size=int(config["hf_grid_size"]),
+            lf_weight=float(config["lf_weight"]),
+            hf_weight=float(config["hf_weight"]),
+            config={"detector_backend": CONTENT_CHAIN_DETECTION_BACKEND_ID, "geometry_aligned": True},
+        )
+    )
+    aligned_content_record = aligned_content_result.to_record()
     content_score = round(float(content_result.content_score), 6)
-    content_fail_reason = "content_chain_scored" if content_score >= DEFAULT_EVENT_THRESHOLDS["content_threshold"] else "content_chain_below_threshold"
+    aligned_content_score = round(float(aligned_content_result.content_score), 6)
+    if content_score >= DEFAULT_EVENT_THRESHOLDS["content_threshold"]:
+        content_fail_reason = "content_chain_scored"
+    elif aligned_content_score >= content_score:
+        content_fail_reason = "geometry_suspected"
+    else:
+        content_fail_reason = "content_chain_below_threshold"
     payload = {
         "thresholds": dict(DEFAULT_EVENT_THRESHOLDS),
         "content": {
             "content_score_raw": content_score,
-            "content_score_aligned": content_score,
+            "content_score_aligned": aligned_content_score,
             "content_fail_reason": content_fail_reason,
             "payload_probe_score": content_score,
         },
         "geometry": {
-            "registration_confidence": 0.0,
-            "anchor_inlier_ratio": 0.0,
-            "recovered_sync_consistency": 0.0,
-            "alignment_residual": 0.0,
-            "geometry_fail_reason": "geometry_recovery_not_implemented",
+            "registration_confidence": geometry_result.registration_confidence,
+            "anchor_inlier_ratio": geometry_result.anchor_inlier_ratio,
+            "recovered_sync_consistency": geometry_result.recovered_sync_consistency,
+            "alignment_residual": geometry_result.alignment_residual,
+            "geometry_fail_reason": "translation_registration_only",
+            "geometry_record": geometry_record,
         },
         "attestation": {
             "attestation_score": 0.0,
@@ -371,10 +442,13 @@ def _build_detection_event(
         "ceg_ablation_variants": list(CEG_ABLATIONS),
         "semantic_mask": semantic_record,
         "content_chain": content_record,
+        "aligned_content_chain": aligned_content_record,
         "image_provenance": {
             "image_id": event_id,
             "source_image_id": source_image_id,
             "image_path": image_path.as_posix(),
+            "reference_image_path": reference_image_path.as_posix(),
+            "aligned_image_path": geometry_result.aligned_image_path,
             "prompt_id": prompt_context.prompt_id,
             "model_id": prompt_context.model_id,
         },
@@ -384,7 +458,7 @@ def _build_detection_event(
             "formal_result_claim": False,
             "paper_main_method_ready": False,
             "paper_main_method_blocking_reasons": [
-                "geometry_recovery_not_implemented",
+                "full_affine_or_feature_geometry_recovery_not_implemented",
                 "attestation_binding_not_implemented",
             ],
         },
@@ -408,6 +482,7 @@ def _build_detection_event(
         "image_path": image_path.as_posix(),
         "semantic_mask": semantic_record,
         "content_chain": content_record,
+        "aligned_content_chain": aligned_content_record,
         "record_digest": build_stable_digest({"event": event_id, "semantic_mask": semantic_record, "content_chain": content_record}),
     }
     return event, detection_record
