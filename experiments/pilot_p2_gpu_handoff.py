@@ -141,6 +141,26 @@ def _python_entrypoint_from_command(command: Any) -> str | None:
     return entrypoint or None
 
 
+
+def _command_uses_backend_wrapper(command: Any) -> bool:
+    """判断命令是否调用仓库提供的 P2 backend 包装入口。"""
+    entrypoint = _python_entrypoint_from_command(command)
+    if entrypoint is None:
+        return False
+    return Path(str(entrypoint).replace("\\", "/")).name == "run_pilot_image_generation_backend.py"
+
+
+def _command_has_external_backend_argument(command: Any) -> bool:
+    """判断包装入口命令是否已经携带真实外部 backend 参数。
+
+    该检查只做结构性提示, 不验证外部 backend 是否真实存在或是否能下载模型。
+    真实可用性必须在 Colab GPU 环境中执行命令后由 P2 接收门禁确认。
+    """
+    if not isinstance(command, list):
+        return False
+    arguments = {str(part) for part in command}
+    return "--external-command" in arguments or "--external-command-json" in arguments
+
 def _build_entrypoint_checks(*, repo_root: Path, colab_command_plan: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """检查 Colab 命令中的仓库内 Python 入口是否存在。
 
@@ -173,6 +193,9 @@ def _build_entrypoint_checks(*, repo_root: Path, colab_command_plan: list[dict[s
             continue
         local_path = repo_root / relative
         exists = local_path.is_file()
+        command = row.get("command")
+        uses_wrapper = _command_uses_backend_wrapper(command)
+        has_external_backend_argument = _command_has_external_backend_argument(command)
         checks.append(
             {
                 "command_index": index,
@@ -180,6 +203,12 @@ def _build_entrypoint_checks(*, repo_root: Path, colab_command_plan: list[dict[s
                 "entrypoint": entrypoint,
                 "repo_relative_path": relative,
                 "local_path": str(local_path),
+                "uses_p2_backend_wrapper": uses_wrapper,
+                "external_backend_command_status": (
+                    "provided" if has_external_backend_argument else "required_before_execution"
+                )
+                if uses_wrapper
+                else "not_applicable",
                 "message": (
                     "仓库内入口存在, Colab 中 clone 或上传仓库后可定位该脚本。"
                     if exists
@@ -200,6 +229,17 @@ def _execution_warnings(entrypoint_checks: list[dict[str, Any]]) -> list[dict[st
                     "warning_type": str(check.get("status")),
                     "entrypoint": str(check.get("entrypoint")),
                     "message": str(check.get("message")),
+                }
+            )
+        if check.get("external_backend_command_status") == "required_before_execution":
+            warnings.append(
+                {
+                    "warning_type": "external_backend_command_required",
+                    "entrypoint": str(check.get("entrypoint")),
+                    "message": (
+                        "仓库内 P2 包装入口已经存在, 但命令计划尚未携带 --external-command-json "
+                        "或 --external-command。正式执行前需要在 Colab 中追加真实 SD / watermark backend 命令。"
+                    ),
                 }
             )
     return warnings

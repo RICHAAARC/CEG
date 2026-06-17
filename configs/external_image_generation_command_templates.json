@@ -4,7 +4,7 @@
       "backend_id": "external_sd_watermark_backend",
       "command_template": [
         "python",
-        "{image_generation_root}/run_image_generation.py",
+        "{image_generation_root}/scripts/run_pilot_image_generation_backend.py",
         "--prompt-plan",
         "{prompt_plan_path}",
         "--out",

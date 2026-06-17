@@ -394,19 +394,28 @@ python scripts/build_pilot_p2_gpu_handoff.py --workspace D:/content/drive/MyDriv
 当前 P2 handoff 会生成 `entrypoint_checks` 和 `execution_warnings`。该检查发现当前命令计划中的 Colab 入口为:
 
 ```text
-/content/CEG/run_image_generation.py
+/content/CEG/scripts/run_pilot_image_generation_backend.py
 ```
 
 但当前仓库内不存在对应的:
 
 ```text
-D:/Code/CEG/run_image_generation.py
+D:/Code/CEG/scripts/run_pilot_image_generation_backend.py
 ```
 
 因此, 当前 P2 命令计划应理解为外部 SD / watermark backend 模板, 不能误认为仓库已经内置真实 SD3 图像生成脚本。用户在 Colab GPU 环境中继续 P2 时必须满足以下任一条件:
 
-1. 在 `/content/CEG/run_image_generation.py` 位置提供真实外部 backend 入口。
+1. 在 `/content/CEG/scripts/run_pilot_image_generation_backend.py` 位置提供真实外部 backend 入口。
 2. 修改 `image_generation_command_plan.json`, 指向实际可运行的 Colab 图像生成 / 水印脚本。
 3. 使用 Notebook 或其他外部 backend 直接生成 P2 必需输出, 但仍必须写出 `prompt_plan.json`、clean / watermarked 图像、`image_pairs.json` 和 image manifests。
 
 无论采用哪种方式, 回传后都必须运行 P2 接收门禁, 不能仅凭命令运行完成判断 P2 通过。
+
+## 9. 2026-06-17 P2 包装入口与用户已确认条件
+
+1. Prompt 来源: `D:/Code/CEG-WM/prompts`。
+2. 当前 pilot prompt draft 已引用该来源。
+3. Hugging Face token: 用户已确认在 Colab 环境定义, 仓库和落盘产物不得保存 token。
+4. 仓库内 P2 包装入口: `scripts/run_pilot_image_generation_backend.py`。
+5. 该入口不是模型实现, 只负责调用用户提供的真实外部 SD / watermark backend, 然后运行 P2 输出接收门禁。
+6. 当前 handoff 的 warning `external_backend_command_required` 表示正式执行前必须追加真实 backend 命令。

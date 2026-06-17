@@ -699,19 +699,68 @@ python scripts/build_pilot_stage_progress_summary.py --workspace D:/content/driv
 当前 P2 handoff 会生成 `entrypoint_checks` 和 `execution_warnings`。该检查发现当前命令计划中的 Colab 入口为:
 
 ```text
-/content/CEG/run_image_generation.py
+/content/CEG/scripts/run_pilot_image_generation_backend.py
 ```
 
 但当前仓库内不存在对应的:
 
 ```text
-D:/Code/CEG/run_image_generation.py
+D:/Code/CEG/scripts/run_pilot_image_generation_backend.py
 ```
 
 因此, 当前 P2 命令计划应理解为外部 SD / watermark backend 模板, 不能误认为仓库已经内置真实 SD3 图像生成脚本。用户在 Colab GPU 环境中继续 P2 时必须满足以下任一条件:
 
-1. 在 `/content/CEG/run_image_generation.py` 位置提供真实外部 backend 入口。
+1. 在 `/content/CEG/scripts/run_pilot_image_generation_backend.py` 位置提供真实外部 backend 入口。
 2. 修改 `image_generation_command_plan.json`, 指向实际可运行的 Colab 图像生成 / 水印脚本。
 3. 使用 Notebook 或其他外部 backend 直接生成 P2 必需输出, 但仍必须写出 `prompt_plan.json`、clean / watermarked 图像、`image_pairs.json` 和 image manifests。
 
 无论采用哪种方式, 回传后都必须运行 P2 接收门禁, 不能仅凭命令运行完成判断 P2 通过。
+
+## 28. 2026-06-17 P2 真实图像生成交接更新
+
+### 28.1 已确认的输入条件
+
+1. Prompt 来源已确认: `D:/Code/CEG-WM/prompts`。
+2. 当前 pilot prompt draft 已记录来源说明, 文件位于:
+   `D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/prompts/prompt_plan.draft.json`。
+3. Hugging Face token 状态已确认: 用户已在 Colab 环境定义 token。
+4. token 仍不得写入仓库、CSV、manifest、Notebook 输出或日志。
+
+### 28.2 P2 backend 入口状态
+
+仓库已新增 P2 包装入口:
+
+```text
+D:/Code/CEG/scripts/run_pilot_image_generation_backend.py
+```
+
+该入口只负责调用真实外部 SD / watermark backend 并运行 P2 接收门禁。它不内置 Stable Diffusion 模型, 不自行生成水印图像, 也不会用 mock 图像冒充正式论文结果。
+
+当前 Colab command plan 已更新为仓库内可定位入口:
+
+```text
+python /content/CEG/scripts/run_pilot_image_generation_backend.py --prompt-plan /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/prompts/prompt_plan.draft.json --out /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images --model-config /content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/configs/model_config.draft.json
+```
+
+### 28.3 当前仍未完成的事项
+
+当前命令计划已经不再缺少仓库入口, 但仍有一个执行前 warning:
+
+```text
+external_backend_command_required
+```
+
+含义是: 正式 Colab 执行前, 需要通过 `--external-command-json` 或 `--external-command` 追加真实 SD / watermark backend 命令。该 backend 必须最终产出 P2 接收门禁要求的文件:
+
+```text
+inputs/images/prompt_plan.json
+inputs/images/clean/*
+inputs/images/watermarked/*
+inputs/images/image_pairs.json
+inputs/images/image_manifests/image_generation_manifest.json
+inputs/images/image_manifests/image_pair_manifest.json
+```
+
+### 28.4 阶段结论
+
+P0 和 P1 已通过。P2 已具备 Colab GPU handoff 和仓库内包装入口, 但尚未获得真实 GPU 生成的 clean / watermarked 图像与 manifests。因此当前阶段仍停留在 `p2_image_generation_outputs`, 不能进入 attack 或 TPR@FPR 统计阶段。
