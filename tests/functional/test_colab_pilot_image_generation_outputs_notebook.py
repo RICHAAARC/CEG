@@ -31,7 +31,9 @@ def test_colab_pilot_image_generation_outputs_notebook_exists_and_calls_governed
     ]
     for script in required_scripts:
         assert script in source
-    assert "RUN_IMAGE_GENERATION_OUTPUTS = False" in source
+    assert "RUN_IMAGE_GENERATION_OUTPUTS = True" in source
+    assert "APPLY_EXTERNAL_COMMAND_FROM_NOTEBOOK = True" in source
+    assert "REQUIRE_BACKEND_COMMAND_READY = True" in source
     assert "图像生成产物是否完成只以" in source
 
 
