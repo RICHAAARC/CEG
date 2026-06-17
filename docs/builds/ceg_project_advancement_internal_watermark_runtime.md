@@ -1514,3 +1514,60 @@ python scripts/validate_colab_end_to_end_formal_run.py \
 ```
 
 若只有 1 个 image pair 的 probe 结果被指定为 `paper_main_full`, 规格验收会失败。这可以防止把调试探针误作为正式论文结果包。
+
+## 32. 本次继续推进: paper writing index 结果包统一入口
+
+本次补充了论文结果包级统一写作索引。修改位置为:
+
+```text
+main/analysis/result_package.py
+experiments/pilot_paper_results_package_acceptance.py
+```
+
+### 32.1 新增文件
+
+每次导出 `paper_results_package` 时, 现在会额外生成:
+
+```text
+paper_writing_index.json
+paper_writing_index.md
+```
+
+这两个文件会被纳入 `paper_results_package_manifest.json` 的 `copied_files` 与 `files` 摘要中, 因此 zip 归档和 MyDrive snapshot 也会保留它们。
+
+### 32.2 索引内容
+
+`paper_writing_index.json` 按论文写作用途组织结果包文件:
+
+```text
+core_reports
+main_tables
+secondary_tables
+latex_tables
+rendered_figures
+pdf_figures
+image_examples
+evidence
+provenance_manifests
+```
+
+这使论文写作时可以直接定位:
+
+1. 论文主表 CSV 和 fixed-FPR 表格。
+2. baseline 对比表。
+3. LaTeX 表格。
+4. SVG / HTML 图表和 PDF 预览。
+5. 示例水印图像与 image example manifest。
+6. paper / external evidence reports。
+7. detection、baseline、metric 等 provenance manifest。
+
+### 32.3 验收变化
+
+`pilot_paper_results_package_acceptance` 现在要求结果包包含:
+
+```text
+paper_writing_index.json
+paper_writing_index.md
+```
+
+这意味着一个可用于论文写作的结果包不能只包含零散表格和图, 还必须包含统一导航索引。该索引不改变指标计算结果, 只增强交付物的可审计性和可写作性。

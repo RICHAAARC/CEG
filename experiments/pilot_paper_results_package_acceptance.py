@@ -30,6 +30,8 @@ REQUIRED_PACKAGE_FILES = (
     "paper_readiness_report.json",
     "paper_results_report.md",
     "paper_results_report_manifest.json",
+    "paper_writing_index.json",
+    "paper_writing_index.md",
     "artifacts/artifact_manifest.json",
     "artifacts/paper_claim_audit.json",
     "artifacts/fixed_fpr_threshold_table.csv",

@@ -9,7 +9,7 @@ import sys
 import pytest
 
 from experiments.pilot_paper_results_package_acceptance import build_pilot_paper_results_package_acceptance_report
-from main.analysis.result_package import build_paper_results_package_manifest, validate_paper_results_package
+from main.analysis.result_package import build_paper_results_package_manifest, validate_paper_results_package, write_paper_writing_index
 
 
 def _write(path, text: str = "ok") -> None:
@@ -77,7 +77,9 @@ def _write_minimal_package(root, *, with_evidence: bool = True, with_image_examp
             {"artifact_name": "image_example_manifest.json", "examples": [{"relative_path": "image_examples/example_001.png"}]},
         )
         files.extend(["image_examples/image_example_manifest.json", "image_examples/example_001.png"])
-    manifest = build_paper_results_package_manifest(root, sorted(files), missing_files=[])
+    files.extend(["paper_writing_index.json", "paper_writing_index.md"])
+    write_paper_writing_index(root, root, sorted(files))
+    manifest = build_paper_results_package_manifest(root, sorted(files), missing_files=[], package_root=root)
     _write_json(root / "paper_results_package_manifest.json", manifest)
     validation = validate_paper_results_package(root)
     _write_json(root / "paper_results_package_validation.json", validation)

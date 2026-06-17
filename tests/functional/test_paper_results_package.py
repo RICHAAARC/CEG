@@ -73,12 +73,19 @@ def test_export_paper_results_package_collects_all_governed_outputs(tmp_path) ->
     assert manifest["claim_audit_decision"] == "pass"
     assert "artifacts/paper_claim_audit.json" in manifest["copied_files"]
     assert "paper_results_report.md" in manifest["copied_files"]
+    assert "paper_writing_index.json" in manifest["copied_files"]
+    assert "paper_writing_index.md" in manifest["copied_files"]
     assert "paper_result_evidence_report.json" in manifest["copied_files"]
     assert "external_result_evidence_report.json" in manifest["copied_files"]
     assert (package_root / "paper_result_evidence_report.json").is_file()
     assert (package_root / "external_result_evidence_report.json").is_file()
     assert any(path.startswith("rendered_figures/figures/") and path.endswith(".svg") for path in manifest["copied_files"])
     assert "pdf_figures/paper_figures_preview.pdf" in manifest["copied_files"]
+    writing_index = json.loads((package_root / "paper_writing_index.json").read_text(encoding="utf-8"))
+    assert writing_index["summary"]["main_table_count"] >= 1
+    assert writing_index["summary"]["rendered_figure_count"] >= 1
+    assert writing_index["summary"]["evidence_file_count"] >= 1
+    assert any(item["relative_path"] == "artifacts/formal_main_table.csv" for item in writing_index["sections"]["main_tables"])
     assert validation["overall_decision"] == "pass"
 
 
@@ -129,4 +136,6 @@ def test_export_paper_results_package_cli_writes_validation(tmp_path) -> None:
     manifest = json.loads((package_root / "paper_results_package_manifest.json").read_text(encoding="utf-8"))
     validation = json.loads((package_root / "paper_results_package_validation.json").read_text(encoding="utf-8"))
     assert manifest["file_count"] == len(manifest["files"])
+    assert manifest["writing_index_files"] == ["paper_writing_index.json", "paper_writing_index.md"]
+    assert (package_root / "paper_writing_index.md").is_file()
     assert validation["overall_decision"] == "pass"

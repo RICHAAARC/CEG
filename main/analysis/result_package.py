@@ -15,6 +15,8 @@ from typing import Any
 from main.core.digest import build_stable_digest
 
 PACKAGE_MANIFEST_NAME = "paper_results_package_manifest.json"
+WRITING_INDEX_JSON_NAME = "paper_writing_index.json"
+WRITING_INDEX_MARKDOWN_NAME = "paper_writing_index.md"
 
 CORE_OUTPUT_FILES = (
     "event_records.json",
@@ -37,6 +39,48 @@ SOURCE_MANIFEST_FILES = (
     "baseline_results/baseline_execution_manifest.json",
     "metric_results/metric_execution_manifest.json",
 )
+
+WRITING_INDEX_SECTIONS = {
+    "core_reports": (
+        "paper_results_report.md",
+        "paper_readiness_report.json",
+        "paper_outputs_summary.json",
+        "paper_results_report_manifest.json",
+    ),
+    "main_tables": (
+        "artifacts/formal_main_table.csv",
+        "artifacts/tpr_at_fixed_fpr_table.csv",
+        "artifacts/attack_tpr_at_fixed_fpr_table.csv",
+        "artifacts/baseline_comparison_table.csv",
+        "artifacts/fixed_fpr_threshold_table.csv",
+    ),
+    "secondary_tables": (
+        "artifacts/rescue_metrics_summary.csv",
+        "artifacts/quality_metrics_summary.csv",
+        "artifacts/bit_recovery_metrics.csv",
+        "artifacts/rate_confidence_intervals.csv",
+        "artifacts/method_pairwise_delta_table.csv",
+        "artifacts/detection_roc_curve.csv",
+        "artifacts/score_histogram_table.csv",
+        "artifacts/operating_point_table.csv",
+    ),
+    "latex_tables": ("latex_tables/",),
+    "rendered_figures": ("rendered_figures/",),
+    "pdf_figures": ("pdf_figures/",),
+    "image_examples": ("image_examples/",),
+    "evidence": (
+        "paper_result_evidence_report.json",
+        "external_result_evidence_report.json",
+        "baseline_results/",
+        "metric_results/",
+        "detection_results/",
+    ),
+    "provenance_manifests": (
+        PACKAGE_MANIFEST_NAME,
+        "artifacts/artifact_manifest.json",
+        "image_manifests/",
+    ),
+}
 
 
 def _read_json(path: Path) -> Any:
@@ -197,17 +241,88 @@ def _claim_audit_decision(output_root: Path) -> str | None:
     return str(payload.get("overall_decision")) if isinstance(payload, dict) else None
 
 
+def _matches_section(relative_path: str, patterns: tuple[str, ...]) -> bool:
+    """判断相对路径是否属于写作索引的某个分区。"""
+
+    return any(relative_path == pattern or (pattern.endswith("/") and relative_path.startswith(pattern)) for pattern in patterns)
+
+
+def build_paper_writing_index(package_root: str | Path, source_output_root: str | Path, package_files: list[str]) -> dict[str, Any]:
+    """构建面向论文写作的统一索引。
+
+    该索引只组织已经进入结果包的表格、图、示例图和证据文件, 不重新计算任何论文指标。
+    """
+
+    root = Path(package_root)
+    files = sorted(dict.fromkeys(str(path).replace("\\", "/") for path in package_files))
+    sections: dict[str, list[dict[str, Any]]] = {}
+    for section_name, patterns in WRITING_INDEX_SECTIONS.items():
+        section_files = [relative for relative in files if _matches_section(relative, patterns)]
+        sections[section_name] = [
+            {
+                "relative_path": relative,
+                "exists": (root / relative).is_file(),
+                "byte_count": (root / relative).stat().st_size if (root / relative).is_file() else 0,
+            }
+            for relative in section_files
+        ]
+    return {
+        "artifact_name": WRITING_INDEX_JSON_NAME,
+        "source_output_root": str(Path(source_output_root)),
+        "package_root": str(root),
+        "section_names": list(WRITING_INDEX_SECTIONS),
+        "sections": sections,
+        "summary": {
+            "package_file_count": len(files),
+            "indexed_file_count": sum(len(items) for items in sections.values()),
+            "section_count": len(sections),
+            "main_table_count": len(sections["main_tables"]),
+            "rendered_figure_count": len(sections["rendered_figures"]),
+            "pdf_figure_count": len(sections["pdf_figures"]),
+            "image_example_file_count": len(sections["image_examples"]),
+            "evidence_file_count": len(sections["evidence"]),
+        },
+    }
+
+
+def write_paper_writing_index(package_root: str | Path, source_output_root: str | Path, package_files: list[str]) -> dict[str, Any]:
+    """写出 JSON 与 Markdown 形式的论文写作索引。"""
+
+    root = Path(package_root)
+    index = build_paper_writing_index(root, source_output_root, package_files)
+    (root / WRITING_INDEX_JSON_NAME).write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    lines = [
+        "# CEG 论文结果包写作索引",
+        "",
+        "该文件用于从结果包中快速定位论文表格、图、示例图和证据文件。",
+        "",
+    ]
+    for section_name in index["section_names"]:
+        lines.extend([f"## {section_name}", ""])
+        items = index["sections"][section_name]
+        if not items:
+            lines.extend(["- 无文件。", ""])
+            continue
+        for item in items:
+            lines.append(f"- `{item['relative_path']}`")
+        lines.append("")
+    (root / WRITING_INDEX_MARKDOWN_NAME).write_text("\n".join(lines), encoding="utf-8")
+    return index
+
+
 def build_paper_results_package_manifest(
     source_output_root: str | Path,
     copied_files: list[str],
     *,
     missing_files: list[str] | None = None,
+    package_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """构建结果包 manifest, 记录文件摘要和来源 manifest。"""
     source_root = Path(source_output_root)
+    digest_root = Path(package_root) if package_root is not None else source_root
     file_entries = []
     for relative in copied_files:
-        source_path = source_root / relative
+        source_path = digest_root / relative
         file_entries.append(
             {
                 "relative_path": relative,
@@ -224,6 +339,7 @@ def build_paper_results_package_manifest(
         "file_count": len(copied_files),
         "package_digest": build_stable_digest(file_entries),
         "source_manifests": list(SOURCE_MANIFEST_FILES),
+        "writing_index_files": [WRITING_INDEX_JSON_NAME, WRITING_INDEX_MARKDOWN_NAME],
         "readiness_decision": _readiness_decision(source_root),
         "claim_audit_decision": _claim_audit_decision(source_root),
         "files": file_entries,
@@ -254,7 +370,10 @@ def export_paper_results_package(
         target_path = target_root / relative
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, target_path)
-    manifest = build_paper_results_package_manifest(source_root, relative_files, missing_files=[])
+    writing_index_files = [WRITING_INDEX_JSON_NAME, WRITING_INDEX_MARKDOWN_NAME]
+    write_paper_writing_index(target_root, source_root, [*relative_files, *writing_index_files])
+    packaged_files = sorted(dict.fromkeys([*relative_files, *writing_index_files]))
+    manifest = build_paper_results_package_manifest(source_root, packaged_files, missing_files=[], package_root=target_root)
     (target_root / PACKAGE_MANIFEST_NAME).write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
