@@ -69,14 +69,17 @@ def test_colab_pilot_image_generation_outputs_notebook_uses_semantic_stage_wordi
 
 
 @pytest.mark.quick
-def test_colab_pilot_image_generation_outputs_notebook_enforces_drive_workspace_and_archive() -> None:
-    """Notebook 必须以 Google Drive 工作区为正式运行和归档位置。"""
+def test_colab_pilot_image_generation_outputs_notebook_enforces_local_runtime_and_drive_archive() -> None:
+    """Notebook 必须在 Colab 本地运行, 仅把 Google Drive 用作输入来源和归档位置。"""
     source = _notebook_source()
     assert "STRICT_GOOGLE_DRIVE_PREFLIGHT = True" in source
     assert "ARCHIVE_IMAGE_GENERATION_OUTPUTS = True" in source
+    assert 'LOCAL_RUNTIME_ROOT = Path("/content/ceg_runtime")' in source
+    assert "DRIVE_INPUT_WORKSPACE_ROOT" in source
+    assert "shutil.copytree(DRIVE_INPUT_WORKSPACE_ROOT, PILOT_WORKSPACE_ROOT)" in source
     assert "archives" in source
     assert "ZipFile" in source
-    assert "Google Drive 工作区缺少图像生成前置文件" in source
+    assert "Colab 本地运行工作区缺少图像生成前置文件" in source
 
 
 @pytest.mark.quick
@@ -86,5 +89,5 @@ def test_colab_pilot_image_generation_outputs_notebook_pulls_code_before_drive_a
     assert 'REPO_URL = "https://github.com/RICHAAARC/CEG.git"' in source
     assert "UPDATE_REPO_FROM_GITHUB = True" in source
     assert "pull" in source
-    assert source.index('git", "clone') < source.index("从 Google Drive 加载前序产物")
+    assert source.index('git", "clone') < source.index("从 Google Drive 读取前序产物到 Colab 本地运行目录")
     assert '"archives" / "image_generation_outputs"' in source
