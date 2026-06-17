@@ -870,3 +870,30 @@ P2 接收门禁通过后, 接续计划会提供以下命令顺序:
 `run_ceg_detection_producer.py` 是契约 dry-run producer, 不是正式检测模型。它用于验证 detection records、fixed-FPR 前置字段和结果包链路。正式论文结果仍需要真实 detector 或经认可的正式 detection backend 输出。
 
 如果 P2 `image_pairs.json` 未覆盖 calibration clean negative、test clean negative 和 test positive, 后续 P4 / P7 仍会阻断。这不是脚本错误, 而是 fixed-FPR 统计所需样本角色不足。
+
+## 32. 2026-06-17 P2 专用 Notebook 补充
+
+### 32.1 新增 Notebook
+
+当前已补充 P2 专用 Colab 入口:
+
+```text
+D:/Code/CEG/paper_workflow/colab_p2_image_generation.ipynb
+```
+
+该 Notebook 用于在 Colab GPU 环境中编排 `p2_image_generation_outputs` 阶段。它不会直接手写正式 P2 manifests, 而是调用以下仓库脚本:
+
+```text
+scripts/apply_pilot_image_generation_backend_command.py
+scripts/validate_pilot_image_generation_backend_command.py
+scripts/run_pilot_image_generation_backend.py
+scripts/validate_pilot_image_generation_outputs.py
+scripts/build_pilot_stage_progress_summary.py
+scripts/build_pilot_post_p2_resume_plan.py
+```
+
+### 32.2 使用边界
+
+该 Notebook 仍然需要真实外部 SD / watermark backend。若 `RUN_P2_IMAGE_GENERATION = False`, Notebook 只打印命令而不执行真实 GPU 生成。若要正式产出 P2, 必须先让 `p2_external_backend_command.draft.json` 中的 `external_command` 指向真实 backend, 并使命令文件校验通过。
+
+P2 是否完成只以 `pilot_image_generation_output_acceptance_report.json` 中 `overall_decision = pass` 为准。

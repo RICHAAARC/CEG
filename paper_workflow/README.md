@@ -212,3 +212,18 @@ python scripts/run_colab_acceptance_checks.py --bundle path\to\colab_run_bundle 
 python scripts/run_colab_acceptance_checks.py --bundle path\to\ceg_colab_run_bundle.zip --out acceptance_report.json --require-pass
 ```
 
+## P2 真实图像生成 Notebook
+
+`paper_workflow/colab_p2_image_generation.ipynb` 是专门用于 `p2_image_generation_outputs` 的 Colab 入口。
+
+它的职责是:
+
+1. 挂载 Google Drive 并定位 `PILOT_WORKSPACE_ROOT`。
+2. 检查 `prompt_plan.draft.json`、`model_config.draft.json` 和 `p2_external_backend_command.draft.json`。
+3. 可选调用 `scripts/apply_pilot_image_generation_backend_command.py` 写入真实外部 SD / watermark backend 命令。
+4. 调用 `scripts/validate_pilot_image_generation_backend_command.py` 校验命令文件。
+5. 调用 `scripts/run_pilot_image_generation_backend.py` 执行真实外部 backend。
+6. 调用 `scripts/validate_pilot_image_generation_outputs.py` 验收 P2 输出。
+7. 调用 `scripts/build_pilot_stage_progress_summary.py` 刷新阶段进度。
+
+该 Notebook 不直接手写正式 `prompt_plan.json`、`image_pairs.json` 或 image manifests。P2 是否完成只以验收脚本是否通过为准。
