@@ -22,6 +22,12 @@ def test_colab_notebook_is_parseable_and_delegates_to_helpers() -> None:
     source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
 
     assert notebook["nbformat"] == 4
+    assert "prepare_p0_input_materials_from_notebook" in source
+    assert "RUN_P0_INPUT_MATERIALS" in source
+    assert "P0_OVERWRITE_EXISTING_MATERIALS" in source
+    assert "pilot_input_value_pack_fill_sheet" in source
+    assert "pilot_input_value_pack_fill_sheet_guidance" in source
+    assert "pilot_input_value_pack_status_report" in source
     assert "run_p0_input_freeze_from_notebook" in source
     assert "RUN_P0_INPUT_FREEZE" in source
     assert "P0_DRY_RUN" in source

@@ -2,11 +2,23 @@
 
 from __future__ import annotations
 
+import csv
 from pathlib import Path
 from typing import Any
 
 from experiments.pilot_input_value_pack import VALUE_PACK_NAME
-from experiments.pilot_input_value_pack_sheet import FILL_SHEET_NAME
+from experiments.pilot_input_value_pack_sheet import (
+    FILL_SHEET_NAME,
+    GUIDANCE_JSON_NAME,
+    GUIDANCE_MARKDOWN_NAME,
+    export_pilot_input_value_pack_fill_sheet,
+    export_pilot_input_value_pack_fill_sheet_guidance,
+)
+from experiments.pilot_input_value_pack_status import (
+    STATUS_MARKDOWN_NAME,
+    STATUS_REPORT_NAME,
+    write_pilot_input_value_pack_status,
+)
 from experiments.pilot_p0_input_freeze import (
     P0_INPUT_FREEZE_MARKDOWN_NAME,
     P0_INPUT_FREEZE_REPORT_NAME,
@@ -31,6 +43,99 @@ def run_profile_from_notebook(
     Notebook 只负责传入事件 rows、profile 和阈值映射。正式协议执行、baseline 适配、结果聚合和产物构造均由 repository modules 完成。
     """
     return run_paper_protocol(event_rows, profile=profile, content_thresholds=content_thresholds)
+
+
+def prepare_p0_input_materials_from_notebook(
+    workspace_root: str | Path,
+    *,
+    value_pack_path: str | Path | None = None,
+    fill_sheet_path: str | Path | None = None,
+    guidance_markdown_path: str | Path | None = None,
+    guidance_json_path: str | Path | None = None,
+    status_json_path: str | Path | None = None,
+    status_markdown_path: str | Path | None = None,
+    overwrite_existing: bool = False,
+) -> dict[str, Any]:
+    """供 Notebook 准备 P0 输入填写材料。
+
+    该入口只调度 repository modules 导出 CSV 填写表、填写指南和 value pack
+    状态报告。它不会生成真实 prompt、模型、水印参数或后续正式论文结果。
+    """
+    workspace = Path(workspace_root)
+    value_pack = Path(value_pack_path) if value_pack_path is not None else workspace / VALUE_PACK_NAME
+    fill_sheet = Path(fill_sheet_path) if fill_sheet_path is not None else workspace / FILL_SHEET_NAME
+    guidance_markdown = (
+        Path(guidance_markdown_path) if guidance_markdown_path is not None else workspace / GUIDANCE_MARKDOWN_NAME
+    )
+    guidance_json = Path(guidance_json_path) if guidance_json_path is not None else workspace / GUIDANCE_JSON_NAME
+    status_json = Path(status_json_path) if status_json_path is not None else workspace / STATUS_REPORT_NAME
+    status_markdown = Path(status_markdown_path) if status_markdown_path is not None else workspace / STATUS_MARKDOWN_NAME
+
+    if fill_sheet.exists() and not overwrite_existing:
+        with fill_sheet.open("r", encoding="utf-8-sig", newline="") as handle:
+            row_count = sum(1 for _ in csv.DictReader(handle))
+        fill_sheet_report = {
+            "artifact_name": FILL_SHEET_NAME,
+            "value_pack_path": str(value_pack),
+            "output_csv_path": str(fill_sheet),
+            "overall_decision": "pass",
+            "row_count": row_count,
+            "skipped_export": True,
+            "reason": "existing_fill_sheet_preserved",
+        }
+    else:
+        fill_sheet_report = export_pilot_input_value_pack_fill_sheet(
+            value_pack_path=value_pack,
+            output_csv_path=fill_sheet,
+        )
+    if guidance_markdown.exists() and guidance_json.exists() and not overwrite_existing:
+        guidance_report = {
+            "artifact_name": GUIDANCE_JSON_NAME,
+            "value_pack_path": str(value_pack),
+            "output_markdown_path": str(guidance_markdown),
+            "output_json_path": str(guidance_json),
+            "overall_decision": "pass",
+            "guidance_only": True,
+            "skipped_export": True,
+            "reason": "existing_guidance_preserved",
+            "summary": {"guidance_row_count": 0},
+        }
+    else:
+        guidance_report = export_pilot_input_value_pack_fill_sheet_guidance(
+            value_pack_path=value_pack,
+            output_markdown_path=guidance_markdown,
+            output_json_path=guidance_json,
+        )
+    status_report = write_pilot_input_value_pack_status(
+        workspace_root=workspace,
+        value_pack_path=value_pack,
+        output_json_path=status_json,
+        output_markdown_path=status_markdown,
+    )
+    blocking_count = int(status_report.get("summary", {}).get("blocking_item_count", 0))
+    return {
+        "artifact_name": "notebook_p0_input_materials_report.json",
+        "workspace_root": str(workspace),
+        "value_pack_path": str(value_pack),
+        "overall_decision": "pass" if fill_sheet_report["overall_decision"] == "pass" and guidance_report["overall_decision"] == "pass" else "fail",
+        "recommended_next_stage": "fill_value_json_and_run_p0_dry_run",
+        "fill_sheet_report": fill_sheet_report,
+        "guidance_report": guidance_report,
+        "status_report": status_report,
+        "output_paths": {
+            "fill_sheet": str(fill_sheet),
+            "guidance_markdown": str(guidance_markdown),
+            "guidance_json": str(guidance_json),
+            "status_json": str(status_json),
+            "status_markdown": str(status_markdown),
+        },
+        "summary": {
+            "fill_sheet_row_count": fill_sheet_report.get("row_count", 0),
+            "guidance_row_count": guidance_report.get("summary", {}).get("guidance_row_count", 0),
+            "value_pack_blocking_item_count": blocking_count,
+            "overwrite_existing": overwrite_existing,
+        },
+    }
 
 
 def run_p0_input_freeze_from_notebook(

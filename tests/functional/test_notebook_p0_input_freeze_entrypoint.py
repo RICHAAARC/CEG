@@ -8,7 +8,10 @@ import json
 import pytest
 
 from experiments.pilot_input_value_pack_sheet import export_pilot_input_value_pack_fill_sheet
-from paper_workflow.notebook_utils.protocol_entrypoint import run_p0_input_freeze_from_notebook
+from paper_workflow.notebook_utils.protocol_entrypoint import (
+    prepare_p0_input_materials_from_notebook,
+    run_p0_input_freeze_from_notebook,
+)
 from tests.functional.test_pilot_input_value_pack import REAL_VALUES
 from tests.functional.test_pilot_input_value_pack_sheet import _prepare_value_pack
 
@@ -34,6 +37,42 @@ def _fill_sheet_with_real_values(fill_sheet) -> None:
     for row in rows:
         row["value_json"] = json.dumps(REAL_VALUES[row["task_id"]], ensure_ascii=False)
     _write_csv_rows(fill_sheet, rows, fieldnames)
+
+
+@pytest.mark.quick
+def test_notebook_p0_input_materials_exports_sheet_guidance_and_status(tmp_path) -> None:
+    """Notebook 入口应能导出 P0 填写材料, 且不向 value pack 写入真实值。"""
+    value_pack_path, _ = _prepare_value_pack(tmp_path)
+
+    report = prepare_p0_input_materials_from_notebook(tmp_path)
+
+    payload = json.loads(value_pack_path.read_text(encoding="utf-8"))
+    assert report["overall_decision"] == "pass"
+    assert report["recommended_next_stage"] == "fill_value_json_and_run_p0_dry_run"
+    assert report["summary"]["fill_sheet_row_count"] == 19
+    assert report["summary"]["guidance_row_count"] == 19
+    assert report["summary"]["value_pack_blocking_item_count"] == 19
+    assert (tmp_path / "pilot_input_value_pack_fill_sheet.csv").is_file()
+    assert (tmp_path / "pilot_input_value_pack_fill_sheet_guidance.md").is_file()
+    assert (tmp_path / "pilot_input_value_pack_fill_sheet_guidance.json").is_file()
+    assert (tmp_path / "pilot_input_value_pack_status_report.json").is_file()
+    assert (tmp_path / "pilot_input_value_pack_status_report.md").is_file()
+    assert all("value" not in entry for entry in payload["value_entries"])
+
+
+@pytest.mark.quick
+def test_notebook_p0_input_materials_preserves_existing_fill_sheet_by_default(tmp_path) -> None:
+    """Notebook 准备入口默认不应覆盖用户已经填写过的 CSV。"""
+    value_pack_path, _ = _prepare_value_pack(tmp_path)
+    fill_sheet = tmp_path / "pilot_input_value_pack_fill_sheet.csv"
+    export_pilot_input_value_pack_fill_sheet(value_pack_path=value_pack_path, output_csv_path=fill_sheet)
+    _fill_sheet_with_real_values(fill_sheet)
+
+    report = prepare_p0_input_materials_from_notebook(tmp_path)
+
+    rows = _read_csv_rows(fill_sheet)
+    assert report["fill_sheet_report"]["skipped_export"] is True
+    assert all(row["value_json"] for row in rows)
 
 
 @pytest.mark.quick
