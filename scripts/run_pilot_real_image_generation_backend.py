@@ -34,6 +34,7 @@ from experiments.pilot_image_generation_output_acceptance import (  # noqa: E402
 )
 from main.analysis.image_examples import build_image_generation_manifest, build_image_pair_manifest  # noqa: E402
 from main.core.digest import build_stable_digest  # noqa: E402
+from main.watermarking.native_lsb import embed_native_lsb_watermark  # noqa: E402
 
 BACKEND_MANIFEST_NAME = "real_image_generation_backend_manifest.json"
 PROMPT_PLAN_NAME = "prompt_plan.json"
@@ -336,38 +337,6 @@ def _run_external_watermark_command(
     }
 
 
-def _bytes_to_bits(payload: bytes) -> list[int]:
-    """把字节串转换为高位优先的 bit 列表。"""
-    bits: list[int] = []
-    for byte in payload:
-        for shift in range(7, -1, -1):
-            bits.append((byte >> shift) & 1)
-    return bits
-
-
-def _build_native_watermark_bits(row: Mapping[str, Any], generation_meta: Mapping[str, Any], *, bit_count: int) -> list[int]:
-    """构造 CEG 项目内原生图像水印 bit 序列。
-
-    该原语属于当前 CEG 仓库自含实现: 使用 prompt、seed、image_id 与生成参数构造稳定
-    digest, 再把 digest 展开为 bit 流。它不是 mock, 因为它会实际修改图像像素的最低有效位;
-    它也不依赖任何外部项目运行时。后续检测流程可以复用相同 digest 规则恢复期望 bit。
-    """
-    payload = {
-        "image_id": _as_text(row.get("image_id") or row.get("event_id")),
-        "prompt_id": _as_text(row.get("prompt_id")),
-        "prompt_text": generation_meta.get("prompt_text"),
-        "seed": generation_meta.get("seed"),
-        "num_inference_steps": generation_meta.get("num_inference_steps"),
-        "guidance_scale": generation_meta.get("guidance_scale"),
-    }
-    digest = hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).digest()
-    bits = _bytes_to_bits(digest)
-    while len(bits) < bit_count:
-        digest = hashlib.sha256(digest).digest()
-        bits.extend(_bytes_to_bits(digest))
-    return bits[:bit_count]
-
-
 def _run_native_ceg_watermark(
     *,
     clean_path: Path,
@@ -376,54 +345,14 @@ def _run_native_ceg_watermark(
     generation_meta: Mapping[str, Any],
     bit_count: int,
 ) -> dict[str, Any]:
-    """使用 CEG 仓库内原生 LSB 图像水印原语生成 watermarked 图像。
-
-    该实现的主要考虑在于先保持 CEG 的运行时自包含, 同时保留可检测、可复现、
-    可记录 provenance 的真实像素级水印。算法流程是: 由样本元数据生成稳定 bit 流,
-    按 seed 派生的伪随机位置选择像素通道, 将最低有效位改写为水印 bit。
-    """
-    try:
-        from PIL import Image  # type: ignore
-    except ImportError as exc:  # pragma: no cover - Colab 依赖决定
-        raise RuntimeError("CEG 原生图像水印需要安装 Pillow。") from exc
-
-    image = Image.open(clean_path).convert("RGB")
-    width, height = image.size
-    pixels = bytearray(image.tobytes())
-    capacity = len(pixels)
-    if capacity < bit_count:
-        raise RuntimeError(f"图像容量不足以嵌入水印: capacity={capacity}, bit_count={bit_count}")
-    seed_material = {
-        "image_id": _as_text(row.get("image_id") or row.get("event_id")),
-        "seed": generation_meta.get("seed"),
-        "prompt_text": generation_meta.get("prompt_text"),
-        "backend": "ceg_native_lsb",
-    }
-    seed_digest = hashlib.sha256(json.dumps(seed_material, ensure_ascii=False, sort_keys=True).encode("utf-8")).digest()
-    positions = list(range(capacity))
-    import random
-
-    rng = random.Random(int.from_bytes(seed_digest[:8], "big"))
-    rng.shuffle(positions)
-    bits = _build_native_watermark_bits(row, generation_meta, bit_count=bit_count)
-    changed_count = 0
-    for position, bit in zip(positions, bits):
-        old_value = pixels[position]
-        new_value = (old_value & 0xFE) | bit
-        if new_value != old_value:
-            changed_count += 1
-        pixels[position] = new_value
-    watermarked = Image.frombytes("RGB", (width, height), bytes(pixels))
-    watermarked_path.parent.mkdir(parents=True, exist_ok=True)
-    watermarked.save(watermarked_path)
-    return {
-        "watermark_backend": "ceg_native_lsb",
-        "returncode": 0,
-        "bit_count": bit_count,
-        "changed_channel_count": changed_count,
-        "capacity_channel_count": capacity,
-        "seed_digest_prefix": seed_digest.hex()[:16],
-    }
+    """调用 CEG 内部 pilot 水印模块生成 watermarked 图像。"""
+    return embed_native_lsb_watermark(
+        clean_path=clean_path,
+        watermarked_path=watermarked_path,
+        row=row,
+        generation_meta=generation_meta,
+        bit_count=bit_count,
+    ).to_report()
 
 
 def _write_watermark_metadata(path: Path, row: Mapping[str, Any], generation_meta: Mapping[str, Any]) -> None:
