@@ -155,3 +155,136 @@ def test_colab_end_to_end_paper_pipeline_uses_existing_image_generation_outputs(
     finally:
         if short_root.exists():
             shutil.rmtree(short_root)
+
+
+@pytest.mark.quick
+def test_validate_colab_end_to_end_formal_run_accepts_reviewed_resume_outputs(tmp_path: Path) -> None:
+    """正式验收入口应能复核端到端 manifest、图像产物、结果包和 Drive 归档。"""
+
+    short_root = Path(".tmp_colab_end_to_end_formal_acceptance_test")
+    if short_root.exists():
+        shutil.rmtree(short_root)
+    workspace = _write_existing_image_generation_outputs(short_root)
+    drive_root = short_root / "MyDrive" / "CEG"
+    pipeline_out = workspace / "paper_end_to_end_pipeline"
+    acceptance_report = workspace / "formal_acceptance" / "formal_run_acceptance.json"
+
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/run_colab_end_to_end_paper_pipeline.py",
+                "--workspace",
+                str(workspace),
+                "--drive-root",
+                str(drive_root),
+                "--out",
+                str(pipeline_out),
+                "--attack-families",
+                "brightness_contrast",
+                "--target-fpr",
+                "0.01",
+                "--allow-incomplete-package",
+                "--allow-invalid-archive",
+                "--affine-rotation-degrees",
+                "0",
+                "--affine-scales",
+                "1.0",
+            ],
+            cwd=".",
+            check=True,
+        )
+
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/validate_colab_end_to_end_formal_run.py",
+                "--manifest",
+                str(pipeline_out / "colab_end_to_end_paper_pipeline_manifest.json"),
+                "--out",
+                str(acceptance_report),
+                "--allow-existing-image-generation",
+                "--allow-incomplete-package",
+                "--allow-invalid-archive",
+                "--require-pass",
+            ],
+            cwd=".",
+            check=True,
+        )
+
+        report = json.loads(acceptance_report.read_text(encoding="utf-8"))
+        assert report["overall_decision"] == "pass"
+        assert report["allow_existing_image_generation"] is True
+        assert report["summary"]["image_pair_count"] == 1
+        assert Path(report["subreport_paths"]["image_generation_acceptance"]).is_file()
+        assert Path(report["subreport_paths"]["paper_results_package_acceptance"]).is_file()
+        assert Path(report["subreport_paths"]["mydrive_archive_acceptance"]).is_file()
+    finally:
+        if short_root.exists():
+            shutil.rmtree(short_root)
+
+
+@pytest.mark.quick
+def test_validate_colab_end_to_end_formal_run_rejects_non_gpu_resume_without_override(tmp_path: Path) -> None:
+    """默认正式验收应拒绝未在同次流程中运行真实图像生成的结果。"""
+
+    short_root = Path(".tmp_colab_end_to_end_formal_reject_test")
+    if short_root.exists():
+        shutil.rmtree(short_root)
+    workspace = _write_existing_image_generation_outputs(short_root)
+    drive_root = short_root / "MyDrive" / "CEG"
+    pipeline_out = workspace / "paper_end_to_end_pipeline"
+    acceptance_report = workspace / "formal_acceptance" / "formal_run_acceptance.json"
+
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                "scripts/run_colab_end_to_end_paper_pipeline.py",
+                "--workspace",
+                str(workspace),
+                "--drive-root",
+                str(drive_root),
+                "--out",
+                str(pipeline_out),
+                "--attack-families",
+                "brightness_contrast",
+                "--target-fpr",
+                "0.01",
+                "--allow-incomplete-package",
+                "--allow-invalid-archive",
+                "--affine-rotation-degrees",
+                "0",
+                "--affine-scales",
+                "1.0",
+            ],
+            cwd=".",
+            check=True,
+        )
+
+        failed = subprocess.run(
+            [
+                sys.executable,
+                "scripts/validate_colab_end_to_end_formal_run.py",
+                "--manifest",
+                str(pipeline_out / "colab_end_to_end_paper_pipeline_manifest.json"),
+                "--out",
+                str(acceptance_report),
+                "--allow-incomplete-package",
+                "--allow-invalid-archive",
+                "--require-pass",
+            ],
+            cwd=".",
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+
+        assert failed.returncode == 1
+        report = json.loads(acceptance_report.read_text(encoding="utf-8"))
+        assert report["overall_decision"] == "fail"
+        checks = {check["check_name"]: check for check in report["checks"]}
+        assert checks["real_image_generation_run"]["status"] == "fail"
+    finally:
+        if short_root.exists():
+            shutil.rmtree(short_root)

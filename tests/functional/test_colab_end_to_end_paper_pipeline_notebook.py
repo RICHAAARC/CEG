@@ -52,3 +52,6 @@ def test_colab_end_to_end_notebook_uses_drive_archive_outputs() -> None:
     assert "image_generation_archive_zip" in source
     assert "paper_results_package_root" in source
     assert "colab_end_to_end_paper_pipeline_manifest.json" in source
+    assert "scripts/validate_colab_end_to_end_formal_run.py" in source
+    assert "--require-evidence" in source
+    assert "--require-image-examples" in source

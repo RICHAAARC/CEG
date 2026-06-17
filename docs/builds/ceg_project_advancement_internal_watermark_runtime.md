@@ -1346,3 +1346,80 @@ execution_boundary
 4. 运行日志、证据路径和 manifest。
 
 这符合当前项目原则: 外部 baseline 用于论文对比, 但不成为 CEG 主方法的一部分。
+
+## 30. 本次继续推进: Colab GPU 正式结果包聚合验收
+
+本次补充了 Colab 端到端正式运行后的聚合验收入口:
+
+```text
+scripts/validate_colab_end_to_end_formal_run.py
+```
+
+该脚本不重新运行 SD、watermark、attack 或 detection。它读取已经由端到端流水线写出的:
+
+```text
+colab_end_to_end_paper_pipeline_manifest.json
+```
+
+然后串联已有验收脚本检查:
+
+```text
+图像生成产物验收
+paper_results_package 验收
+MyDrive package archive 验收
+端到端 manifest 路径一致性
+图像生成 zip 归档存在性
+```
+
+### 30.1 正式 GPU 运行约束
+
+该验收脚本默认要求 `run_image_generation=True`。这表示正式论文结果包应来自同一次 Colab 端到端流程中的真实 SD / CEG watermark 图像生成, 而不是仅复用已有图像产物的断点续跑。
+
+若确实是在人工复核或断点续跑场景中使用已有图像产物, 可以显式传入:
+
+```bash
+--allow-existing-image-generation
+```
+
+该参数会写入验收报告, 因此不会与正式 GPU 运行混淆。
+
+### 30.2 与 Notebook 的关系
+
+`paper_workflow/colab_end_to_end_paper_pipeline.ipynb` 已接入该验收脚本。Notebook 在端到端流水线完成后会继续运行:
+
+```bash
+scripts/validate_colab_end_to_end_formal_run.py \
+  --manifest <colab_end_to_end_paper_pipeline_manifest.json> \
+  --out <colab_end_to_end_formal_run_acceptance_report.json> \
+  --require-evidence \
+  --require-image-examples \
+  --require-pass
+```
+
+这使 Colab 的最终输出不只是生成结果包, 还会同时生成一个可归档、可审计的正式运行验收报告。
+
+### 30.3 输出报告
+
+新增报告名为:
+
+```text
+colab_end_to_end_formal_run_acceptance_report.json
+```
+
+核心字段包括:
+
+```text
+overall_decision
+run_image_generation
+allow_existing_image_generation
+image_output_root
+paper_results_package_root
+drive_root
+subreport_paths
+checks
+command_results
+summary
+acceptance_digest
+```
+
+该报告用于判断当前 Google Drive 中的结果包是否已经可以作为论文写作与对比实验表格的数据来源。
