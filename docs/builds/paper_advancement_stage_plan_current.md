@@ -237,6 +237,7 @@ P2 的目标是调用真实 SD 或等价图像生成 backend, 并结合真实 wa
 ### 9.2 必须输出
 
 ```text
+inputs/images/prompt_plan.json
 inputs/images/clean/*
 inputs/images/watermarked/*
 inputs/images/image_pairs.json
@@ -662,7 +663,16 @@ D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_0345
 ```text
 p2_image_generation_gpu_handoff_manifest.json
 p2_image_generation_gpu_handoff_readme.md
+p2_image_generation_colab_execution_checklist.json
+p2_image_generation_colab_runbook.md
 ```
+
+可用以下仓库命令重新生成 P2 Colab 执行清单:
+
+```text
+python scripts/build_pilot_p2_gpu_handoff.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-ready
+```
+
 
 用户完成 Colab GPU 图像生成并回传输出后, 本地恢复验收命令为:
 

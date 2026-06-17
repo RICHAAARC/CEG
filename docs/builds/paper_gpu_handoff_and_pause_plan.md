@@ -184,6 +184,7 @@ GPU 或外部 backend 执行后, 应把产物放回同一个 MyDrive 工作区, 
 ### 7.1 图像生成产物
 
 ```text
+D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images/prompt_plan.json
 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images/clean/*
 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images/watermarked/*
 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images/image_pairs.json
@@ -357,15 +358,22 @@ D:\content\drive\MyDrive\CEG\pilot_runs\real_pilot_input_workspace_20260617_0345
 1. 使用 `stabilityai/stable-diffusion-3.5-medium` 生成 clean 图像。
 2. 使用与 `D:\Code\CEG-WM` 对齐的 CEG-WM 水印机制生成 watermarked 图像。
 3. 不把 Hugging Face token 写入任何落盘文件。
-4. 写出 `inputs/images/clean/*`。
-5. 写出 `inputs/images/watermarked/*`。
-6. 写出 `inputs/images/image_pairs.json`。
-7. 写出 `inputs/images/image_manifests/image_generation_manifest.json`。
-8. 写出 `inputs/images/image_manifests/image_pair_manifest.json`。
+4. 写出 `inputs/images/prompt_plan.json`。
+5. 写出 `inputs/images/clean/*`。
+6. 写出 `inputs/images/watermarked/*`。
+7. 写出 `inputs/images/image_pairs.json`。
+8. 写出 `inputs/images/image_manifests/image_generation_manifest.json`。
+9. 写出 `inputs/images/image_manifests/image_pair_manifest.json`。
 
 完成后回到本地运行验收命令:
 
 ```text
 python scripts/validate_pilot_image_generation_outputs.py --output-root D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/inputs/images --out D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/pilot_image_generation_output_acceptance_report.json --require-pass
 python scripts/build_pilot_stage_progress_summary.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500
+```
+
+可用以下仓库命令重新生成 P2 Colab 执行清单:
+
+```text
+python scripts/build_pilot_p2_gpu_handoff.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-ready
 ```

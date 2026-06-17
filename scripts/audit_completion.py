@@ -128,6 +128,7 @@ REQUIRED_CLEAN_FILES = (
     "experiments/pilot_detection_output_acceptance.py",
     "experiments/pilot_fixed_fpr_output_acceptance.py",
     "experiments/pilot_image_generation_output_acceptance.py",
+    "experiments/pilot_p2_gpu_handoff.py",
     "experiments/pilot_metric_output_acceptance.py",
     "experiments/pilot_mydrive_archive_acceptance.py",
     "experiments/pilot_paper_results_package_acceptance.py",
@@ -157,6 +158,7 @@ REQUIRED_CLEAN_FILES = (
     "scripts/scaffold_pilot_image_generation_launch_variables.py",
     "scripts/build_pilot_image_generation_launch_plan.py",
     "scripts/validate_pilot_image_generation_outputs.py",
+    "scripts/build_pilot_p2_gpu_handoff.py",
     "scripts/validate_pilot_attack_outputs.py",
     "scripts/validate_pilot_baseline_outputs.py",
     "scripts/validate_pilot_detection_outputs.py",
@@ -397,6 +399,7 @@ REQUIRED_ARTIFACT_RELEASE_FILES = {
     "experiments/pilot_detection_output_acceptance.py",
     "experiments/pilot_fixed_fpr_output_acceptance.py",
     "experiments/pilot_image_generation_output_acceptance.py",
+    "experiments/pilot_p2_gpu_handoff.py",
     "experiments/pilot_metric_output_acceptance.py",
     "experiments/pilot_mydrive_archive_acceptance.py",
     "experiments/pilot_paper_results_package_acceptance.py",
@@ -421,6 +424,7 @@ REQUIRED_ARTIFACT_RELEASE_FILES = {
     "scripts/scaffold_pilot_image_generation_launch_variables.py",
     "scripts/build_pilot_image_generation_launch_plan.py",
     "scripts/validate_pilot_image_generation_outputs.py",
+    "scripts/build_pilot_p2_gpu_handoff.py",
     "scripts/validate_pilot_attack_outputs.py",
     "scripts/validate_pilot_baseline_outputs.py",
     "scripts/validate_pilot_detection_outputs.py",
@@ -1047,4 +1051,3 @@ def main() -> None:
 if __name__ == "__main__":
 
     main()
-

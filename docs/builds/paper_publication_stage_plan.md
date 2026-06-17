@@ -260,6 +260,7 @@ P2 调用真实 SD 或等价图像生成 backend, 并结合真实 watermark back
 ### 8.2 必须输出
 
 ```text
+inputs/images/prompt_plan.json
 inputs/images/clean/*
 inputs/images/watermarked/*
 inputs/images/image_pairs.json
@@ -705,6 +706,14 @@ P2 GPU 交接目录:
 
 ```text
 D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500/gpu_handoff/p2_image_generation
+```
+
+
+
+可用以下仓库命令重新生成 P2 Colab 执行清单:
+
+```text
+python scripts/build_pilot_p2_gpu_handoff.py --workspace D:/content/drive/MyDrive/CEG/pilot_runs/real_pilot_input_workspace_20260617_034500 --require-ready
 ```
 
 继续推进的唯一有效下一步是用户在 Colab GPU 环境中生成真实 clean / watermarked 图像并回传 manifests。当前不得用 mock 图像或 dry-run 结果替代 P2 论文证据。
