@@ -81,7 +81,8 @@ def test_build_paper_outputs_can_require_paper_readiness(tmp_path) -> None:
     events_path.write_text(
         json.dumps(
             [
-                _event("positive", "positive_source", True, 0.72, "crop"),
+                _event("positive", "positive_source", True, 0.72, "clean"),
+                _event("attacked_positive", "attacked_positive", True, 0.74, "jpeg"),
                 _event("clean_negative", "clean_negative", False, 0.18, "clean"),
                 _event("attacked_negative", "attacked_negative", False, 0.2, "jpeg"),
             ],

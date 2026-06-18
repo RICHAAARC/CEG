@@ -351,12 +351,21 @@ def _events_from_attack_manifest(
             field_name="attacked_image_path",
         )
         is_watermarked = _infer_attack_watermark_label(record, source_row)
+        reference_field_name = "reference_watermarked_image_path" if is_watermarked else "reference_clean_image_path"
         reference_path = _resolve_existing_path(
-            _optional_string(record, "watermarked_image_path")
-            or _optional_string(source_row, "watermarked_image_path")
-            or _optional_string(source_row, "watermarked_path"),
+            (
+                _optional_string(record, "watermarked_image_path")
+                or _optional_string(source_row, "watermarked_image_path")
+                or _optional_string(source_row, "watermarked_path")
+            )
+            if is_watermarked
+            else (
+                _optional_string(record, "clean_image_path")
+                or _optional_string(source_row, "clean_image_path")
+                or _optional_string(source_row, "reference_path")
+            ),
             base_dir,
-            field_name="reference_watermarked_image_path",
+            field_name=reference_field_name,
         )
         event, detection_record = _build_detection_event(
             image_path=attacked_path,

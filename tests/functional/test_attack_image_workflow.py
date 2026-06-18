@@ -29,9 +29,11 @@ def test_run_attack_workflow_writes_attack_manifests_and_pairs(tmp_path) -> None
     )
     attacked_pairs = json.loads((attack_root / "image_pairs_attacked.json").read_text(encoding="utf-8"))
     assert shard_manifest["input_image_pair_count"] == 1
-    assert attacked_manifest["attacked_image_count"] == 2
-    assert len(attacked_pairs) == 2
+    assert attacked_manifest["attacked_image_count"] == 4
+    assert len(attacked_pairs) == 4
     assert all(Path(row["attacked_image_path"]).is_file() for row in attacked_pairs)
+    assert {row["sample_role"] for row in attacked_pairs} == {"attacked_positive", "attacked_negative"}
+    assert {record["sample_role"] for record in attacked_manifest["attacked_images"]} == {"attacked_positive", "attacked_negative"}
 
 
 @pytest.mark.quick

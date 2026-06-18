@@ -1,12 +1,12 @@
 {
   "schema_version": "ceg_prompt_plan_v1",
   "profile": "paper_main_probe",
-  "purpose": "端到端流程探针运行, 用于确认 Colab、SD 生成、水印、攻击、检测和统计链路可闭环。",
+  "purpose": "端到端流程探针运行, 使用 5 个 calibration 和 5 个 test 样本确认 Colab、SD 生成、水印、攻击、检测和 TPR@FPR 统计链路可闭环。",
   "source": {
     "source_file": "paper_main_pilot_prompts.txt",
     "source_path": "prompts\\sources\\paper_main_pilot_prompts.txt",
     "source_prompt_count": 600,
-    "selected_prompt_count": 4
+    "selected_prompt_count": 10
   },
   "generation_defaults": {
     "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
@@ -14,10 +14,11 @@
     "target_fpr": 0.01
   },
   "split_policy": {
-    "calibration_count": 4,
-    "test_count": 0,
+    "calibration_count": 5,
+    "test_count": 5,
     "split_counts": {
-      "calibration": 4
+      "calibration": 5,
+      "test": 5
     }
   },
   "prompts": [
@@ -70,6 +71,84 @@
       "split": "calibration",
       "prompt_text": "The people are riding down the street on bikes.",
       "seed": 1092205837,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000005",
+      "image_id": "paper_main_probe_image_000005",
+      "sample_index": 5,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 5,
+      "split": "calibration",
+      "prompt_text": "A close up of a banana that is beginning to ripen",
+      "seed": 3480820421,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000006",
+      "image_id": "paper_main_probe_image_000006",
+      "sample_index": 6,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 6,
+      "split": "test",
+      "prompt_text": "A rubber eraser and a fabric blanket",
+      "seed": 1791910926,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000007",
+      "image_id": "paper_main_probe_image_000007",
+      "sample_index": 7,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 7,
+      "split": "test",
+      "prompt_text": "A decrepit bathroom with rusted bathtub, radiator and tattered hangings.",
+      "seed": 2468104044,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000008",
+      "image_id": "paper_main_probe_image_000008",
+      "sample_index": 8,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 8,
+      "split": "test",
+      "prompt_text": "The warm yellow sun shone down on the cool blue water.",
+      "seed": 2206265973,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000009",
+      "image_id": "paper_main_probe_image_000009",
+      "sample_index": 9,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 9,
+      "split": "test",
+      "prompt_text": "A bathroom complete with a toilet, sink and window",
+      "seed": 3950646294,
+      "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
+      "watermark_backend": "ceg_content_chain_embedding"
+    },
+    {
+      "profile": "paper_main_probe",
+      "prompt_id": "paper_main_probe_prompt_000010",
+      "image_id": "paper_main_probe_image_000010",
+      "sample_index": 10,
+      "source_file": "paper_main_pilot_prompts.txt",
+      "source_line_number": 10,
+      "split": "test",
+      "prompt_text": "Two people in a small boat on a body of water",
+      "seed": 3498924598,
       "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
       "watermark_backend": "ceg_content_chain_embedding"
     }

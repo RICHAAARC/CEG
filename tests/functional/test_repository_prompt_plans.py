@@ -21,7 +21,8 @@ def test_repository_prompt_plans_match_expected_counts() -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
 
     assert set(manifest["profiles"]) == set(PROFILE_SPECS)
-    assert manifest["profiles"]["paper_main_probe"]["prompt_count"] == 4
+    assert manifest["profiles"]["paper_main_probe"]["prompt_count"] == 10
+    assert manifest["profiles"]["paper_main_probe"]["split_counts"] == {"calibration": 5, "test": 5}
     assert manifest["profiles"]["paper_main_pilot"]["split_counts"] == {"calibration": 300, "test": 300}
     assert manifest["profiles"]["paper_main_full"]["split_counts"] == {"calibration": 3000, "test": 3000}
     assert manifest["profiles"]["paper_main_full"]["target_fpr"] == 0.001

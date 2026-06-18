@@ -45,6 +45,46 @@ def test_metric_rows_merge_external_lpips_fid_clip_score(tmp_path) -> None:
 
 
 @pytest.mark.quick
+def test_metric_rows_merge_image_pair_quality_into_ceg_positive_records() -> None:
+    """图像对质量指标应按 image_id 合并到 positive_source 事件, 并覆盖 CEG 内部消融记录。"""
+    merged = merge_metric_rows_into_records(
+        [
+            {
+                "event_id": "image_001__positive_source",
+                "method_name": "ceg",
+                "sample_role": "positive_source",
+                "attack_family": "clean",
+            },
+            {
+                "event_id": "image_001__positive_source",
+                "method_name": "ceg_full",
+                "sample_role": "positive_source",
+                "attack_family": "clean",
+            },
+            {
+                "event_id": "image_001__clean_negative",
+                "method_name": "ceg",
+                "sample_role": "clean_negative",
+                "attack_family": "clean",
+            },
+        ],
+        [
+            {
+                "event_id": "image_001",
+                "method_name": "ceg",
+                "psnr": 39.5,
+                "ssim": 0.98,
+            }
+        ],
+    )
+
+    assert merged[0]["psnr"] == pytest.approx(39.5)
+    assert merged[0]["ssim"] == pytest.approx(0.98)
+    assert merged[1]["psnr"] == pytest.approx(39.5)
+    assert "psnr" not in merged[2]
+
+
+@pytest.mark.quick
 def test_baseline_command_plan_loads_and_manifests_commands(tmp_path) -> None:
     """baseline 命令计划应规范化 baseline id 并保留显式命令列表。"""
     plan_path = tmp_path / "baseline_plan.json"

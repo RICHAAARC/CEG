@@ -49,8 +49,8 @@ def test_attack_output_acceptance_passes_attack_workflow_contract(tmp_path) -> N
 
     assert report["overall_decision"] == "pass"
     assert report["recommended_next_stage"] == "ceg_detection_pilot"
-    assert report["summary"]["attacked_record_count"] == 2
-    assert report["summary"]["attacked_pair_count"] == 2
+    assert report["summary"]["attacked_record_count"] == 4
+    assert report["summary"]["attacked_pair_count"] == 4
     assert report["summary"]["blocking_issue_count"] == 0
     assert all(item["attacked_image_path"]["exists"] for item in report["attacked_record_checks"])
 

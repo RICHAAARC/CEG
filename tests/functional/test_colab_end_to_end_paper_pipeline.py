@@ -39,70 +39,80 @@ def _write_existing_image_generation_outputs(tmp_root: Path) -> Path:
 
     workspace = tmp_root / "real_pilot_input_workspace_end_to_end"
     image_root = workspace / "inputs" / "images"
-    clean = image_root / "clean" / "img_001.png"
-    watermarked = image_root / "watermarked" / "img_001.png"
-    mask_path = image_root / "semantic_masks" / "img_001.png"
-    _write_test_image(clean)
+    image_pairs: list[dict[str, object]] = []
+    prompt_plan_rows: list[dict[str, object]] = []
 
-    prompt_context = WatermarkPromptContext(
-        image_id="img_001",
-        prompt_id="prompt_001",
-        prompt_text="a bright square on dark background",
-        seed=23,
-        model_id="test-model",
-    )
-    semantic_mask = extract_semantic_mask(
-        SemanticMaskRequest(image_path=clean, output_mask_path=mask_path, threshold_quantile=0.75)
-    )
-    embed_content_chain_watermark(
-        ContentChainEmbeddingRequest(
-            clean_image_path=clean,
-            watermarked_image_path=watermarked,
-            semantic_mask=semantic_mask,
-            prompt_context=prompt_context,
-            lf_strength=6.0,
-            hf_strength=4.0,
-        )
-    )
-
-    image_pairs = [
-        {
-            "image_id": "img_001",
-            "prompt_id": "prompt_001",
-            "prompt_text": "a bright square on dark background",
-            "seed": 23,
-            "model_id": "test-model",
-            "clean_image_path": clean.resolve().as_posix(),
-            "watermarked_image_path": watermarked.resolve().as_posix(),
-            "split": "calibration",
-        }
+    # probe 正式规格要求同时具备 calibration 和 test。这里使用 2 个轻量样本，
+    # 目的是在单元测试中覆盖跨 split 恢复逻辑，而不是模拟真实论文规模。
+    rows = [
+        ("img_001", "prompt_001", "a bright square on dark background", 23, "calibration"),
+        ("img_002", "prompt_002", "a second bright square on dark background", 29, "test"),
     ]
-    (image_root / "image_pairs.json").write_text(json.dumps(image_pairs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (image_root / "prompt_plan.json").write_text(
-        json.dumps(
-            [
-                {
-                    "prompt_id": "prompt_001",
-                    "prompt_text": "a bright square on dark background",
-                    "seed": 23,
-                    "split": "calibration",
-                }
-            ],
-            ensure_ascii=False,
-            indent=2,
+    for image_id, prompt_id, prompt_text, seed, split in rows:
+        clean = image_root / "clean" / f"{image_id}.png"
+        watermarked = image_root / "watermarked" / f"{image_id}.png"
+        mask_path = image_root / "semantic_masks" / f"{image_id}.png"
+        _write_test_image(clean)
+
+        prompt_context = WatermarkPromptContext(
+            image_id=image_id,
+            prompt_id=prompt_id,
+            prompt_text=prompt_text,
+            seed=seed,
+            model_id="test-model",
         )
-        + "\n",
+        semantic_mask = extract_semantic_mask(
+            SemanticMaskRequest(image_path=clean, output_mask_path=mask_path, threshold_quantile=0.75)
+        )
+        embed_content_chain_watermark(
+            ContentChainEmbeddingRequest(
+                clean_image_path=clean,
+                watermarked_image_path=watermarked,
+                semantic_mask=semantic_mask,
+                prompt_context=prompt_context,
+                lf_strength=6.0,
+                hf_strength=4.0,
+            )
+        )
+
+        image_pairs.append(
+            {
+                "image_id": image_id,
+                "prompt_id": prompt_id,
+                "prompt_text": prompt_text,
+                "seed": seed,
+                "model_id": "test-model",
+                "clean_image_path": clean.resolve().as_posix(),
+                "watermarked_image_path": watermarked.resolve().as_posix(),
+                "split": split,
+            }
+        )
+        prompt_plan_rows.append(
+            {
+                "prompt_id": prompt_id,
+                "prompt_text": prompt_text,
+                "seed": seed,
+                "split": split,
+            }
+        )
+
+    (image_root / "image_pairs.json").write_text(
+        json.dumps(image_pairs, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (image_root / "prompt_plan.json").write_text(
+        json.dumps(prompt_plan_rows, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 
     manifest_root = image_root / "image_manifests"
     manifest_root.mkdir(parents=True, exist_ok=True)
     (manifest_root / "image_generation_manifest.json").write_text(
-        json.dumps({"artifact_name": "image_generation_manifest.json", "record_count": 1}, ensure_ascii=False, indent=2) + "\n",
+        json.dumps({"artifact_name": "image_generation_manifest.json", "record_count": 2}, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     (manifest_root / "image_pair_manifest.json").write_text(
-        json.dumps({"artifact_name": "image_pair_manifest.json", "image_pair_count": 1}, ensure_ascii=False, indent=2) + "\n",
+        json.dumps({"artifact_name": "image_pair_manifest.json", "image_pair_count": 2}, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     return workspace
@@ -222,7 +232,7 @@ def test_validate_colab_end_to_end_formal_run_accepts_reviewed_resume_outputs(tm
         assert report["overall_decision"] == "pass"
         assert report["allow_existing_image_generation"] is True
         assert report["summary"]["formal_run_spec_decision"] == "pass"
-        assert report["summary"]["image_pair_count"] == 1
+        assert report["summary"]["image_pair_count"] == 2
         assert Path(report["subreport_paths"]["formal_run_spec_validation"]).is_file()
         assert Path(report["subreport_paths"]["image_generation_acceptance"]).is_file()
         assert Path(report["subreport_paths"]["paper_results_package_acceptance"]).is_file()
@@ -300,7 +310,7 @@ def test_validate_colab_end_to_end_formal_run_rejects_non_gpu_resume_without_ove
 
 @pytest.mark.quick
 def test_validate_colab_end_to_end_formal_run_rejects_under_scaled_full_profile(tmp_path: Path) -> None:
-    """full 正式运行规格应拒绝只有 1 个 image pair 的最小探针结果。"""
+    """full 正式运行规格应拒绝只有 2 个 image pair 的最小探针结果。"""
 
     short_root = Path(".tmp_full_reject")
     if short_root.exists():

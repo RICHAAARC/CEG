@@ -36,6 +36,14 @@ def _source_watermarked_path(row: dict[str, Any]) -> Path:
     return Path(value)
 
 
+def _source_clean_path(row: dict[str, Any]) -> Path:
+    """从 image pair 行中读取 clean 图像路径, 用于生成 attacked-negative 评估样本。"""
+    value = _optional_string(row, "clean_image_path") or _optional_string(row, "reference_path")
+    if value is None:
+        raise ValueError("image pair row missing clean image path")
+    return Path(value)
+
+
 def _image_id(row: dict[str, Any], index: int) -> str:
     """读取图像 ID, 缺失时使用稳定序号。"""
     return _optional_string(row, "image_id") or _optional_string(row, "event_id") or f"image_{index:04d}"
@@ -132,32 +140,63 @@ def run_attack_workflow(
     attacked_records: list[dict[str, Any]] = []
     attacked_pairs: list[dict[str, Any]] = []
     for index, row in enumerate(rows, start=1):
-        source_path = _source_watermarked_path(row)
+        clean_path = _source_clean_path(row)
+        watermarked_path = _source_watermarked_path(row)
         image_id = _image_id(row, index)
         for attack_family in attack_names:
-            attacked_image_id = f"{image_id}_{attack_family}"
-            target_path = image_root / attack_family / f"{attacked_image_id}{source_path.suffix or '.ppm'}"
-            attack_info = apply_attack_to_image(source_path, target_path, attack_family)
-            actual_target = Path(str(attack_info.get("actual_target_path") or target_path))
-            record = {
-                "attacked_image_id": attacked_image_id,
-                "source_image_id": image_id,
-                "event_id": _optional_string(row, "event_id"),
-                "watermarked_image_path": str(source_path),
-                "attacked_image_path": str(actual_target),
-                "attack_family": attack_family,
-                "attack_condition": f"{attack_family}_default",
-                "attack_backend": attack_info["backend"],
-                "attack_parameters": {key: value for key, value in attack_info.items() if key not in {"backend", "actual_target_path"}},
-            }
-            attacked_records.append(record)
-            attacked_pair = dict(row)
-            attacked_pair["image_id"] = attacked_image_id
-            attacked_pair["attack_family"] = attack_family
-            attacked_pair["attack_condition"] = f"{attack_family}_default"
-            attacked_pair["attacked_image_path"] = str(actual_target)
-            attacked_pair["attacked_path"] = str(actual_target)
-            attacked_pairs.append(attacked_pair)
+            variants = [
+                {
+                    "source_path": watermarked_path,
+                    "attacked_image_id": f"{image_id}_{attack_family}",
+                    "sample_role": "attacked_positive",
+                    "is_watermarked": True,
+                    "source_variant": "watermarked",
+                },
+                {
+                    "source_path": clean_path,
+                    "attacked_image_id": f"{image_id}__clean_negative_{attack_family}",
+                    "sample_role": "attacked_negative",
+                    "is_watermarked": False,
+                    "source_variant": "clean",
+                },
+            ]
+            for variant in variants:
+                source_path = Path(variant["source_path"])
+                attacked_image_id = str(variant["attacked_image_id"])
+                target_path = image_root / attack_family / f"{attacked_image_id}{source_path.suffix or '.ppm'}"
+                attack_info = apply_attack_to_image(source_path, target_path, attack_family)
+                actual_target = Path(str(attack_info.get("actual_target_path") or target_path))
+                record = {
+                    "attacked_image_id": attacked_image_id,
+                    "source_image_id": image_id,
+                    "event_id": _optional_string(row, "event_id"),
+                    "sample_role": variant["sample_role"],
+                    "is_watermarked": variant["is_watermarked"],
+                    "source_variant": variant["source_variant"],
+                    "clean_image_path": str(clean_path),
+                    "watermarked_image_path": str(watermarked_path),
+                    "source_image_path": str(source_path),
+                    "attacked_image_path": str(actual_target),
+                    "attack_family": attack_family,
+                    "attack_condition": f"{attack_family}_default",
+                    "attack_backend": attack_info["backend"],
+                    "attack_parameters": {
+                        key: value
+                        for key, value in attack_info.items()
+                        if key not in {"backend", "actual_target_path"}
+                    },
+                }
+                attacked_records.append(record)
+                attacked_pair = dict(row)
+                attacked_pair["image_id"] = attacked_image_id
+                attacked_pair["sample_role"] = variant["sample_role"]
+                attacked_pair["is_watermarked"] = variant["is_watermarked"]
+                attacked_pair["source_variant"] = variant["source_variant"]
+                attacked_pair["attack_family"] = attack_family
+                attacked_pair["attack_condition"] = f"{attack_family}_default"
+                attacked_pair["attacked_image_path"] = str(actual_target)
+                attacked_pair["attacked_path"] = str(actual_target)
+                attacked_pairs.append(attacked_pair)
     attacked_manifest = {
         "artifact_name": ATTACKED_IMAGE_MANIFEST_NAME,
         "manifest_role": "attacked_image_provenance",

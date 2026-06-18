@@ -175,18 +175,43 @@ def _metric_row_key(row: dict[str, Any]) -> tuple[str, str]:
     return (str(row.get("event_id")), str(row.get("method_name") or row.get("baseline_id") or "ceg"))
 
 
+def _base_image_event_id(event_id: str) -> str:
+    """从派生事件 ID 中还原 image pair 级别 ID, 便于把图像质量指标合并到 positive_source 事件。"""
+
+    for marker in ("__positive_source", "__clean_negative"):
+        if event_id.endswith(marker):
+            return event_id[: -len(marker)]
+    return event_id
+
+
+def _is_ceg_method(method_name: str) -> bool:
+    """判断 method_name 是否属于 CEG 主方法或内部消融方法。"""
+
+    return method_name == "ceg" or method_name.startswith("ceg_")
+
+
 def merge_metric_rows_into_records(
     records: Iterable[dict[str, Any]],
     metric_rows: Iterable[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """按 event_id + method_name / baseline_id 将高级指标合并进 records。"""
     metrics_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    metrics_by_image_id: dict[str, dict[str, Any]] = {}
     for row in metric_rows:
         metric_values = {key: value for key, value in row.items() if key in STANDARD_METRIC_COLUMNS}
-        metrics_by_key.setdefault(_metric_row_key(row), {}).update(metric_values)
+        key = _metric_row_key(row)
+        metrics_by_key.setdefault(key, {}).update(metric_values)
+        metrics_by_image_id.setdefault(str(row.get("event_id")), {}).update(metric_values)
     merged: list[dict[str, Any]] = []
     for record in records:
         output = dict(record)
-        output.update(metrics_by_key.get(_record_metric_key(output), {}))
+        method_name = str(output.get("method_name") or output.get("baseline_id") or "ceg")
+        exact_metrics = metrics_by_key.get(_record_metric_key(output), {})
+        output.update(exact_metrics)
+        if not exact_metrics and _is_ceg_method(method_name):
+            sample_role = str(output.get("sample_role") or "")
+            attack_family = str(output.get("attack_family") or "clean")
+            if sample_role == "positive_source" and attack_family == "clean":
+                output.update(metrics_by_image_id.get(_base_image_event_id(str(output.get("event_id"))), {}))
         merged.append(output)
     return merged

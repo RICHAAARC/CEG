@@ -30,7 +30,7 @@ def test_detection_producer_builds_events_from_image_pairs_and_attacks(tmp_path)
 
     events = build_detection_events_from_image_manifests(image_pairs[:2], attacked_manifest)
 
-    assert len(events) == 4
+    assert len(events) == 6
     assert {event["method_name"] for event in events} == {"ceg"}
     assert "attacked_positive" in {event["sample_role"] for event in events}
     assert all("content_score_raw" in event["payload"]["content"] for event in events)

@@ -24,10 +24,10 @@ WATERMARK_BACKEND = "ceg_content_chain_embedding"
 PROFILE_SPECS: dict[str, dict[str, Any]] = {
     "paper_main_probe": {
         "source_file": "paper_main_pilot_prompts.txt",
-        "prompt_count": 4,
-        "calibration_count": 4,
+        "prompt_count": 10,
+        "calibration_count": 5,
         "target_fpr": 0.01,
-        "purpose": "端到端流程探针运行, 用于确认 Colab、SD 生成、水印、攻击、检测和统计链路可闭环。",
+        "purpose": "端到端流程探针运行, 使用 5 个 calibration 和 5 个 test 样本确认 Colab、SD 生成、水印、攻击、检测和 TPR@FPR 统计链路可闭环。",
     },
     "paper_main_pilot": {
         "source_file": "paper_main_pilot_prompts.txt",

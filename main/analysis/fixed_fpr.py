@@ -123,16 +123,31 @@ def _positive_rows(
     attacked_only: bool | None = None,
 ) -> list[dict[str, Any]]:
     """筛选正例行, attacked_only 用于区分 clean 正例和攻击后正例。"""
-    rows = [
+    if attacked_only is True:
+        return [
+            row
+            for row in method_rows
+            if _split_name(row) == split
+            and _sample_role(row) == "attacked_positive"
+            and _attack_family(row) != "clean"
+            and _is_watermarked(row) is True
+        ]
+    if attacked_only is False:
+        return [
+            row
+            for row in method_rows
+            if _split_name(row) == split
+            and _sample_role(row) == "positive_source"
+            and _attack_family(row) == "clean"
+            and _is_watermarked(row) is True
+        ]
+    return [
         row
         for row in method_rows
-        if _split_name(row) == split and _sample_role(row) == "positive_source" and _is_watermarked(row) is True
+        if _split_name(row) == split
+        and _sample_role(row) in {"positive_source", "attacked_positive"}
+        and _is_watermarked(row) is True
     ]
-    if attacked_only is True:
-        return [row for row in rows if _attack_family(row) != "clean"]
-    if attacked_only is False:
-        return [row for row in rows if _attack_family(row) == "clean"]
-    return rows
 
 
 def build_fixed_fpr_artifacts(

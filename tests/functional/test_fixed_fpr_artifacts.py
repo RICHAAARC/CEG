@@ -46,7 +46,7 @@ def _rows() -> list[dict[str, object]]:
         {
             "method_name": "ceg",
             "split": "test",
-            "sample_role": "positive_source",
+            "sample_role": "attacked_positive",
             "attack_family": "jpeg",
             "is_watermarked": True,
             "content_score_raw": 0.70,

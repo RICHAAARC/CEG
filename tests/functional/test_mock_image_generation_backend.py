@@ -86,5 +86,5 @@ def test_mock_image_generation_cli_outputs_feed_attack_workflow(tmp_path) -> Non
         (attack_root / "image_manifests" / "attacked_image_manifest.json").read_text(encoding="utf-8")
     )
     assert shard_manifest["input_image_pair_count"] == 1
-    assert attacked_manifest["attacked_image_count"] == 1
+    assert attacked_manifest["attacked_image_count"] == 2
     assert Path(attacked_manifest["attacked_images"][0]["attacked_image_path"]).is_file()

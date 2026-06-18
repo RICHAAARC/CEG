@@ -171,7 +171,7 @@ def _event_from_attack_record(record: dict[str, Any], source_row: dict[str, Any]
     """从 attack manifest 记录生成 attacked detection 事件。"""
     attacked_image_id = _optional_string(record, "attacked_image_id", f"attacked_{index:04d}") or f"attacked_{index:04d}"
     source = source_row or {}
-    is_watermarked = _infer_is_watermarked(source) if source else True
+    is_watermarked = _bool_from_any(record.get("is_watermarked"), default=_infer_is_watermarked(source) if source else True)
     payload = _score_payload(image_id=attacked_image_id, is_watermarked=is_watermarked, attacked=True)
     payload["image_provenance"] = {
         "image_id": attacked_image_id,

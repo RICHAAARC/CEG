@@ -19,14 +19,14 @@ SAMPLE_BLUEPRINTS = (
     {
         "sample_role": "positive_source",
         "is_watermarked": True,
-        "attack_family": "crop",
-        "attack_condition": "crop_light",
+        "attack_family": "clean",
+        "attack_condition": "clean_none",
         "content_score_raw": 0.48,
         "content_score_aligned": 0.63,
         "attestation_score": 0.91,
     },
     {
-        "sample_role": "positive_source",
+        "sample_role": "attacked_positive",
         "is_watermarked": True,
         "attack_family": "jpeg",
         "attack_condition": "jpeg_medium",

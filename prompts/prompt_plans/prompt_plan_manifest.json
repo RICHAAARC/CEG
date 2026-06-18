@@ -3,9 +3,10 @@
   "profiles": {
     "paper_main_probe": {
       "prompt_plan_path": "prompts\\prompt_plans\\paper_main_probe_prompt_plan.json",
-      "prompt_count": 4,
+      "prompt_count": 10,
       "split_counts": {
-        "calibration": 4
+        "calibration": 5,
+        "test": 5
       },
       "target_fpr": 0.01,
       "sd_model_id": "stabilityai/stable-diffusion-3.5-medium",
