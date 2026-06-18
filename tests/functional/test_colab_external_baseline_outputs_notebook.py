@@ -23,8 +23,11 @@ def test_colab_external_baseline_outputs_notebook_runs_baseline_plan_only() -> N
     """外部 baseline Notebook 应运行 baseline plan, 不实现 CEG 主方法或调用 CEG-WM。"""
 
     source = _notebook_source()
+    assert "scripts/build_t2smark_adapter_baseline_plan.py" in source
     assert "scripts/run_baseline_plan.py" in source
-    assert "baseline_plan.json" in source
+    assert "t2smark_baseline_plan.json" in source
+    assert "T2SMARK_RESULTS" in source
+    assert "external_baseline_inputs" in source
     assert "baseline_observations.json" in source
     assert "baseline_execution_manifest.json" in source
     assert 'REPO_URL = "https://github.com/RICHAAARC/CEG.git"' in source
