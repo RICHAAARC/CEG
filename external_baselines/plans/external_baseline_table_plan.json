@@ -6,24 +6,30 @@
       "display_name": "Tree-Ring",
       "source_url": "https://github.com/YuxinWenRick/tree-ring-watermark",
       "local_source_root": "external_baselines/main_table/tree_ring_watermark/source",
-      "integration_status": "requires_sd35_inversion_and_latent_shape_adaptation",
-      "table_role": "external_diffusion_watermark_baseline"
+      "integration_status": "ceg_sd35_adapter_available_requires_gpu_run",
+      "table_role": "external_diffusion_watermark_baseline",
+      "adapter_path": "external_baselines/main_table/tree_ring_watermark/adapter/run_ceg_eval.py",
+      "plan_builder_path": "scripts/build_tree_ring_adapter_baseline_plan.py"
     },
     {
       "method_id": "gaussian_shading",
       "display_name": "Gaussian Shading",
       "source_url": "https://github.com/bsmhmmlf/Gaussian-Shading",
       "local_source_root": "external_baselines/main_table/gaussian_shading/source",
-      "integration_status": "requires_sd35_parameter_inversion_and_latent_shape_adaptation",
-      "table_role": "external_diffusion_watermark_baseline"
+      "integration_status": "ceg_sd35_adapter_available_requires_gpu_run",
+      "table_role": "external_diffusion_watermark_baseline",
+      "adapter_path": "external_baselines/main_table/gaussian_shading/adapter/run_ceg_eval.py",
+      "plan_builder_path": "scripts/build_sd35_external_adapter_baseline_plan.py"
     },
     {
       "method_id": "shallow_diffuse",
       "display_name": "Shallow Diffuse",
       "source_url": "https://github.com/liwd190019/Shallow-Diffuse",
       "local_source_root": "external_baselines/main_table/shallow_diffuse/source",
-      "integration_status": "requires_sd35_inversion_and_latent_shape_adaptation",
-      "table_role": "external_diffusion_watermark_baseline"
+      "integration_status": "ceg_sd35_adapter_available_requires_gpu_run",
+      "table_role": "external_diffusion_watermark_baseline",
+      "adapter_path": "external_baselines/main_table/shallow_diffuse/adapter/run_ceg_eval.py",
+      "plan_builder_path": "scripts/build_sd35_external_adapter_baseline_plan.py"
     },
     {
       "method_id": "t2smark",

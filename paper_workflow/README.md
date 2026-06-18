@@ -269,26 +269,43 @@ https://huggingface.co/plemeri/InSPyReNet/resolve/main/ckpt_base.pth
 
 ### 外部 baseline Notebook
 
-`paper_workflow/colab_external_baseline_outputs.ipynb` 用于在 Colab 中运行外部 baseline command plan。它只调用:
+`paper_workflow/colab_external_baseline_outputs.ipynb` 用于在独立 Colab GPU 会话中运行主表外部 baseline adapter, 并把统一产物保存回 Google Drive。
+
+当前支持的主表方法包括:
 
 ```text
+Tree-Ring
+Gaussian Shading
+Shallow Diffuse
+T2SMark
+```
+
+其中 Tree-Ring、Gaussian Shading 和 Shallow Diffuse 由仓库内 `external_baselines/main_table/*/adapter/run_ceg_eval.py` 直接读取仓库内置 `prompt_plan.json`, 调用 `stabilityai/stable-diffusion-3.5-medium` 生成各自的 clean / watermarked 图像、攻击样本、manifest 和统一 `baseline_observations.json`。T2SMark 的原生 `results.json` 由 `paper_workflow/baselines/colab_t2smark_baseline_outputs.ipynb` 单独生成, 本 Notebook 只把它适配成统一 observation。
+
+Notebook 内部会调用:
+
+```text
+scripts/build_sd35_external_adapter_baseline_plan.py
+scripts/build_t2smark_adapter_baseline_plan.py
 scripts/run_baseline_plan.py
 ```
 
-输入是 Google Drive 工作区中的:
+输出归档位置为:
 
 ```text
-external_baselines/baseline_plan.json
+/content/drive/MyDrive/CEG/archives/external_baseline_outputs/<RUN_ID>.zip
 ```
 
-输出是:
+该 zip 的根目录必须包含:
 
 ```text
-external_baselines/baseline_observations.json
-external_baselines/baseline_execution_manifest.json
+baseline_observations.json
+baseline_execution_manifest.json
+baseline_command_plan_manifest.json
+baseline_command_results.json
 ```
 
-该 Notebook 不实现 CEG 主方法, 不生成 CEG 水印图像, 不运行 detection, 也不调用 CEG-WM。外部 baseline 如果需要专用环境、额外 GPU 或第三方代码, 应通过 `baseline_plan.json` 中的命令声明, 并把运行证据通过 `--evidence-path` 进入 baseline execution manifest。
+`colab_paper_results_pipeline.ipynb` 会按同一 `RUN_ID` 从上述 zip 恢复 `baseline_observations.json`, 然后通过 `scripts/import_baseline_observations.py` 导入 paper results package。该 Notebook 不实现 CEG 主方法, 不调用 CEG-WM, 不运行 CEG detection。
 
 ## 独立 Colab 会话分阶段流程
 
