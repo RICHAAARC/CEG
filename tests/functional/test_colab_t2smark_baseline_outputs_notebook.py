@@ -34,7 +34,12 @@ def test_colab_t2smark_baseline_outputs_notebook_exists_and_uses_t2smark_backend
     assert "archive_group=\"t2smark_baseline_outputs\"" in source
     assert "t2smark_prompt_alignment_manifest.json" in source
     assert "t2smark_backend_run_manifest.json" in source
+    assert "t2smark_backend_command_result.json" in source
+    assert "t2smark_backend_stderr.txt" in source
+    assert "t2smark_backend_stdout.txt" in source
     assert "t2smark_baseline_output_acceptance_report.json" in source
+    assert "HF_TOKEN_SECRET_NAMES" in source
+    assert "HF_TOKEN" in source
 
 
 @pytest.mark.quick
