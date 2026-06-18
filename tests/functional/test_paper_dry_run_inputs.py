@@ -20,7 +20,7 @@ def test_paper_dry_run_inputs_cover_methods_roles_and_baselines(tmp_path) -> Non
     sample_roles = {row["sample_role"] for row in bundle["events"]}
     baseline_ids = {row["baseline_id"] for row in bundle["baseline_observations"]}
     assert {"positive_source", "clean_negative", "attacked_negative"} <= sample_roles
-    assert {"tree_ring", "gaussian_shading", "shallow_diffuse", "stable_signature_dee"} <= baseline_ids
+    assert {"tree_ring", "gaussian_shading", "shallow_diffuse", "t2smark"} <= baseline_ids
     assert manifest["event_count"] == len(bundle["events"])
     assert (tmp_path / "events.json").exists()
     assert (tmp_path / "prompt_plan.json").exists()

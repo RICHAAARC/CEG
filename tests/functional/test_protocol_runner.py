@@ -28,7 +28,7 @@ def _event_rows() -> list[dict[str, object]]:
             {"baseline_id": "tree_ring", "score": 0.7, "threshold": 0.5},
             {"baseline_id": "gaussian_shading", "score": 0.4, "threshold": 0.5},
             {"baseline_id": "shallow_diffuse", "score": 0.6, "threshold": 0.5},
-            {"baseline_id": "stable_signaturedee", "score": 0.8, "threshold": 0.5},
+            {"baseline_id": "t2smark", "score": 0.8, "threshold": 0.5},
         ],
     }
     return [
@@ -65,7 +65,7 @@ def test_run_protocol_events_emits_ceg_and_baseline_records() -> None:
         "tree_ring",
         "gaussian_shading",
         "shallow_diffuse",
-        "stable_signature_dee",
+        "t2smark",
     }
     ceg_record = next(record for record in records if record["method_name"] == "ceg")
     assert ceg_record["positive_by_geo_rescue"] is True

@@ -1347,7 +1347,7 @@ COLAB_RESULT_REQUIRED_METHODS: tuple[str, ...] = (
     "tree_ring",
     "gaussian_shading",
     "shallow_diffuse",
-    "stable_signature_dee",
+    "t2smark",
 )
 COLAB_RESULT_INTERNAL_ABLATION_METHODS: tuple[str, ...] = (
     "ceg_full",
@@ -1360,7 +1360,7 @@ COLAB_RESULT_EXTERNAL_BASELINE_METHODS: tuple[str, ...] = (
     "tree_ring",
     "gaussian_shading",
     "shallow_diffuse",
-    "stable_signature_dee",
+    "t2smark",
 )
 COLAB_RESULT_PAIRWISE_METRIC_FIELDS: tuple[str, ...] = ("tpr", "clean_fpr", "attacked_negative_fpr")
 COLAB_RESULT_STANDARD_METRIC_FIELDS: tuple[str, ...] = (
@@ -2813,7 +2813,11 @@ def _build_external_plan_steps(
                 "--var",
                 f"baseline_root={Path(baseline_root).resolve()}",
                 "--var",
+                f"repo_root={root}",
+                "--var",
                 f"events_path={events_path}",
+                "--var",
+                f"image_pairs_path={Path(image_pairs_path).resolve() if image_pairs_path else ''}",
                 "--var",
                 f"output_root={baseline_output_root}",
             ]
@@ -3369,7 +3373,9 @@ def _build_external_plan_preflight(
                 root / "configs" / "baseline_command_templates.json",
                 {
                     "baseline_root": str(Path(str(baseline_root)).resolve()),
+                    "repo_root": str(root),
                     "events_path": events_path,
+                    "image_pairs_path": str(Path(image_pairs_path).resolve()) if image_pairs_path else "",
                     "output_root": baseline_output_root,
                 },
             )

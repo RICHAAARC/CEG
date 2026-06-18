@@ -53,7 +53,7 @@ DEFAULT_REQUIRED_METHODS = (
     "tree_ring",
     "gaussian_shading",
     "shallow_diffuse",
-    "stable_signature_dee",
+    "t2smark",
 )
 DEFAULT_REQUIRED_SAMPLE_ROLES = ("positive_source", "clean_negative", "attacked_negative")
 DEFAULT_REQUIRED_TABLE_COLUMNS = {

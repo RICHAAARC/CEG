@@ -46,7 +46,7 @@ def test_baseline_pilot_producer_builds_registered_baseline_rows(tmp_path) -> No
         "tree_ring",
         "gaussian_shading",
         "shallow_diffuse",
-        "stable_signature_dee",
+        "t2smark",
     }
     assert all(row["formal_result_claim"] is False for row in rows)
     assert all(row["threshold"] == 0.5 for row in rows)
@@ -127,7 +127,7 @@ def test_baseline_pilot_outputs_feed_paper_package(tmp_path) -> None:
     assert baseline_manifest["baseline_ids"] == [
         "gaussian_shading",
         "shallow_diffuse",
-        "stable_signature_dee",
+        "t2smark",
         "tree_ring",
     ]
     assert "baseline_results/baseline_execution_manifest.json" in package_manifest["copied_files"]

@@ -48,7 +48,7 @@
         "tree_ring",
         "gaussian_shading",
         "shallow_diffuse",
-        "stable_signature_dee"
+        "t2smark"
       ],
       "min_gpu_vram_gb": 16,
       "recommended_gpu_vram_gb": 24
@@ -78,7 +78,7 @@
         "tree_ring",
         "gaussian_shading",
         "shallow_diffuse",
-        "stable_signature_dee"
+        "t2smark"
       ],
       "min_gpu_vram_gb": 24,
       "recommended_gpu_vram_gb": 40

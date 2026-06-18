@@ -1,7 +1,7 @@
 """从 CEG detection events 生成外部 baseline pilot observations。
 
 该模块服务于论文结果包推进阶段的外部 baseline 接口验证。它不会实现 Tree-Ring、
-Gaussian Shading、Shallow Diffuse 或 Stable Signature DEE 的第三方算法本体, 也不会
+Gaussian Shading、Shallow Diffuse 或 T2SMark 的第三方算法本体, 也不会
 声明正式论文数值。它的职责是把已经受治理的 `detection_events.json` 转换成统一的
 `baseline_observations.json` 与 `baseline_execution_manifest.json`, 让后续表格、fixed-FPR
 统计和结果包导出可以先验证数据契约。

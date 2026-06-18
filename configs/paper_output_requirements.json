@@ -59,7 +59,7 @@
     "tree_ring",
     "gaussian_shading",
     "shallow_diffuse",
-    "stable_signature_dee"
+    "t2smark"
   ],
   "required_sample_roles": [
     "positive_source",

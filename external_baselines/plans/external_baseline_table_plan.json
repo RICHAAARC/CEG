@@ -30,8 +30,9 @@
       "display_name": "T2SMark",
       "source_url": "https://github.com/0xD009/T2SMark",
       "local_source_root": "external_baselines/main_table/t2smark/source",
-      "integration_status": "sd35_entrypoint_present_adapter_required",
-      "table_role": "external_diffusion_watermark_baseline"
+      "integration_status": "ceg_observation_adapter_available_results_json_import",
+      "table_role": "external_diffusion_watermark_baseline",
+      "adapter_path": "external_baselines/main_table/t2smark/adapter/run_ceg_eval.py"
     },
     {
       "method_id": "ceg",

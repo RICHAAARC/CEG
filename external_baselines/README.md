@@ -18,7 +18,7 @@
 | Tree-Ring | `main_table/tree_ring_watermark/source` | https://github.com/YuxinWenRick/tree-ring-watermark | 已拉取代码, README 明确依赖扩散 inversion 检测初始噪声 key | 需要重做 SD3.5 Medium inversion 入口, 对齐 latent shape 和 scheduler |
 | Gaussian Shading | `main_table/gaussian_shading/source` | https://github.com/bsmhmmlf/Gaussian-Shading | 已拉取代码, README 明确原始兼容 SD 1.4/2.0/2.1 且 latent size 为 `4 x 64 x 64` | 需要重做 SD3.5 Medium 参数、watermark capacity 和 inversion 适配 |
 | Shallow Diffuse | `main_table/shallow_diffuse/source` | https://github.com/liwd190019/Shallow-Diffuse | 已拉取代码, README 提示高版本 diffusers 可能不兼容 DDIM inversion | 需要重做 inversion、latent shape 和 SD3.5 Medium 采样流程适配 |
-| T2SMark | `main_table/t2smark/source` | https://github.com/0xD009/T2SMark | 已拉取代码, 仓库包含 `run_sd35.py`, README 明确 SD3.5 Medium 需要 diffusers `0.32.0` | 优先作为 SD3.5 Medium 主表 baseline 接入 |
+| T2SMark | `main_table/t2smark/source` | https://github.com/0xD009/T2SMark | 已拉取代码, 仓库包含 `run_sd35.py`, 且已补充 `main_table/t2smark/adapter/run_ceg_eval.py` | 优先作为 SD3.5 Medium 主表 baseline 接入, adapter 负责把 T2SMark `results.json` 转换为 CEG observations |
 | CEG | `main/` 与 `scripts/run_colab_paper_results_pipeline.py` | 本仓库 | 已有主流程和 `TPR@FPR` 统计 | 作为 proposed method, 不放入 external baseline 命令计划 |
 
 ## 3. 补充表 baseline

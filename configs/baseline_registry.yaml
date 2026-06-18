@@ -9,6 +9,6 @@ external_baselines:
   - baseline_id: "shallow_diffuse"
     display_name: "Shallow Diffuse"
     comparison_role: "external_main_table"
-  - baseline_id: "stable_signature_dee"
-    display_name: "Stable Signature DEE"
+  - baseline_id: "t2smark"
+    display_name: "T2SMark"
     comparison_role: "external_main_table"

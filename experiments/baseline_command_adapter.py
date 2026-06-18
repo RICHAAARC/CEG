@@ -1,6 +1,6 @@
 """封装外部 baseline 命令执行并收集 observation 文件。
 
-该模块用于 Tree-Ring、Gaussian Shading、Shallow Diffuse、Stable Signature DEE 等
+该模块用于 Tree-Ring、Gaussian Shading、Shallow Diffuse、T2SMark 等
 外部实现的实验接入。它只规定命令执行和输出文件读取契约, 不把第三方算法实现
 复制进 CEG 核心方法层。
 """

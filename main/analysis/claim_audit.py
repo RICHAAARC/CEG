@@ -18,7 +18,7 @@ REQUIRED_METHODS = (
     "tree_ring",
     "gaussian_shading",
     "shallow_diffuse",
-    "stable_signature_dee",
+    "t2smark",
 )
 
 INTERNAL_METHODS = (
@@ -34,7 +34,7 @@ EXTERNAL_BASELINES = (
     "tree_ring",
     "gaussian_shading",
     "shallow_diffuse",
-    "stable_signature_dee",
+    "t2smark",
 )
 
 REQUIRED_FIGURES = (
@@ -63,7 +63,7 @@ CLAIM_CONTRACTS = (
     },
     {
         "claim_id": "external_baseline_comparison_supported",
-        "claim_text": "Tree-Ring、Gaussian Shading、Shallow Diffuse 和 Stable Signature DEE 外部 baseline 对比可由 baseline 表支撑。",
+        "claim_text": "Tree-Ring、Gaussian Shading、Shallow Diffuse 和 T2SMark 外部 baseline 对比可由 baseline 表支撑。",
         "supporting_artifacts": ("baseline_comparison_table.csv", "standard_watermark_metrics.json"),
         "supporting_methods": EXTERNAL_BASELINES,
     },

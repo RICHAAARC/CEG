@@ -1,7 +1,7 @@
 """将外部 baseline 输出适配为统一事件 records。
 
 该模块的职责是定义 baseline 结果进入 CEG 论文流程时的最小接口。它不实现
-Tree-Ring、Gaussian Shading、Shallow Diffuse 或 Stable Signature DEE 的第三方
+Tree-Ring、Gaussian Shading、Shallow Diffuse 或 T2SMark 的第三方
 算法本体, 只把这些方法的外部检测分数规范化为统一 records, 以便后续聚合。
 """
 

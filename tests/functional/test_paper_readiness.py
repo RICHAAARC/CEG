@@ -11,7 +11,7 @@ import pytest
 from main.analysis.paper_readiness import validate_paper_output_directory
 
 
-BASELINES = ("tree_ring", "gaussian_shading", "shallow_diffuse", "stable_signature_dee")
+BASELINES = ("tree_ring", "gaussian_shading", "shallow_diffuse", "t2smark")
 ABLATIONS = ("Full", "Content-only", "Recover-then-Content", "No-rescue", "No-attestation")
 
 

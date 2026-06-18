@@ -1,6 +1,6 @@
 """构建和执行外部 baseline 命令计划。
 
-该模块把 Tree-Ring、Gaussian Shading、Shallow Diffuse、Stable Signature DEE 等第三方
+该模块把 Tree-Ring、Gaussian Shading、Shallow Diffuse、T2SMark 等第三方
 实现作为外部命令处理。它只保存命令、输出路径和审计 manifest, 不把第三方算法复制进
 CEG 核心方法层。
 """

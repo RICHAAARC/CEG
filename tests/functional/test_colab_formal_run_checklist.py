@@ -206,7 +206,7 @@ def test_build_colab_formal_run_checklist_cli_writes_report_and_blocks_failure(t
 def _prepare_external_plan_roots(tmp_path):
     """创建轻量第三方 baseline 和 metric 脚本目录, 只用于预检文件存在性。"""
     baseline_root = tmp_path / "baselines"
-    for baseline_id in ("tree_ring", "gaussian_shading", "shallow_diffuse", "stable_signature_dee"):
+    for baseline_id in ("tree_ring", "gaussian_shading", "shallow_diffuse", "t2smark"):
         script = baseline_root / baseline_id / "run_ceg_eval.py"
         script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text("print('baseline preflight')\n", encoding="utf-8")

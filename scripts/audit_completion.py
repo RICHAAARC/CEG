@@ -274,7 +274,7 @@ REQUIRED_BASELINES = {
 
     "shallow_diffuse",
 
-    "stable_signature_dee",
+    "t2smark",
 
 }
 

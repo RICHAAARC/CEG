@@ -23,7 +23,7 @@ from main.analysis.standard_metrics import QUALITY_METRIC_FIELDS
 
 
 DEFAULT_REQUIRED_QUALITY_METRICS = tuple(QUALITY_METRIC_FIELDS)
-DEFAULT_REQUIRED_EXTERNAL_BASELINES = ("tree_ring", "gaussian_shading", "shallow_diffuse", "stable_signature_dee")
+DEFAULT_REQUIRED_EXTERNAL_BASELINES = ("tree_ring", "gaussian_shading", "shallow_diffuse", "t2smark")
 DEFAULT_REQUIRED_INTERNAL_ABLATIONS = (
     "ceg_full",
     "ceg_content_only",

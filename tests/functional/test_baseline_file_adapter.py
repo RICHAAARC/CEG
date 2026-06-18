@@ -63,12 +63,12 @@ def test_attach_baseline_observations_enters_protocol_records() -> None:
     """外部 baseline 文件适配后应进入统一 protocol records。"""
     rows = [
         {"event_id": "event_external_baseline", "baseline_id": "tree_ring", "score": 0.7, "threshold": 0.5},
-        {"event_id": "event_external_baseline", "baseline_id": "stable_signaturedee", "score": 0.8, "threshold": 0.5},
+        {"event_id": "event_external_baseline", "baseline_id": "t2smark", "score": 0.8, "threshold": 0.5},
     ]
     events = attach_baseline_observations([_event()], rows)
     records = run_protocol_events(events)
 
-    assert {record["method_name"] for record in records} == {"ceg", "tree_ring", "stable_signature_dee"}
+    assert {record["method_name"] for record in records} == {"ceg", "tree_ring", "t2smark"}
 
 
 @pytest.mark.quick

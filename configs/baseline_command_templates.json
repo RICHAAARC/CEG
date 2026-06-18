@@ -43,17 +43,19 @@
       "timeout_seconds": 7200
     },
     {
-      "baseline_id": "stable_signature_dee",
+      "baseline_id": "t2smark",
       "command_template": [
         "python",
-        "{baseline_root}/stable_signature_dee/run_ceg_eval.py",
-        "--events",
-        "{events_path}",
-        "--output",
-        "{output_root}/stable_signature_dee_observations.json"
+        "{repo_root}/external_baselines/main_table/t2smark/adapter/run_ceg_eval.py",
+        "--image-pairs",
+        "{image_pairs_path}",
+        "--t2smark-results",
+        "{baseline_root}/t2smark/results.json",
+        "--out",
+        "{output_root}/t2smark_observations.json"
       ],
-      "output_path_template": "{output_root}/stable_signature_dee_observations.json",
-      "working_directory_template": "{baseline_root}/stable_signature_dee",
+      "output_path_template": "{output_root}/t2smark_observations.json",
+      "working_directory_template": "{repo_root}",
       "timeout_seconds": 7200
     }
   ]

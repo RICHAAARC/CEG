@@ -61,9 +61,9 @@ BASELINE_REGISTRY: dict[str, BaselineSpec] = {
         required_record_fields=COMMON_BASELINE_RECORD_FIELDS,
         required_artifacts=("baseline_event_records.jsonl", "baseline_metrics_summary.csv"),
     ),
-    "stable_signature_dee": BaselineSpec(
-        baseline_id="stable_signature_dee",
-        display_name="Stable Signature DEE",
+    "t2smark": BaselineSpec(
+        baseline_id="t2smark",
+        display_name="T2SMark",
         method_family="diffusion_watermark_baseline",
         comparison_role="external_main_table",
         required_record_fields=COMMON_BASELINE_RECORD_FIELDS,
@@ -77,10 +77,9 @@ BASELINE_ALIASES = {
     "treering": "tree_ring",
     "gaussian-shading": "gaussian_shading",
     "shallow-diffuse": "shallow_diffuse",
-    "stable-signature": "stable_signature_dee",
-    "stable-signature-dee": "stable_signature_dee",
-    "stable_signature": "stable_signature_dee",
-    "stable_signaturedee": "stable_signature_dee",
+    "t2s-mark": "t2smark",
+    "t2s_mark": "t2smark",
+    "t2s mark": "t2smark",
 }
 
 
