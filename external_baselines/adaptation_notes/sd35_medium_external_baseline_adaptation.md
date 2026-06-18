@@ -55,10 +55,10 @@ python external_baselines/<group>/<baseline>/adapter/run_ceg_eval.py \
 
 ## 3. 补充表 baseline 适配判断
 
-### 3.1 RivaGAN
+### 3.1 RivaGAN via invisible-watermark
 
-- 原始 `DAI-Lab/RivaGAN` 是视频水印管线, 不建议直接作为主表扩散水印 baseline。
-- 建议使用 `invisible-watermark` 中 `imwatermark/rivaGan.py` 作为图像补充 baseline。
+- 原始视频 RivaGAN 管线已从本目录移除。
+- 后续仅保留 `invisible-watermark` 中 `imwatermark/rivaGan.py` 作为图像补充 baseline。
 
 ### 3.2 WAM
 

@@ -25,7 +25,6 @@
 
 | baseline | 本地路径 | 上游仓库 | 当前检查结论 | 适配重点 |
 |---|---|---|---|---|
-| RivaGAN | `supplementary_table/rivagan/source` | https://github.com/DAI-Lab/RivaGAN | 已拉取原始 RivaGAN 视频水印仓库 | 不建议直接并入主表, 可作为历史参考 |
 | RivaGAN via invisible-watermark | `supplementary_table/rivagan_invisible_watermark/source` | https://github.com/ShieldMnt/invisible-watermark | 已拉取图像水印实现, 包含 `imwatermark/rivaGan.py` | 建议用于图像补充 baseline, 输出统一 observation |
 | WAM | `supplementary_table/watermark_anything/source` | https://github.com/facebookresearch/watermark-anything | 已拉取代码, README 包含 embedding、detection 和 bit decoding 示例 | 作为任意图像水印补充表 baseline |
 | TrustMark | `supplementary_table/trustmark/source` | https://github.com/adobe/trustmark | 已拉取代码, Python 子目录包含 TrustMark 入口说明 | 作为任意分辨率图像水印补充表 baseline |
@@ -52,5 +51,5 @@
 1. 先为每个外部 baseline 建立统一 adapter, 输出 `baseline_observations.json`。
 2. T2SMark 优先接入主表, 因为它已有 SD3.5 Medium 入口。
 3. Tree-Ring、Gaussian Shading、Shallow Diffuse 需要先完成 SD3.5 Medium inversion 与 latent shape 适配, 再进入正式主表。
-4. RivaGAN、WAM、TrustMark 作为图像域补充 baseline, 不与扩散 latent watermark 主表混为同一机制解释。
+4. invisible-watermark RivaGAN、WAM、TrustMark 作为图像域补充 baseline, 不与扩散 latent watermark 主表混为同一机制解释。
 5. 所有正式 baseline 运行证据必须由 `baseline_execution_manifest.json` 和 evidence paths 绑定, 否则只能作为 dry-run 或 pilot 对比。

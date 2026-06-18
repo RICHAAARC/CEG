@@ -1,4 +1,4 @@
-﻿{
+{
   "schema_version": "external_baseline_table_plan_v1",
   "main_table_methods": [
     {
@@ -66,14 +66,6 @@
       "local_source_root": "external_baselines/supplementary_table/trustmark/source",
       "integration_status": "image_watermark_adapter_required",
       "table_role": "supplementary_image_watermark_baseline"
-    },
-    {
-      "method_id": "rivagan_original_video_reference",
-      "display_name": "RivaGAN original video reference",
-      "source_url": "https://github.com/DAI-Lab/RivaGAN",
-      "local_source_root": "external_baselines/supplementary_table/rivagan/source",
-      "integration_status": "reference_only_not_main_table",
-      "table_role": "historical_reference"
     }
   ],
   "internal_ablation_methods": [
