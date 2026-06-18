@@ -271,3 +271,18 @@ def test_colab_paper_results_pipeline_runs_formal_baseline_plan(tmp_path: Path) 
     finally:
         if short_root.exists():
             shutil.rmtree(short_root)
+
+
+@pytest.mark.quick
+def test_colab_paper_results_pipeline_notebook_defaults_to_external_baseline_archive() -> None:
+    """paper results Notebook 默认应读取前序 external baseline 归档, 避免遗漏 T2SMark。"""
+
+    notebook_path = Path("paper_workflow/colab_paper_results_pipeline.ipynb")
+    payload = json.loads(notebook_path.read_text(encoding="utf-8"))
+    source = "\n".join("".join(cell.get("source", [])) for cell in payload.get("cells", []))
+    assert "paper_results_pipeline_with_external_baselines_v2" in source
+    assert 'BASELINE_RUN_ID = f"{IMAGE_GENERATION_RUN_ID}_external_baselines"' in source
+    assert "archives" in source
+    assert "external_baseline_outputs" in source
+    assert "--baseline-observations" in source
+    assert "baseline_archive =" in source
