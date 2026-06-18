@@ -1,0 +1,91 @@
+﻿{
+  "schema_version": "external_baseline_table_plan_v1",
+  "main_table_methods": [
+    {
+      "method_id": "tree_ring",
+      "display_name": "Tree-Ring",
+      "source_url": "https://github.com/YuxinWenRick/tree-ring-watermark",
+      "local_source_root": "external_baselines/main_table/tree_ring_watermark/source",
+      "integration_status": "requires_sd35_inversion_and_latent_shape_adaptation",
+      "table_role": "external_diffusion_watermark_baseline"
+    },
+    {
+      "method_id": "gaussian_shading",
+      "display_name": "Gaussian Shading",
+      "source_url": "https://github.com/bsmhmmlf/Gaussian-Shading",
+      "local_source_root": "external_baselines/main_table/gaussian_shading/source",
+      "integration_status": "requires_sd35_parameter_inversion_and_latent_shape_adaptation",
+      "table_role": "external_diffusion_watermark_baseline"
+    },
+    {
+      "method_id": "shallow_diffuse",
+      "display_name": "Shallow Diffuse",
+      "source_url": "https://github.com/liwd190019/Shallow-Diffuse",
+      "local_source_root": "external_baselines/main_table/shallow_diffuse/source",
+      "integration_status": "requires_sd35_inversion_and_latent_shape_adaptation",
+      "table_role": "external_diffusion_watermark_baseline"
+    },
+    {
+      "method_id": "t2smark",
+      "display_name": "T2SMark",
+      "source_url": "https://github.com/0xD009/T2SMark",
+      "local_source_root": "external_baselines/main_table/t2smark/source",
+      "integration_status": "sd35_entrypoint_present_adapter_required",
+      "table_role": "external_diffusion_watermark_baseline"
+    },
+    {
+      "method_id": "ceg",
+      "display_name": "CEG",
+      "source_url": "local_repository_main_method",
+      "local_source_root": "main/methods/ceg",
+      "integration_status": "implemented",
+      "table_role": "proposed_method"
+    }
+  ],
+  "supplementary_table_methods": [
+    {
+      "method_id": "rivagan_invisible_watermark",
+      "display_name": "RivaGAN via invisible-watermark",
+      "source_url": "https://github.com/ShieldMnt/invisible-watermark",
+      "local_source_root": "external_baselines/supplementary_table/rivagan_invisible_watermark/source",
+      "integration_status": "image_watermark_adapter_required",
+      "table_role": "supplementary_image_watermark_baseline"
+    },
+    {
+      "method_id": "wam",
+      "display_name": "WAM",
+      "source_url": "https://github.com/facebookresearch/watermark-anything",
+      "local_source_root": "external_baselines/supplementary_table/watermark_anything/source",
+      "integration_status": "image_watermark_adapter_required",
+      "table_role": "supplementary_image_watermark_baseline"
+    },
+    {
+      "method_id": "trustmark",
+      "display_name": "TrustMark",
+      "source_url": "https://github.com/adobe/trustmark",
+      "local_source_root": "external_baselines/supplementary_table/trustmark/source",
+      "integration_status": "image_watermark_adapter_required",
+      "table_role": "supplementary_image_watermark_baseline"
+    },
+    {
+      "method_id": "rivagan_original_video_reference",
+      "display_name": "RivaGAN original video reference",
+      "source_url": "https://github.com/DAI-Lab/RivaGAN",
+      "local_source_root": "external_baselines/supplementary_table/rivagan/source",
+      "integration_status": "reference_only_not_main_table",
+      "table_role": "historical_reference"
+    }
+  ],
+  "internal_ablation_methods": [
+    "ceg_without_geometry",
+    "ceg_without_content_adaptive_routing",
+    "ceg_lf_only",
+    "ceg_hf_only",
+    "ceg_random_routing",
+    "ceg_saliency_only",
+    "ceg_texture_only",
+    "ceg_without_attestation",
+    "content_score_direct_threshold",
+    "geometry_direct_positive_diagnostic_only"
+  ]
+}

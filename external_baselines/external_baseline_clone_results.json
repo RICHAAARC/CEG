@@ -1,0 +1,58 @@
+﻿[
+    {
+        "name":  "tree_ring_watermark",
+        "url":  "https://github.com/YuxinWenRick/tree-ring-watermark.git",
+        "path":  "external_baselines\\main_table\\tree_ring_watermark\\source",
+        "exists":  true,
+        "commit":  "3015283d9cf82e90b628f02ad2121bd37408ca9a"
+    },
+    {
+        "name":  "gaussian_shading",
+        "url":  "https://github.com/bsmhmmlf/Gaussian-Shading.git",
+        "path":  "external_baselines\\main_table\\gaussian_shading\\source",
+        "exists":  true,
+        "commit":  "09c678fadc7545acf7be12647ddf2a5e66f6a9dc"
+    },
+    {
+        "name":  "shallow_diffuse",
+        "url":  "https://github.com/liwd190019/Shallow-Diffuse.git",
+        "path":  "external_baselines\\main_table\\shallow_diffuse\\source",
+        "exists":  true,
+        "commit":  "c80c553fdf66fda8db735d77a9d56538b7a0ade8"
+    },
+    {
+        "name":  "t2smark",
+        "url":  "https://github.com/0xD009/T2SMark.git",
+        "path":  "external_baselines\\main_table\\t2smark\\source",
+        "exists":  true,
+        "commit":  "0c1fbfd50fcd1fba135477a2c016e284d5d7914d"
+    },
+    {
+        "name":  "rivagan",
+        "url":  "https://github.com/DAI-Lab/RivaGAN.git",
+        "path":  "external_baselines\\supplementary_table\\rivagan\\source",
+        "exists":  true,
+        "commit":  "efffa72a4ca46d4d5051f6970c96424c2cdab441"
+    },
+    {
+        "name":  "rivagan_invisible_watermark",
+        "url":  "https://github.com/ShieldMnt/invisible-watermark.git",
+        "path":  "external_baselines\\supplementary_table\\rivagan_invisible_watermark\\source",
+        "exists":  true,
+        "commit":  "68d0376d94a4701ed240af0841ec12e00676e325"
+    },
+    {
+        "name":  "watermark_anything",
+        "url":  "https://github.com/facebookresearch/watermark-anything.git",
+        "path":  "external_baselines\\supplementary_table\\watermark_anything\\source",
+        "exists":  true,
+        "commit":  "2c08af04d037d5667c02f6ddebbda9ff04581c3e"
+    },
+    {
+        "name":  "trustmark",
+        "url":  "https://github.com/adobe/trustmark.git",
+        "path":  "external_baselines\\supplementary_table\\trustmark\\source",
+        "exists":  true,
+        "commit":  "0ed40cbe8188f664fd9cbbeacd969807de27440a"
+    }
+]

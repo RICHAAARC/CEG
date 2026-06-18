@@ -1,0 +1,1943 @@
+{
+  "schema_version": "external_baseline_intake_manifest_v1",
+  "generated_from": "git shallow clones",
+  "repositories": [
+    {
+      "baseline_id": "gaussian_shading",
+      "table_group": "main_table",
+      "source_path": "external_baselines\\main_table\\gaussian_shading\\source",
+      "remote": "git@github.com:bsmhmmlf/Gaussian-Shading.git",
+      "branch": "master",
+      "commit": "09c678fadc7545acf7be12647ddf2a5e66f6a9dc",
+      "top_level": [
+        {
+          "name": ".gitignore",
+          "type": "file"
+        },
+        {
+          "name": "__pycache__",
+          "type": "dir"
+        },
+        {
+          "name": "fig",
+          "type": "dir"
+        },
+        {
+          "name": "gaussian_shading_fid.py",
+          "type": "file"
+        },
+        {
+          "name": "image_utils.py",
+          "type": "file"
+        },
+        {
+          "name": "inverse_stable_diffusion.py",
+          "type": "file"
+        },
+        {
+          "name": "io_utils.py",
+          "type": "file"
+        },
+        {
+          "name": "ldm",
+          "type": "dir"
+        },
+        {
+          "name": "LICENSE",
+          "type": "file"
+        },
+        {
+          "name": "modified_stable_diffusion.py",
+          "type": "file"
+        },
+        {
+          "name": "open_clip",
+          "type": "dir"
+        },
+        {
+          "name": "optim_utils.py",
+          "type": "file"
+        },
+        {
+          "name": "pytorch_fid",
+          "type": "dir"
+        },
+        {
+          "name": "README.md",
+          "type": "file"
+        },
+        {
+          "name": "requirements.txt",
+          "type": "file"
+        },
+        {
+          "name": "run_gaussian_shading.py",
+          "type": "file"
+        },
+        {
+          "name": "scripts",
+          "type": "dir"
+        },
+        {
+          "name": "taming",
+          "type": "dir"
+        },
+        {
+          "name": "watermark.py",
+          "type": "file"
+        }
+      ],
+      "readmes": [
+        {
+          "path": "README.md",
+          "snippet": "# Gaussian Shading: Provable Performance-Lossless Image Watermarking for Diffusion Models\n\n[![arXiv](https://img.shields.io/badge/arXiv-2404.04956-b31b1b.svg)](https://arxiv.org/abs/2404.04956)\n\nThis repository hosts the official PyTorch implementation of the paper: [\"**Gaussian Shading: Provable Performance-Lossless Image Watermarking for Diffusion Models**\"](https://arxiv.org/abs/2404.04956) (Accepted by CVPR 2024).\n\n\n## Method\n\n![method](fig/framework.png)\n\nWe propose a watermarking method named Gaussian Shading, designed to ensure no\ndeterioration in model performance. The embedding process encompasses three primary elements: watermark diffuse, randomization, and distribution-preserving sampling. Watermark diffusion spreads the watermark information throughout the latent representation to enhance the robustness. Watermark randomization and distribution preserving sampling guarantee the congruity of the latent representation distribution with that of watermark-free latent representations, thereby achieving performance-lossless. In the extraction phase, the latent representations are acquired through Denoising Diffusion Implicit Model (DDIM) inversion, allowing for the retrieval "
+        },
+        {
+          "path": "README.md",
+          "snippet": "# Gaussian Shading: Provable Performance-Lossless Image Watermarking for Diffusion Models\n\n[![arXiv](https://img.shields.io/badge/arXiv-2404.04956-b31b1b.svg)](https://arxiv.org/abs/2404.04956)\n\nThis repository hosts the official PyTorch implementation of the paper: [\"**Gaussian Shading: Provable Performance-Lossless Image Watermarking for Diffusion Models**\"](https://arxiv.org/abs/2404.04956) (Accepted by CVPR 2024).\n\n\n## Method\n\n![method](fig/framework.png)\n\nWe propose a watermarking method named Gaussian Shading, designed to ensure no\ndeterioration in model performance. The embedding process encompasses three primary elements: watermark diffuse, randomization, and distribution-preserving sampling. Watermark diffusion spreads the watermark information throughout the latent representation to enhance the robustness. Watermark randomization and distribution preserving sampling guarantee the congruity of the latent representation distribution with that of watermark-free latent representations, thereby achieving performance-lossless. In the extraction phase, the latent representations are acquired through Denoising Diffusion Implicit Model (DDIM) inversion, allowing for the retrieval "
+        }
+      ],
+      "candidate_files": [
+        {
+          "path": "gaussian_shading_fid.py",
+          "hits": [
+            "stable-diffusion",
+            "StableDiffusion",
+            "latent",
+            "watermark"
+          ]
+        },
+        {
+          "path": "image_utils.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "inverse_stable_diffusion.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "modified_stable_diffusion.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "decode_latents",
+            "encode",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "optim_utils.py",
+          "hits": [
+            "detect"
+          ]
+        },
+        {
+          "path": "README.md",
+          "hits": [
+            "inversion",
+            "latent",
+            "watermark"
+          ]
+        },
+        {
+          "path": "requirements.txt",
+          "hits": []
+        },
+        {
+          "path": "run_gaussian_shading.py",
+          "hits": [
+            "stable-diffusion",
+            "StableDiffusion",
+            "inversion",
+            "latent",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "watermark.py",
+          "hits": [
+            "latent",
+            "watermark"
+          ]
+        },
+        {
+          "path": "ldm/util.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/coca_model.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/factory.py",
+          "hits": [
+            "detect"
+          ]
+        },
+        {
+          "path": "open_clip/hf_model.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/model.py",
+          "hits": [
+            "encode",
+            "detect"
+          ]
+        },
+        {
+          "path": "open_clip/openai.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/tokenizer.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/data/annotated_objects_dataset.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/data/imagenet.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/data/open_images_helper.py",
+          "hits": [
+            "invert"
+          ]
+        },
+        {
+          "path": "taming/models/cond_transformer.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/models/dummy_cond_stage.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/models/vqgan.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/modules/util.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/modules/diffusionmodules/model.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/modules/losses/lpips.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/modules/misc/coord.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/modules/vqvae/quantize.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/data/conditional_builder/objects_bbox.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "taming/data/conditional_builder/objects_center_points.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/data/imagenet.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/models/autoencoder.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/modules/x_transformer.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/modules/diffusionmodules/model.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/modules/diffusionmodules/openaimodel.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/modules/encoders/modules.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/modules/image_degradation/bsrgan.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/modules/image_degradation/bsrgan_light.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/models/diffusion/classifier.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/models/diffusion/ddim.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/models/diffusion/ddpm.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "ldm/models/diffusion/plms.py",
+          "hits": [
+            "encode"
+          ]
+        }
+      ],
+      "license_files": [
+        "LICENSE"
+      ],
+      "requirement_files": [
+        "requirements.txt",
+        "requirements.txt"
+      ],
+      "entry_candidates": [
+        "inverse_stable_diffusion.py",
+        "README.md",
+        "run_gaussian_shading.py",
+        "watermark.py"
+      ]
+    },
+    {
+      "baseline_id": "shallow_diffuse",
+      "table_group": "main_table",
+      "source_path": "external_baselines\\main_table\\shallow_diffuse\\source",
+      "remote": "git@github.com:liwd190019/Shallow-Diffuse.git",
+      "branch": "main",
+      "commit": "c80c553fdf66fda8db735d77a9d56538b7a0ade8",
+      "top_level": [
+        {
+          "name": ".gitignore",
+          "type": "file"
+        },
+        {
+          "name": "arguments.py",
+          "type": "file"
+        },
+        {
+          "name": "assets",
+          "type": "dir"
+        },
+        {
+          "name": "attackers.py",
+          "type": "file"
+        },
+        {
+          "name": "attdiffuse.py",
+          "type": "file"
+        },
+        {
+          "name": "guided_diffusion",
+          "type": "dir"
+        },
+        {
+          "name": "inverse_stable_diffusion.py",
+          "type": "file"
+        },
+        {
+          "name": "io_utils.py",
+          "type": "file"
+        },
+        {
+          "name": "modified_stable_diffusion.py",
+          "type": "file"
+        },
+        {
+          "name": "open_clip",
+          "type": "dir"
+        },
+        {
+          "name": "optim_utils.py",
+          "type": "file"
+        },
+        {
+          "name": "README.md",
+          "type": "file"
+        },
+        {
+          "name": "run_shallow_diffuse_i2i.py",
+          "type": "file"
+        },
+        {
+          "name": "run_shallow_diffuse_t2i.py",
+          "type": "file"
+        }
+      ],
+      "readmes": [
+        {
+          "path": "README.md",
+          "snippet": "# Shallow Diffuse: Robust and Invisible Watermarking through Low-Dimensional Subspaces in Diffusion Models\nThis code is the official implementation of [Shallow Diffuse Watermarks](https://arxiv.org/abs/2410.21088).\n\nIf you have any questions, feel free to reach out ([Issues](https://github.com/liwd190019/Shallow-Diffuse/issues) or <wdli@umich.edu>).\n\n## Abstract\nThe widespread use of AI-generated content from diffusion models has raised significant concerns regarding misinformation and copyright infringement. Watermarking is a crucial technique for identifying these AI-generated images and preventing their misuse. In this paper, we introduce **Shallow Diffuse**, a new watermarking technique that embeds robust and invisible watermarks into diffusion model outputs. Unlike existing approaches that integrate watermarking throughout the entire diffusion sampling process, **Shallow Diffuse** decouples these steps by leveraging the presence of a low-dimensional subspace in the image generation process. This method ensures that a substantial portion of the watermark lies in the null space of this subspace, effectively separating it from the image generation process. Our theoretical and emp"
+        },
+        {
+          "path": "README.md",
+          "snippet": "# Shallow Diffuse: Robust and Invisible Watermarking through Low-Dimensional Subspaces in Diffusion Models\nThis code is the official implementation of [Shallow Diffuse Watermarks](https://arxiv.org/abs/2410.21088).\n\nIf you have any questions, feel free to reach out ([Issues](https://github.com/liwd190019/Shallow-Diffuse/issues) or <wdli@umich.edu>).\n\n## Abstract\nThe widespread use of AI-generated content from diffusion models has raised significant concerns regarding misinformation and copyright infringement. Watermarking is a crucial technique for identifying these AI-generated images and preventing their misuse. In this paper, we introduce **Shallow Diffuse**, a new watermarking technique that embeds robust and invisible watermarks into diffusion model outputs. Unlike existing approaches that integrate watermarking throughout the entire diffusion sampling process, **Shallow Diffuse** decouples these steps by leveraging the presence of a low-dimensional subspace in the image generation process. This method ensures that a substantial portion of the watermark lies in the null space of this subspace, effectively separating it from the image generation process. Our theoretical and emp"
+        }
+      ],
+      "candidate_files": [
+        {
+          "path": "arguments.py",
+          "hits": [
+            "stable-diffusion",
+            "watermark"
+          ]
+        },
+        {
+          "path": "attackers.py",
+          "hits": [
+            "stable-diffusion",
+            "latent",
+            "decode_latents",
+            "encode"
+          ]
+        },
+        {
+          "path": "attdiffuse.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "decode_latents",
+            "encode",
+            "detect"
+          ]
+        },
+        {
+          "path": "inverse_stable_diffusion.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "decode_latents",
+            "encode"
+          ]
+        },
+        {
+          "path": "modified_stable_diffusion.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "decode_latents",
+            "encode",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "optim_utils.py",
+          "hits": [
+            "invert",
+            "latent",
+            "encode",
+            "watermark"
+          ]
+        },
+        {
+          "path": "README.md",
+          "hits": [
+            "inversion",
+            "encode",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "run_shallow_diffuse_i2i.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "decode_latents",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "run_shallow_diffuse_t2i.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "decode_latents",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "guided_diffusion/gaussian_diffusion.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "guided_diffusion/script_util.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "guided_diffusion/unet.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/coca_model.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/factory.py",
+          "hits": [
+            "detect"
+          ]
+        },
+        {
+          "path": "open_clip/hf_model.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/model.py",
+          "hits": [
+            "encode",
+            "detect"
+          ]
+        },
+        {
+          "path": "open_clip/openai.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/tokenizer.py",
+          "hits": [
+            "encode"
+          ]
+        }
+      ],
+      "license_files": [],
+      "requirement_files": [],
+      "entry_candidates": [
+        "inverse_stable_diffusion.py",
+        "README.md",
+        "run_shallow_diffuse_i2i.py",
+        "run_shallow_diffuse_t2i.py"
+      ]
+    },
+    {
+      "baseline_id": "t2smark",
+      "table_group": "main_table",
+      "source_path": "external_baselines\\main_table\\t2smark\\source",
+      "remote": "git@github.com:0xD009/T2SMark.git",
+      "branch": "main",
+      "commit": "0c1fbfd50fcd1fba135477a2c016e284d5d7914d",
+      "top_level": [
+        {
+          "name": "LICENSE",
+          "type": "file"
+        },
+        {
+          "name": "option.py",
+          "type": "file"
+        },
+        {
+          "name": "README.md",
+          "type": "file"
+        },
+        {
+          "name": "requirements.txt",
+          "type": "file"
+        },
+        {
+          "name": "run.py",
+          "type": "file"
+        },
+        {
+          "name": "run_sd35.py",
+          "type": "file"
+        },
+        {
+          "name": "src",
+          "type": "dir"
+        }
+      ],
+      "readmes": [
+        {
+          "path": "README.md",
+          "snippet": "# T2SMark: Balancing Robustness and Diversity in Noise-as-Watermark for Diffusion Models\n\n## Dependencies\n\nThe code requires **Python 3.10.13** and the packages listed in `requirements.txt`. Install them with:\n\n```bash\npip install -r requirements.txt\n```\n\n> **Note:** To run T2SMark on Stable Diffusion v3.5 Medium, upgrade `diffusers` from `0.21.4` to `0.32.0`. Otherwise, `StableDiffusion3Pipeline` will not be supported.\n\n## Usage\n\n### Stable Diffusion v2.1\n\n```bash\npython run.py --name test\n```\n\n### Stable Diffusion v3.5 Medium\n\n```bash\npython run_sd35.py --name test_sd35\n```\n\nThe `--name` argument is required. For additional options, see `option.py`.\n\n## Evaluation\n\nOur code includes built-in evaluation of TPR, bit accuracy, and CLIP score. For LPIPS and FID metrics, we recommend using the following repositories:\n\n- LPIPS score: https://github.com/richzhang/PerceptualSimilarity.git\n- FID: https://github.com/mseitzer/pytorch-fid.git\n\n> **Note:** The COCO prompts and ground-truth images used in our experiments are available [here](https://drive.google.com/drive/folders/1saWx-B3vJxzspJ-LaXSEn5Qjm8NIs3r0), sourced from the [Tree-Ring Watermark](https://github.com/YuxinWenRick/tree-rin"
+        },
+        {
+          "path": "README.md",
+          "snippet": "# T2SMark: Balancing Robustness and Diversity in Noise-as-Watermark for Diffusion Models\n\n## Dependencies\n\nThe code requires **Python 3.10.13** and the packages listed in `requirements.txt`. Install them with:\n\n```bash\npip install -r requirements.txt\n```\n\n> **Note:** To run T2SMark on Stable Diffusion v3.5 Medium, upgrade `diffusers` from `0.21.4` to `0.32.0`. Otherwise, `StableDiffusion3Pipeline` will not be supported.\n\n## Usage\n\n### Stable Diffusion v2.1\n\n```bash\npython run.py --name test\n```\n\n### Stable Diffusion v3.5 Medium\n\n```bash\npython run_sd35.py --name test_sd35\n```\n\nThe `--name` argument is required. For additional options, see `option.py`.\n\n## Evaluation\n\nOur code includes built-in evaluation of TPR, bit accuracy, and CLIP score. For LPIPS and FID metrics, we recommend using the following repositories:\n\n- LPIPS score: https://github.com/richzhang/PerceptualSimilarity.git\n- FID: https://github.com/mseitzer/pytorch-fid.git\n\n> **Note:** The COCO prompts and ground-truth images used in our experiments are available [here](https://drive.google.com/drive/folders/1saWx-B3vJxzspJ-LaXSEn5Qjm8NIs3r0), sourced from the [Tree-Ring Watermark](https://github.com/YuxinWenRick/tree-rin"
+        }
+      ],
+      "candidate_files": [
+        {
+          "path": "option.py",
+          "hits": [
+            "stable-diffusion",
+            "inversion",
+            "watermark"
+          ]
+        },
+        {
+          "path": "README.md",
+          "hits": [
+            "StableDiffusion",
+            "SD3",
+            "inversion",
+            "watermark",
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "requirements.txt",
+          "hits": []
+        },
+        {
+          "path": "run.py",
+          "hits": [
+            "StableDiffusion",
+            "inversion",
+            "latent",
+            "encode",
+            "detect"
+          ]
+        },
+        {
+          "path": "run_sd35.py",
+          "hits": [
+            "inversion",
+            "latent",
+            "encode",
+            "detect"
+          ]
+        },
+        {
+          "path": "src/t2s.py",
+          "hits": [
+            "latent",
+            "encode",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "src/utils.py",
+          "hits": [
+            "stable-diffusion",
+            "encode"
+          ]
+        },
+        {
+          "path": "src/inversion/inverse_diffusion3.py",
+          "hits": [
+            "StableDiffusion",
+            "inversion",
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "src/inversion/inverse_stable_diffusion.py",
+          "hits": [
+            "StableDiffusion",
+            "inversion",
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "src/inversion/modified_stable_diffusion.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "decode_latents",
+            "encode",
+            "watermark",
+            "detect"
+          ]
+        }
+      ],
+      "license_files": [
+        "LICENSE"
+      ],
+      "requirement_files": [
+        "requirements.txt",
+        "requirements.txt"
+      ],
+      "entry_candidates": [
+        "README.md",
+        "run.py",
+        "run_sd35.py",
+        "src/inversion/inverse_diffusion3.py",
+        "src/inversion/inverse_stable_diffusion.py",
+        "src/inversion/modified_stable_diffusion.py"
+      ]
+    },
+    {
+      "baseline_id": "tree_ring_watermark",
+      "table_group": "main_table",
+      "source_path": "external_baselines\\main_table\\tree_ring_watermark\\source",
+      "remote": "git@github.com:YuxinWenRick/tree-ring-watermark.git",
+      "branch": "main",
+      "commit": "3015283d9cf82e90b628f02ad2121bd37408ca9a",
+      "top_level": [
+        {
+          "name": ".gitignore",
+          "type": "file"
+        },
+        {
+          "name": "256x256_diffusion.json",
+          "type": "file"
+        },
+        {
+          "name": "guided_diffusion",
+          "type": "dir"
+        },
+        {
+          "name": "inverse_stable_diffusion.py",
+          "type": "file"
+        },
+        {
+          "name": "io_utils.py",
+          "type": "file"
+        },
+        {
+          "name": "LICENSE.md",
+          "type": "file"
+        },
+        {
+          "name": "Makefile",
+          "type": "file"
+        },
+        {
+          "name": "modified_stable_diffusion.py",
+          "type": "file"
+        },
+        {
+          "name": "open_clip",
+          "type": "dir"
+        },
+        {
+          "name": "optim_utils.py",
+          "type": "file"
+        },
+        {
+          "name": "pytorch_fid",
+          "type": "dir"
+        },
+        {
+          "name": "README.md",
+          "type": "file"
+        },
+        {
+          "name": "requirements.txt",
+          "type": "file"
+        },
+        {
+          "name": "run_tree_ring_watermark.py",
+          "type": "file"
+        },
+        {
+          "name": "run_tree_ring_watermark_fid.py",
+          "type": "file"
+        },
+        {
+          "name": "run_tree_ring_watermark_imagenet.py",
+          "type": "file"
+        },
+        {
+          "name": "run_tree_ring_watermark_imagenet_fid.py",
+          "type": "file"
+        },
+        {
+          "name": "scripts",
+          "type": "dir"
+        },
+        {
+          "name": "setup.py",
+          "type": "file"
+        },
+        {
+          "name": "src",
+          "type": "dir"
+        }
+      ],
+      "readmes": [
+        {
+          "path": "README.md",
+          "snippet": "# Tree-Ring Watermarks: Fingerprints for Diffusion Images that are Invisible and Robust\n\n<img src=scripts/teaser.png  width=\"80%\" height=\"60%\">\n\nThis code is the official implementation of [Tree-Ring Watermarks](http://arxiv.org/abs/2305.20030).\n\nIf you have any questions, feel free to email Yuxin (<ywen@umd.edu>).\n\n## About\nWe propose Tree-Ring Watermarking to watermark diffusion model outputs. Tree-Ring Watermarking chooses the initial noise array so that its Fourier transform contains a carefully constructed pattern near its center. This pattern is called the key. This initial noise vector is then converted into an image using the standard diffusion pipeline with no modifications. To detect the watermark in an image, the diffusion model is inverted to retrieve the original noise array used for generation. This array is then checked to see whether the key is present.\n\n## Dependencies\n- PyTorch == 1.13.0\n- transformers == 4.23.1\n- diffusers == 0.11.1\n- datasets\n\nNote: higher diffusers version may not be compatible with the DDIM inversion code.\n\n## Usage\n\n### Perform main experiments and calculate CLIP Score\nFor non-adversarial case, you can simply run:\n```\npython run_tree_ring_wat"
+        },
+        {
+          "path": "README.md",
+          "snippet": "# Tree-Ring Watermarks: Fingerprints for Diffusion Images that are Invisible and Robust\n\n<img src=scripts/teaser.png  width=\"80%\" height=\"60%\">\n\nThis code is the official implementation of [Tree-Ring Watermarks](http://arxiv.org/abs/2305.20030).\n\nIf you have any questions, feel free to email Yuxin (<ywen@umd.edu>).\n\n## About\nWe propose Tree-Ring Watermarking to watermark diffusion model outputs. Tree-Ring Watermarking chooses the initial noise array so that its Fourier transform contains a carefully constructed pattern near its center. This pattern is called the key. This initial noise vector is then converted into an image using the standard diffusion pipeline with no modifications. To detect the watermark in an image, the diffusion model is inverted to retrieve the original noise array used for generation. This array is then checked to see whether the key is present.\n\n## Dependencies\n- PyTorch == 1.13.0\n- transformers == 4.23.1\n- diffusers == 0.11.1\n- datasets\n\nNote: higher diffusers version may not be compatible with the DDIM inversion code.\n\n## Usage\n\n### Perform main experiments and calculate CLIP Score\nFor non-adversarial case, you can simply run:\n```\npython run_tree_ring_wat"
+        }
+      ],
+      "candidate_files": [
+        {
+          "path": "inverse_stable_diffusion.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "modified_stable_diffusion.py",
+          "hits": [
+            "StableDiffusion",
+            "latent",
+            "decode_latents",
+            "encode",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "optim_utils.py",
+          "hits": [
+            "latent",
+            "encode",
+            "watermark"
+          ]
+        },
+        {
+          "path": "README.md",
+          "hits": [
+            "inversion",
+            "invert",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "requirements.txt",
+          "hits": []
+        },
+        {
+          "path": "run_tree_ring_watermark.py",
+          "hits": [
+            "stable-diffusion",
+            "StableDiffusion",
+            "latent",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "run_tree_ring_watermark_fid.py",
+          "hits": [
+            "stable-diffusion",
+            "StableDiffusion",
+            "latent",
+            "watermark"
+          ]
+        },
+        {
+          "path": "run_tree_ring_watermark_imagenet.py",
+          "hits": [
+            "stable-diffusion",
+            "latent",
+            "watermark"
+          ]
+        },
+        {
+          "path": "run_tree_ring_watermark_imagenet_fid.py",
+          "hits": [
+            "latent",
+            "watermark"
+          ]
+        },
+        {
+          "path": "setup.py",
+          "hits": [
+            "watermark"
+          ]
+        },
+        {
+          "path": "guided_diffusion/gaussian_diffusion.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "guided_diffusion/script_util.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "guided_diffusion/unet.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/coca_model.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/factory.py",
+          "hits": [
+            "detect"
+          ]
+        },
+        {
+          "path": "open_clip/hf_model.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/model.py",
+          "hits": [
+            "encode",
+            "detect"
+          ]
+        },
+        {
+          "path": "open_clip/openai.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "open_clip/tokenizer.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "scripts/tree_rand.sh",
+          "hits": [
+            "watermark"
+          ]
+        },
+        {
+          "path": "scripts/tree_ring.sh",
+          "hits": [
+            "watermark"
+          ]
+        },
+        {
+          "path": "scripts/tree_ring_imagenet.sh",
+          "hits": [
+            "watermark"
+          ]
+        },
+        {
+          "path": "scripts/tree_zeros.sh",
+          "hits": [
+            "watermark"
+          ]
+        },
+        {
+          "path": "src/tree_ring_watermark/target_api.py",
+          "hits": [
+            "stable-diffusion",
+            "StableDiffusion",
+            "latent",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "src/tree_ring_watermark/_detect.py",
+          "hits": [
+            "inversion",
+            "invert",
+            "latent",
+            "encode",
+            "detect"
+          ]
+        },
+        {
+          "path": "src/tree_ring_watermark/_get_noise.py",
+          "hits": [
+            "latent",
+            "watermark"
+          ]
+        },
+        {
+          "path": "src/tree_ring_watermark/__init__.py",
+          "hits": [
+            "detect"
+          ]
+        }
+      ],
+      "license_files": [
+        "LICENSE.md"
+      ],
+      "requirement_files": [
+        "requirements.txt",
+        "requirements.txt"
+      ],
+      "entry_candidates": [
+        "inverse_stable_diffusion.py",
+        "README.md",
+        "run_tree_ring_watermark.py",
+        "run_tree_ring_watermark_fid.py",
+        "run_tree_ring_watermark_imagenet.py",
+        "run_tree_ring_watermark_imagenet_fid.py",
+        "src/tree_ring_watermark/target_api.py",
+        "src/tree_ring_watermark/_detect.py",
+        "src/tree_ring_watermark/_get_noise.py",
+        "src/tree_ring_watermark/__init__.py"
+      ]
+    },
+    {
+      "baseline_id": "rivagan",
+      "table_group": "supplementary_table",
+      "source_path": "external_baselines\\supplementary_table\\rivagan\\source",
+      "remote": "git@github.com:DAI-Lab/RivaGAN.git",
+      "branch": "master",
+      "commit": "efffa72a4ca46d4d5051f6970c96424c2cdab441",
+      "top_level": [
+        {
+          "name": ".editorconfig",
+          "type": "file"
+        },
+        {
+          "name": ".github",
+          "type": "dir"
+        },
+        {
+          "name": ".gitignore",
+          "type": "file"
+        },
+        {
+          "name": ".travis.yml",
+          "type": "file"
+        },
+        {
+          "name": "AUTHORS.rst",
+          "type": "file"
+        },
+        {
+          "name": "CONTRIBUTING.rst",
+          "type": "file"
+        },
+        {
+          "name": "docs",
+          "type": "dir"
+        },
+        {
+          "name": "HISTORY.md",
+          "type": "file"
+        },
+        {
+          "name": "LICENSE",
+          "type": "file"
+        },
+        {
+          "name": "Makefile",
+          "type": "file"
+        },
+        {
+          "name": "MANIFEST.in",
+          "type": "file"
+        },
+        {
+          "name": "README.md",
+          "type": "file"
+        },
+        {
+          "name": "rivagan",
+          "type": "dir"
+        },
+        {
+          "name": "setup.cfg",
+          "type": "file"
+        },
+        {
+          "name": "setup.py",
+          "type": "file"
+        },
+        {
+          "name": "tests",
+          "type": "dir"
+        },
+        {
+          "name": "tox.ini",
+          "type": "file"
+        }
+      ],
+      "readmes": [
+        {
+          "path": "README.md",
+          "snippet": "<p align=\"left\">\n<img width=15% src=\"https://dai.lids.mit.edu/wp-content/uploads/2018/06/Logo_DAI_highres.png\" alt=“DAI-Lab” />\n<i>An open source project from Data to AI Lab at MIT.</i>\n</p>\n\n<!-- Uncomment these lines after releasing the package to PyPI for version and downloads badges -->\n<!--[![PyPI Shield](https://img.shields.io/pypi/v/rivagan.svg)](https://pypi.python.org/pypi/rivagan)-->\n<!--[![Downloads](https://pepy.tech/badge/rivagan)](https://pepy.tech/project/rivagan)-->\n<!--[![Coverage Status](https://codecov.io/gh/DAI-Lab/RivaGAN/branch/master/graph/badge.svg)](https://codecov.io/gh/DAI-Lab/RivaGAN)-->\n\n[![Travis CI Shield](https://travis-ci.org/DAI-Lab/RivaGAN.svg?branch=master)](https://travis-ci.org/DAI-Lab/RivaGAN)\n\n\n# RivaGAN\n\nRobust Video Watermarking with Attention\n\n- Free software: MIT license\n- Documentation: https://DAI-Lab.github.io/RivaGAN\n- Homepage: https://github.com/DAI-Lab/RivaGAN\n\n# Overview\n\nThe goal of video watermarking is to embed a message within a video file in a\nway such that it minimally impacts the viewing experience but can be recovered\neven if the video is redistributed and modified, allowing media producers to assert\nownership over their c"
+        },
+        {
+          "path": "README.md",
+          "snippet": "<p align=\"left\">\n<img width=15% src=\"https://dai.lids.mit.edu/wp-content/uploads/2018/06/Logo_DAI_highres.png\" alt=“DAI-Lab” />\n<i>An open source project from Data to AI Lab at MIT.</i>\n</p>\n\n<!-- Uncomment these lines after releasing the package to PyPI for version and downloads badges -->\n<!--[![PyPI Shield](https://img.shields.io/pypi/v/rivagan.svg)](https://pypi.python.org/pypi/rivagan)-->\n<!--[![Downloads](https://pepy.tech/badge/rivagan)](https://pepy.tech/project/rivagan)-->\n<!--[![Coverage Status](https://codecov.io/gh/DAI-Lab/RivaGAN/branch/master/graph/badge.svg)](https://codecov.io/gh/DAI-Lab/RivaGAN)-->\n\n[![Travis CI Shield](https://travis-ci.org/DAI-Lab/RivaGAN.svg?branch=master)](https://travis-ci.org/DAI-Lab/RivaGAN)\n\n\n# RivaGAN\n\nRobust Video Watermarking with Attention\n\n- Free software: MIT license\n- Documentation: https://DAI-Lab.github.io/RivaGAN\n- Homepage: https://github.com/DAI-Lab/RivaGAN\n\n# Overview\n\nThe goal of video watermarking is to embed a message within a video file in a\nway such that it minimally impacts the viewing experience but can be recovered\neven if the video is redistributed and modified, allowing media producers to assert\nownership over their c"
+        }
+      ],
+      "candidate_files": [
+        {
+          "path": ".travis.yml",
+          "hits": [
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "README.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "setup.py",
+          "hits": [
+            "watermark",
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": ".github/ISSUE_TEMPLATE.md",
+          "hits": [
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "docs/conf.py",
+          "hits": [
+            "watermark",
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "rivagan/attention.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "rivagan/dense.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "rivagan/rivagan.py",
+          "hits": [
+            "encode",
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "rivagan/__init__.py",
+          "hits": [
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "tests/test_rivagan.py",
+          "hits": [
+            "RivaGAN"
+          ]
+        }
+      ],
+      "license_files": [
+        "LICENSE"
+      ],
+      "requirement_files": [],
+      "entry_candidates": [
+        "README.md"
+      ]
+    },
+    {
+      "baseline_id": "rivagan_invisible_watermark",
+      "table_group": "supplementary_table",
+      "source_path": "external_baselines\\supplementary_table\\rivagan_invisible_watermark\\source",
+      "remote": "git@github.com:ShieldMnt/invisible-watermark.git",
+      "branch": "main",
+      "commit": "68d0376d94a4701ed240af0841ec12e00676e325",
+      "top_level": [
+        {
+          "name": ".gitignore",
+          "type": "file"
+        },
+        {
+          "name": "export_onnx.py",
+          "type": "file"
+        },
+        {
+          "name": "imwatermark",
+          "type": "dir"
+        },
+        {
+          "name": "invisible-watermark",
+          "type": "file"
+        },
+        {
+          "name": "LICENSE",
+          "type": "file"
+        },
+        {
+          "name": "MANIFEST.in",
+          "type": "file"
+        },
+        {
+          "name": "README.md",
+          "type": "file"
+        },
+        {
+          "name": "setup.py",
+          "type": "file"
+        },
+        {
+          "name": "test_vectors",
+          "type": "dir"
+        }
+      ],
+      "readmes": [
+        {
+          "path": "README.md",
+          "snippet": "# invisible-watermark\n[![PyPI](https://img.shields.io/pypi/v/invisible-watermark)](https://pypi.org/project/invisible-watermark/)\n[![License](https://img.shields.io/pypi/l/invisible-watermark.svg)](https://github.com/ShieldMnt/invisible-watermark/blob/main/LICENSE)\n![Python](https://img.shields.io/badge/python->=3.6-green.svg)\n![Platform](https://img.shields.io/badge/platform-%20linux%20-green.svg)\n[![Downloads](https://static.pepy.tech/badge/invisible-watermark)](https://pepy.tech/project/invisible-watermark) \n\ninvisible-watermark is a **python** library and command line tool for creating invisible watermark over image (a.k.a. **blink image watermark**, **digital image watermark**). The algorithm doesn't rely on the original image.\n\n**Note that** this library is still experimental and it doesn't support GPU acceleration, carefully deploy it on the production environment. The default method **dwtDCT**(one variant of frequency methods) is ready for on-the-fly embedding, the other methods are too slow on a CPU only environment.\n\n\n[supported algorithms](https://github.com/ShieldMnt/invisible-watermark#supported-algorithms)\n* [Discrete wavelet transform](https://en.wikipedia.org/wiki/D"
+        },
+        {
+          "path": "README.md",
+          "snippet": "# invisible-watermark\n[![PyPI](https://img.shields.io/pypi/v/invisible-watermark)](https://pypi.org/project/invisible-watermark/)\n[![License](https://img.shields.io/pypi/l/invisible-watermark.svg)](https://github.com/ShieldMnt/invisible-watermark/blob/main/LICENSE)\n![Python](https://img.shields.io/badge/python->=3.6-green.svg)\n![Platform](https://img.shields.io/badge/platform-%20linux%20-green.svg)\n[![Downloads](https://static.pepy.tech/badge/invisible-watermark)](https://pepy.tech/project/invisible-watermark) \n\ninvisible-watermark is a **python** library and command line tool for creating invisible watermark over image (a.k.a. **blink image watermark**, **digital image watermark**). The algorithm doesn't rely on the original image.\n\n**Note that** this library is still experimental and it doesn't support GPU acceleration, carefully deploy it on the production environment. The default method **dwtDCT**(one variant of frequency methods) is ready for on-the-fly embedding, the other methods are too slow on a CPU only environment.\n\n\n[supported algorithms](https://github.com/ShieldMnt/invisible-watermark#supported-algorithms)\n* [Discrete wavelet transform](https://en.wikipedia.org/wiki/D"
+        }
+      ],
+      "candidate_files": [
+        {
+          "path": "export_onnx.py",
+          "hits": [
+            "encode",
+            "watermark",
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "README.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "setup.py",
+          "hits": [
+            "watermark"
+          ]
+        },
+        {
+          "path": "imwatermark/dwtDctSvd.py",
+          "hits": [
+            "encode",
+            "watermark"
+          ]
+        },
+        {
+          "path": "imwatermark/maxDct.py",
+          "hits": [
+            "encode",
+            "watermark"
+          ]
+        },
+        {
+          "path": "imwatermark/rivaGan.py",
+          "hits": [
+            "encode",
+            "watermark",
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "imwatermark/watermark.py",
+          "hits": [
+            "encode",
+            "watermark",
+            "RivaGAN"
+          ]
+        },
+        {
+          "path": "imwatermark/__init__.py",
+          "hits": [
+            "encode",
+            "watermark"
+          ]
+        }
+      ],
+      "license_files": [
+        "LICENSE"
+      ],
+      "requirement_files": [],
+      "entry_candidates": [
+        "README.md",
+        "imwatermark/dwtDctSvd.py",
+        "imwatermark/maxDct.py",
+        "imwatermark/rivaGan.py",
+        "imwatermark/watermark.py",
+        "imwatermark/__init__.py"
+      ]
+    },
+    {
+      "baseline_id": "trustmark",
+      "table_group": "supplementary_table",
+      "source_path": "external_baselines\\supplementary_table\\trustmark\\source",
+      "remote": "git@github.com:adobe/trustmark.git",
+      "branch": "main",
+      "commit": "0ed40cbe8188f664fd9cbbeacd969807de27440a",
+      "top_level": [
+        {
+          "name": ".DS_Store",
+          "type": "file"
+        },
+        {
+          "name": "c2pa",
+          "type": "dir"
+        },
+        {
+          "name": "CODE_OF_CONDUCT.md",
+          "type": "file"
+        },
+        {
+          "name": "CONTRIBUTING.md",
+          "type": "file"
+        },
+        {
+          "name": "FAQ.md",
+          "type": "file"
+        },
+        {
+          "name": "images",
+          "type": "dir"
+        },
+        {
+          "name": "js",
+          "type": "dir"
+        },
+        {
+          "name": "LICENSE",
+          "type": "file"
+        },
+        {
+          "name": "python",
+          "type": "dir"
+        },
+        {
+          "name": "README.md",
+          "type": "file"
+        },
+        {
+          "name": "rust",
+          "type": "dir"
+        }
+      ],
+      "readmes": [
+        {
+          "path": "README.md",
+          "snippet": "# TrustMark\n\nThis repository contains the official, open source implementation of TrustMark watermarking for the Content Authenticity Initiative (CAI) as described in:\n\n[**TrustMark - Universal Watermarking for Arbitrary Resolution Images**](https://arxiv.org/abs/2311.18297) (`arXiv:2311.18297`) by [Tu Bui](https://www.surrey.ac.uk/people/tu-bui)[^1], [Shruti Agarwal](https://research.adobe.com/person/shruti-agarwal/)[^2], and [John Collomosse](https://www.collomosse.com)[^1] [^2].\n\nand later published at [ICCV 2025](https://iccv.thecvf.com/virtual/2025/poster/1714) as [**TrustMark: Robust Watermarking and Watermark Removal for Arbitrary Resolution Images**](https://collomosse.com/pubs/Bui-ICCV-2025.pdf).\n\n[^1]: [DECaDE](https://decade.ac.uk/) Centre for the Decentralized Digital Economy, University of Surrey, UK.\n\n[^2]: [Adobe Research](https://research.adobe.com/), San Jose, CA.\n\n## Overview\n\nThis repository contains the following directories:\n\n- `/python`: Python implementation of TrustMark for encoding, decoding and removing image watermarks (using PyTorch). For information on configuring TrustMark in Python, see [Configuring TrustMark](python/CONFIG.md). \n- `/js`: Javascript i"
+        },
+        {
+          "path": "README.md",
+          "snippet": "# TrustMark\n\nThis repository contains the official, open source implementation of TrustMark watermarking for the Content Authenticity Initiative (CAI) as described in:\n\n[**TrustMark - Universal Watermarking for Arbitrary Resolution Images**](https://arxiv.org/abs/2311.18297) (`arXiv:2311.18297`) by [Tu Bui](https://www.surrey.ac.uk/people/tu-bui)[^1], [Shruti Agarwal](https://research.adobe.com/person/shruti-agarwal/)[^2], and [John Collomosse](https://www.collomosse.com)[^1] [^2].\n\nand later published at [ICCV 2025](https://iccv.thecvf.com/virtual/2025/poster/1714) as [**TrustMark: Robust Watermarking and Watermark Removal for Arbitrary Resolution Images**](https://collomosse.com/pubs/Bui-ICCV-2025.pdf).\n\n[^1]: [DECaDE](https://decade.ac.uk/) Centre for the Decentralized Digital Economy, University of Surrey, UK.\n\n[^2]: [Adobe Research](https://research.adobe.com/), San Jose, CA.\n\n## Overview\n\nThis repository contains the following directories:\n\n- `/python`: Python implementation of TrustMark for encoding, decoding and removing image watermarks (using PyTorch). For information on configuring TrustMark in Python, see [Configuring TrustMark](python/CONFIG.md). \n- `/js`: Javascript i"
+        }
+      ],
+      "candidate_files": [
+        {
+          "path": "FAQ.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "README.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "c2pa/c2pa_watermark_example.py",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "c2pa/manifest.json",
+          "hits": [
+            "watermark",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "c2pa/README.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "js/README.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "python/CLAUDE.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "python/CONFIG.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "python/README.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "python/setup.py",
+          "hits": [
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "python/test.py",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "rust/README.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "rust/benches/encode.sh",
+          "hits": [
+            "encode",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "rust/benches/load.sh",
+          "hits": [
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "rust/crates/trustmark-cli/README.md",
+          "hits": [
+            "encode",
+            "watermark",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "python/trustmark/bchecc.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "python/trustmark/datalayer.py",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "python/trustmark/denoise.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "python/trustmark/model.py",
+          "hits": [
+            "encode",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "python/trustmark/trustmark.py",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "python/trustmark/yolo_wo_decoder_multibox.py",
+          "hits": [
+            "detect"
+          ]
+        },
+        {
+          "path": "python/trustmark/__init__.py",
+          "hits": [
+            "TrustMark"
+          ]
+        },
+        {
+          "path": "python/trustmark/bbox_detector/anchor_utils.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "python/trustmark/bbox_detector/det_utils.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "python/trustmark/bbox_detector/faster_rcnn.py",
+          "hits": [
+            "detect"
+          ]
+        },
+        {
+          "path": "python/trustmark/bbox_detector/generalized_rcnn.py",
+          "hits": [
+            "detect"
+          ]
+        },
+        {
+          "path": "python/trustmark/bbox_detector/roi_heads.py",
+          "hits": [
+            "encode",
+            "detect"
+          ]
+        },
+        {
+          "path": "python/trustmark/bbox_detector/rpn.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "python/trustmark/KBNet/kbnet.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "python/trustmark/KBNet/kbnet_l_arch.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "python/trustmark/KBNet/kbnet_s_arch.py",
+          "hits": [
+            "encode"
+          ]
+        }
+      ],
+      "license_files": [
+        "LICENSE"
+      ],
+      "requirement_files": [
+        "python/requirements.txt"
+      ],
+      "entry_candidates": [
+        "README.md",
+        "c2pa/c2pa_watermark_example.py",
+        "c2pa/README.md",
+        "js/README.md",
+        "python/README.md",
+        "rust/README.md",
+        "rust/crates/trustmark-cli/README.md"
+      ]
+    },
+    {
+      "baseline_id": "watermark_anything",
+      "table_group": "supplementary_table",
+      "source_path": "external_baselines\\supplementary_table\\watermark_anything\\source",
+      "remote": "git@github.com:facebookresearch/watermark-anything.git",
+      "branch": "main",
+      "commit": "2c08af04d037d5667c02f6ddebbda9ff04581c3e",
+      "top_level": [
+        {
+          "name": ".github",
+          "type": "dir"
+        },
+        {
+          "name": ".gitignore",
+          "type": "file"
+        },
+        {
+          "name": "assets",
+          "type": "dir"
+        },
+        {
+          "name": "checkpoints",
+          "type": "dir"
+        },
+        {
+          "name": "configs",
+          "type": "dir"
+        },
+        {
+          "name": "LICENSE",
+          "type": "file"
+        },
+        {
+          "name": "LICENSE-COCO",
+          "type": "file"
+        },
+        {
+          "name": "notebooks",
+          "type": "dir"
+        },
+        {
+          "name": "README.md",
+          "type": "file"
+        },
+        {
+          "name": "requirements.txt",
+          "type": "file"
+        },
+        {
+          "name": "train.py",
+          "type": "file"
+        },
+        {
+          "name": "watermark_anything",
+          "type": "dir"
+        }
+      ],
+      "readmes": [
+        {
+          "path": "README.md",
+          "snippet": "# 🐤 Watermark Anything\n\nImplementation and pretrained models for the paper [**Watermark Anything**](https://arxiv.org/abs/2411.07231). \nOur approach allows for embedding (possibly multiple) localized watermarks into images.\n\n<!-- [[`Webpage`](...)] -->\n[[`arXiv`](https://arxiv.org/abs/2411.07231)]\n[[`Colab`](https://colab.research.google.com/github/facebookresearch/watermark-anything/blob/main/notebooks/colab.ipynb)]\n[[`HF Demo`]](https://huggingface.co/spaces/xiaoyao9184/watermark-anything)\n[[`Podcast`](https://notebooklm.google.com/notebook/6c69b3f8-b1a6-41c4-92fb-c416903ceb49/audio)]\n[[`Hacker News`](https://news.ycombinator.com/item?id=42113674)]\n[[`Video`](https://youtu.be/gwnYmoVzJCo)]\n\n![Watermark Anything Overview](assets/splash_wam.jpg)\n\n## 📰 News\n\n### [January 30, 2025] - Watermark Anything is [accepted](https://openreview.net/forum?id=IkZVDzdC8M) at ICLR 2025!\n\n### [December 12, 2024] - New WAM Model Released Under MIT License!\n- 📢 We are excited to announce the release of the weights for our new model, trained on a subset of the [SA-1B](https://ai.meta.com/datasets/segment-anything/) dataset, now available under the MIT License.\n- We've also enhanced the model's robustn"
+        },
+        {
+          "path": "README.md",
+          "snippet": "# 🐤 Watermark Anything\n\nImplementation and pretrained models for the paper [**Watermark Anything**](https://arxiv.org/abs/2411.07231). \nOur approach allows for embedding (possibly multiple) localized watermarks into images.\n\n<!-- [[`Webpage`](...)] -->\n[[`arXiv`](https://arxiv.org/abs/2411.07231)]\n[[`Colab`](https://colab.research.google.com/github/facebookresearch/watermark-anything/blob/main/notebooks/colab.ipynb)]\n[[`HF Demo`]](https://huggingface.co/spaces/xiaoyao9184/watermark-anything)\n[[`Podcast`](https://notebooklm.google.com/notebook/6c69b3f8-b1a6-41c4-92fb-c416903ceb49/audio)]\n[[`Hacker News`](https://news.ycombinator.com/item?id=42113674)]\n[[`Video`](https://youtu.be/gwnYmoVzJCo)]\n\n![Watermark Anything Overview](assets/splash_wam.jpg)\n\n## 📰 News\n\n### [January 30, 2025] - Watermark Anything is [accepted](https://openreview.net/forum?id=IkZVDzdC8M) at ICLR 2025!\n\n### [December 12, 2024] - New WAM Model Released Under MIT License!\n- 📢 We are excited to announce the release of the weights for our new model, trained on a subset of the [SA-1B](https://ai.meta.com/datasets/segment-anything/) dataset, now available under the MIT License.\n- We've also enhanced the model's robustn"
+        }
+      ],
+      "candidate_files": [
+        {
+          "path": "README.md",
+          "hits": [
+            "watermark",
+            "detect",
+            "WAM"
+          ]
+        },
+        {
+          "path": "requirements.txt",
+          "hits": []
+        },
+        {
+          "path": "train.py",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "WAM"
+          ]
+        },
+        {
+          "path": ".github/CONTRIBUTING.md",
+          "hits": [
+            "watermark"
+          ]
+        },
+        {
+          "path": "configs/all_augs.yaml",
+          "hits": [
+            "invert"
+          ]
+        },
+        {
+          "path": "configs/all_augs_multi_wm.yaml",
+          "hits": [
+            "invert"
+          ]
+        },
+        {
+          "path": "configs/embedder.yaml",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "configs/extractor.yaml",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "notebooks/inference_utils.py",
+          "hits": [
+            "watermark",
+            "detect",
+            "WAM"
+          ]
+        },
+        {
+          "path": "watermark_anything/augmentation/augmenter.py",
+          "hits": [
+            "invert",
+            "watermark"
+          ]
+        },
+        {
+          "path": "watermark_anything/augmentation/geometric.py",
+          "hits": [
+            "watermark"
+          ]
+        },
+        {
+          "path": "watermark_anything/augmentation/masks.py",
+          "hits": [
+            "invert"
+          ]
+        },
+        {
+          "path": "watermark_anything/augmentation/valuemetric.py",
+          "hits": [
+            "watermark"
+          ]
+        },
+        {
+          "path": "watermark_anything/data/loader.py",
+          "hits": [
+            "detect"
+          ]
+        },
+        {
+          "path": "watermark_anything/losses/detperceptual.py",
+          "hits": [
+            "latent",
+            "detect"
+          ]
+        },
+        {
+          "path": "watermark_anything/models/embedder.py",
+          "hits": [
+            "latent",
+            "encode",
+            "watermark"
+          ]
+        },
+        {
+          "path": "watermark_anything/models/extractor.py",
+          "hits": [
+            "latent",
+            "encode",
+            "watermark",
+            "detect"
+          ]
+        },
+        {
+          "path": "watermark_anything/models/wam.py",
+          "hits": [
+            "encode",
+            "watermark",
+            "detect",
+            "WAM"
+          ]
+        },
+        {
+          "path": "watermark_anything/models/__init__.py",
+          "hits": [
+            "WAM"
+          ]
+        },
+        {
+          "path": "watermark_anything/modules/common.py",
+          "hits": [
+            "detect"
+          ]
+        },
+        {
+          "path": "watermark_anything/modules/msg_processor.py",
+          "hits": [
+            "latent",
+            "encode"
+          ]
+        },
+        {
+          "path": "watermark_anything/modules/pixel_decoder.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "watermark_anything/modules/vae.py",
+          "hits": [
+            "encode"
+          ]
+        },
+        {
+          "path": "watermark_anything/modules/vit.py",
+          "hits": [
+            "encode",
+            "detect"
+          ]
+        },
+        {
+          "path": "watermark_anything/utils/image.py",
+          "hits": [
+            "watermark",
+            "detect",
+            "WAM"
+          ]
+        }
+      ],
+      "license_files": [
+        "LICENSE",
+        "LICENSE-COCO"
+      ],
+      "requirement_files": [
+        "requirements.txt",
+        "requirements.txt"
+      ],
+      "entry_candidates": [
+        "README.md",
+        "watermark_anything/augmentation/augmenter.py",
+        "watermark_anything/augmentation/geometric.py",
+        "watermark_anything/augmentation/masks.py",
+        "watermark_anything/augmentation/valuemetric.py",
+        "watermark_anything/data/loader.py",
+        "watermark_anything/losses/detperceptual.py",
+        "watermark_anything/models/embedder.py",
+        "watermark_anything/models/extractor.py",
+        "watermark_anything/models/wam.py",
+        "watermark_anything/models/__init__.py",
+        "watermark_anything/modules/common.py",
+        "watermark_anything/modules/msg_processor.py",
+        "watermark_anything/modules/pixel_decoder.py",
+        "watermark_anything/modules/vae.py",
+        "watermark_anything/modules/vit.py",
+        "watermark_anything/utils/image.py"
+      ]
+    }
+  ]
+}
