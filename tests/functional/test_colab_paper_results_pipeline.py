@@ -139,8 +139,6 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
                 "0.01",
                 "--allow-incomplete-package",
                 "--allow-invalid-archive",
-                "--affine-rotation-degrees",
-                "0",
                 "--affine-scales",
                 "1.0",
                 "--baseline-observations",
@@ -158,6 +156,9 @@ def test_colab_paper_results_pipeline_cli(tmp_path: Path) -> None:
 
         manifest = json.loads((out / "colab_paper_results_pipeline_manifest.json").read_text(encoding="utf-8"))
         assert manifest["overall_decision"] == "pass"
+        detection_command = manifest["detection_result"]["command"]
+        assert "--affine-rotation-degrees=-6,-3,0,3,6" in detection_command
+        assert "--affine-rotation-degrees" not in detection_command
         assert (out / "attack_outputs" / "image_manifests" / "attacked_image_manifest.json").is_file()
         assert (out / "detection_outputs" / "detection_events.json").is_file()
         detection_manifest = json.loads((out / "detection_outputs" / "ceg_detection_producer_manifest.json").read_text(encoding="utf-8"))
