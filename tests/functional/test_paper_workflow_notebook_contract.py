@@ -74,6 +74,8 @@ def test_stage_notebooks_use_drive_archives_for_cross_session_handoff() -> None:
     paper_results_source = _notebook_source(NOTEBOOK_ROOT / "colab_paper_results_pipeline.ipynb")
     assert "IMAGE_GENERATION_ARCHIVE" in paper_results_source
     assert "extract_stage_archive" in paper_results_source
+    assert "rewrite_image_pairs_for_restored_archive" in paper_results_source
+    assert "print_paper_pipeline_failure_reports" in paper_results_source
     assert 'archives" / "image_generation_outputs"' in paper_results_source
 
     baseline_source = _notebook_source(NOTEBOOK_ROOT / "colab_external_baseline_outputs.ipynb")
@@ -118,3 +120,51 @@ def test_extract_stage_archive_strips_legacy_inputs_images_prefix(tmp_path) -> N
     assert (destination / "watermarked" / "example.png").is_file()
     assert not (destination / "inputs" / "images" / "image_pairs.json").exists()
     assert not (destination / "pilot_stage_progress_summary.json").exists()
+
+
+@pytest.mark.quick
+def test_rewrite_image_pairs_for_restored_archive_points_to_current_workspace(tmp_path) -> None:
+    """恢复图像归档后, image_pairs.json 中的旧绝对路径应被改写到当前 workspace。"""
+    from paper_workflow.colab_utils.runtime import rewrite_image_pairs_for_restored_archive
+
+    image_root = tmp_path / "workspace" / "inputs" / "images"
+    (image_root / "clean").mkdir(parents=True)
+    (image_root / "watermarked").mkdir(parents=True)
+    (image_root / "clean" / "sample_000001.png").write_bytes(b"clean")
+    (image_root / "watermarked" / "sample_000001.png").write_bytes(b"watermarked")
+    image_pairs_path = image_root / "image_pairs.json"
+    image_pairs_path.write_text(
+        json.dumps(
+            [
+                {
+                    "image_id": "sample_000001",
+                    "clean_image_path": "/content/ceg_runtime/old_run/inputs/images/clean/sample_000001.png",
+                    "reference_path": "/content/ceg_runtime/old_run/inputs/images/clean/sample_000001.png",
+                    "watermarked_image_path": "/content/ceg_runtime/old_run/inputs/images/watermarked/sample_000001.png",
+                    "watermarked_path": "/content/ceg_runtime/old_run/inputs/images/watermarked/sample_000001.png",
+                    "clean_sha256": "clean-sha",
+                    "watermarked_sha256": "watermarked-sha",
+                }
+            ],
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    report = rewrite_image_pairs_for_restored_archive(
+        image_pairs_path=image_pairs_path,
+        image_output_root=image_root,
+    )
+
+    rewritten = json.loads(image_pairs_path.read_text(encoding="utf-8"))
+    row = rewritten[0]
+    assert report["overall_decision"] == "pass"
+    assert report["rewritten_field_count"] == 4
+    assert Path(row["clean_image_path"]).is_file()
+    assert Path(row["reference_path"]).is_file()
+    assert Path(row["watermarked_image_path"]).is_file()
+    assert Path(row["watermarked_path"]).is_file()
+    assert str(tmp_path / "workspace") in row["clean_image_path"]
+    assert row["clean_sha256"] == "clean-sha"
+    assert (image_root / "image_pairs_restored_path_rewrite_report.json").is_file()

@@ -371,6 +371,111 @@ def extract_stage_archive(
     return destination_root
 
 
+def _choose_existing_restored_image_path(
+    *,
+    image_output_root: Path,
+    folder_name: str,
+    old_value: Any,
+    image_id: str,
+) -> Path:
+    """为恢复后的 image_pairs 字段选择当前 workspace 中真实存在的图像路径。
+
+    该函数只服务 Colab 阶段归档恢复。它不会改变水印算法, 只把旧 Colab 会话中的绝对路径
+    重写为当前 Colab 会话已经解压出来的本地路径。
+    """
+
+    folder = image_output_root / folder_name
+    old_text = str(old_value) if old_value is not None else ""
+    candidates: list[Path] = []
+    if old_text:
+        old_name = Path(old_text).name
+        if old_name:
+            candidates.append(folder / old_name)
+    if image_id:
+        for suffix in (".png", ".jpg", ".jpeg", ".webp"):
+            candidates.append(folder / f"{image_id}{suffix}")
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    if candidates:
+        return candidates[0]
+    return folder / f"{image_id or 'unknown'}.png"
+
+
+def rewrite_image_pairs_for_restored_archive(
+    *,
+    image_pairs_path: Path,
+    image_output_root: Path,
+) -> dict[str, Any]:
+    """重写恢复后的 image_pairs.json 路径, 使其指向当前 Colab workspace。
+
+    图像生成 Notebook 与结果流水线 Notebook 是两个独立的 Colab 会话。图像生成阶段写出的
+    image_pairs.json 可能包含旧会话的绝对路径, 例如 /content/ceg_runtime/旧运行名/...。
+    结果流水线恢复 zip 后, 图像实际位于新的 workspace。该函数会根据文件名和 image_id
+    把 clean 与 watermarked 路径改写为当前 workspace 中的真实文件路径。
+    """
+
+    if not image_pairs_path.is_file():
+        raise FileNotFoundError(f"image_pairs.json 不存在: {image_pairs_path}")
+    payload = read_json(image_pairs_path)
+    if not isinstance(payload, list):
+        raise TypeError(f"image_pairs.json 顶层必须是列表: {image_pairs_path}")
+
+    rewritten_field_count = 0
+    missing_paths: list[dict[str, Any]] = []
+    rewritten_rows: list[dict[str, Any]] = []
+    for row_index, row in enumerate(payload):
+        if not isinstance(row, dict):
+            raise TypeError(f"image_pairs.json 第 {row_index} 行必须是对象")
+        image_id = str(row.get("image_id") or row.get("prompt_id") or f"row_{row_index:06d}")
+        field_specs = {
+            "clean_image_path": "clean",
+            "reference_path": "clean",
+            "watermarked_image_path": "watermarked",
+            "watermarked_path": "watermarked",
+        }
+        for field_name, folder_name in field_specs.items():
+            if field_name not in row:
+                continue
+            old_value = row.get(field_name)
+            new_path = _choose_existing_restored_image_path(
+                image_output_root=image_output_root,
+                folder_name=folder_name,
+                old_value=old_value,
+                image_id=image_id,
+            )
+            new_value = str(new_path)
+            if str(old_value) != new_value:
+                row[field_name] = new_value
+                rewritten_field_count += 1
+            if not new_path.is_file():
+                missing_paths.append(
+                    {
+                        "row_index": row_index,
+                        "image_id": image_id,
+                        "field_name": field_name,
+                        "expected_path": new_value,
+                        "old_value": str(old_value),
+                    }
+                )
+        rewritten_rows.append(row)
+
+    write_json(image_pairs_path, rewritten_rows)
+    report = {
+        "artifact_name": "image_pairs_restored_path_rewrite_report.json",
+        "overall_decision": "pass" if not missing_paths else "fail",
+        "image_pairs_path": str(image_pairs_path),
+        "image_output_root": str(image_output_root),
+        "row_count": len(rewritten_rows),
+        "rewritten_field_count": rewritten_field_count,
+        "missing_path_count": len(missing_paths),
+        "missing_paths": missing_paths,
+    }
+    write_json(image_pairs_path.with_name("image_pairs_restored_path_rewrite_report.json"), report)
+    return report
+
+
+
 def write_model_config_with_cache(
     *,
     path: Path,
