@@ -1,0 +1,136 @@
+{
+  "schema_version": "paper_workflow_notebook_contract_v1",
+  "drive_root": "/content/drive/MyDrive/CEG",
+  "local_runtime_root": "/content/ceg_runtime",
+  "global_rule": "每个 Notebook 都必须能在独立 Colab 冷启动会话运行。跨会话只能通过 Google Drive 阶段归档 zip 和 manifest 交接, 不得依赖上一个 Colab 会话中的 /content 中间目录。",
+  "notebooks": [
+    {
+      "notebook": "paper_workflow/colab_pilot_image_generation_outputs.ipynb",
+      "stage_id": "image_generation_outputs",
+      "role": "从仓库 prompt plan 调用真实 SD 与 CEG watermark backend, 生成 clean / watermarked 图像和 image manifests。",
+      "reads_previous_stage_archive": false,
+      "required_drive_inputs": [
+        "/content/drive/MyDrive/Models/inspyrenet/ckpt_base.pth"
+      ],
+      "repository_inputs": [
+        "prompts/prompt_plans/{profile}_prompt_plan.json"
+      ],
+      "local_outputs": [
+        "/content/ceg_runtime/{run_id}/inputs/images/clean",
+        "/content/ceg_runtime/{run_id}/inputs/images/watermarked",
+        "/content/ceg_runtime/{run_id}/inputs/images/image_pairs.json",
+        "/content/ceg_runtime/{run_id}/inputs/images/image_manifests/image_generation_manifest.json",
+        "/content/ceg_runtime/{run_id}/inputs/images/image_manifests/image_pair_manifest.json",
+        "/content/ceg_runtime/{run_id}/inputs/images/pilot_image_generation_output_acceptance_report.json"
+      ],
+      "drive_archives": [
+        "/content/drive/MyDrive/CEG/archives/image_generation_outputs/{run_id}.zip"
+      ],
+      "downstream_consumers": [
+        "paper_workflow/colab_paper_results_pipeline.ipynb",
+        "paper_workflow/colab_external_baseline_outputs.ipynb",
+        "paper_workflow/colab_end_to_end_paper_pipeline.ipynb"
+      ],
+      "formal_claim_boundary": "该阶段只声明图像生成产物和水印图像 provenance 合规, 不单独声明最终 TPR@FPR 或论文主表结果。"
+    },
+    {
+      "notebook": "paper_workflow/colab_external_baseline_outputs.ipynb",
+      "stage_id": "external_baseline_outputs",
+      "role": "运行第三方或外部 baseline command plan, 产出 baseline_observations.json 和 baseline_execution_manifest.json。",
+      "reads_previous_stage_archive": true,
+      "required_previous_stage_archives": [
+        "image_generation_outputs"
+      ],
+      "required_drive_inputs": [
+        "/content/drive/MyDrive/CEG/archives/image_generation_outputs/{image_generation_run_id}.zip",
+        "用户提供或仓库物化的 baseline_plan.json"
+      ],
+      "local_outputs": [
+        "/content/ceg_runtime/{run_id}/external_baselines/baseline_observations.json",
+        "/content/ceg_runtime/{run_id}/external_baselines/baseline_execution_manifest.json"
+      ],
+      "drive_archives": [
+        "/content/drive/MyDrive/CEG/archives/external_baseline_outputs/{run_id}.zip"
+      ],
+      "downstream_consumers": [
+        "paper_workflow/colab_paper_results_pipeline.ipynb",
+        "paper_workflow/colab_end_to_end_paper_pipeline.ipynb"
+      ],
+      "formal_claim_boundary": "只有 baseline_execution_manifest 中 formal_result_claim=true 且 evidence_paths 完整时, 才能支持外部 baseline 对比声明。"
+    },
+    {
+      "notebook": "paper_workflow/colab_paper_results_pipeline.ipynb",
+      "stage_id": "paper_results_package",
+      "role": "读取图像生成归档和可选 baseline 归档, 执行 attack、CEG detection、fixed-FPR 校准、质量指标、论文表格图表和结果包导出。",
+      "reads_previous_stage_archive": true,
+      "required_previous_stage_archives": [
+        "image_generation_outputs"
+      ],
+      "optional_previous_stage_archives": [
+        "external_baseline_outputs"
+      ],
+      "required_drive_inputs": [
+        "/content/drive/MyDrive/CEG/archives/image_generation_outputs/{image_generation_run_id}.zip"
+      ],
+      "local_outputs": [
+        "/content/ceg_runtime/{run_id}/paper_results_pipeline/attack_outputs",
+        "/content/ceg_runtime/{run_id}/paper_results_pipeline/detection_outputs/detection_events.json",
+        "/content/ceg_runtime/{run_id}/paper_results_pipeline/calibrated_paper_results_package/paper_results_package",
+        "/content/ceg_runtime/{run_id}/paper_results_pipeline/colab_paper_results_pipeline_manifest.json"
+      ],
+      "drive_archives": [
+        "/content/drive/MyDrive/CEG/package_archives/paper_results_package_*.zip",
+        "/content/drive/MyDrive/CEG/result_inventories/drive_result_inventory_{run_id}.json"
+      ],
+      "downstream_consumers": [
+        "论文撰写",
+        "本地离线验收",
+        "paper_workflow/colab_paper_results_pipeline.ipynb 的重新运行"
+      ],
+      "formal_claim_boundary": "该阶段是 TPR@FPR、attack robustness、baseline comparison、ablation 和示例图像进入论文结果包的主入口。"
+    },
+    {
+      "notebook": "paper_workflow/colab_end_to_end_paper_pipeline.ipynb",
+      "stage_id": "end_to_end_paper_pipeline",
+      "role": "在同一个 Colab 会话中串联图像生成和论文结果包生成, 主要用于小规模 probe 或完整自动化运行。",
+      "reads_previous_stage_archive": false,
+      "required_drive_inputs": [
+        "/content/drive/MyDrive/Models/inspyrenet/ckpt_base.pth"
+      ],
+      "repository_inputs": [
+        "prompts/prompt_plans/{profile}_prompt_plan.json"
+      ],
+      "local_outputs": [
+        "/content/ceg_runtime/{run_id}/paper_end_to_end_pipeline/colab_end_to_end_paper_pipeline_manifest.json"
+      ],
+      "drive_archives": [
+        "/content/drive/MyDrive/CEG/archives/image_generation_outputs/image_generation_outputs_{run_id}.zip",
+        "/content/drive/MyDrive/CEG/package_archives/paper_results_package_*.zip"
+      ],
+      "downstream_consumers": [
+        "论文撰写",
+        "本地离线验收"
+      ],
+      "formal_claim_boundary": "该 Notebook 是 convenience entrypoint, 不替代分阶段归档流程。正式大规模运行建议使用分阶段 Notebook。"
+    },
+    {
+      "notebook": "paper_workflow/colab_ceg_cold_start.ipynb",
+      "stage_id": "dry_run_or_provided_results_package",
+      "role": "执行 dry-run 或使用用户已经提供的 events / thresholds / baseline / metric rows 重建论文结果链路。",
+      "reads_previous_stage_archive": false,
+      "required_drive_inputs": [],
+      "local_outputs": [
+        "/content/drive/MyDrive/CEG/colab_run_bundle",
+        "/content/drive/MyDrive/CEG/archives/ceg_colab_run_bundle.zip"
+      ],
+      "drive_archives": [
+        "/content/drive/MyDrive/CEG/archives/ceg_colab_run_bundle.zip"
+      ],
+      "downstream_consumers": [
+        "离线 bundle 验收",
+        "输入模板整理"
+      ],
+      "formal_claim_boundary": "默认 dry-run 不支持正式论文结果声明; 只有关闭 dry-run 并提供真实输入证据后才可进入正式验收。"
+    }
+  ]
+}

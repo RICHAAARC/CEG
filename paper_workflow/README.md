@@ -289,3 +289,44 @@ external_baselines/baseline_execution_manifest.json
 ```
 
 该 Notebook 不实现 CEG 主方法, 不生成 CEG 水印图像, 不运行 detection, 也不调用 CEG-WM。外部 baseline 如果需要专用环境、额外 GPU 或第三方代码, 应通过 `baseline_plan.json` 中的命令声明, 并把运行证据通过 `--evidence-path` 进入 baseline execution manifest。
+
+## 独立 Colab 会话分阶段流程
+
+正式 `paper_workflow` 现在采用“每个 Notebook 独立冷启动, 通过 Google Drive 阶段归档交接”的约定。机器可读契约位于:
+
+```text
+configs/paper_workflow_notebook_contract.json
+```
+
+面向人的详细说明位于:
+
+```text
+docs/builds/paper_workflow_independent_colab_stage_contract.md
+```
+
+推荐正式运行顺序:
+
+1. `colab_pilot_image_generation_outputs.ipynb`
+   - 不读取前序 Colab 会话。
+   - 从 GitHub 拉取 CEG。
+   - 从仓库 `prompts/prompt_plans/{profile}_prompt_plan.json` 读取 prompt。
+   - 准备 Hugging Face model snapshot 和 InSPyReNet 权重。
+   - 生成 clean / watermarked 图像、`image_pairs.json` 和 image manifests。
+   - 将图像生成阶段 zip 写入 `/content/drive/MyDrive/CEG/archives/image_generation_outputs/`。
+
+2. `colab_external_baseline_outputs.ipynb`
+   - 可读取图像生成阶段 zip。
+   - 运行用户提供的外部 baseline command plan。
+   - 将 `baseline_observations.json` 和 `baseline_execution_manifest.json` 打包到 `/content/drive/MyDrive/CEG/archives/external_baseline_outputs/`。
+
+3. `colab_paper_results_pipeline.ipynb`
+   - 必须从 Drive 读取图像生成阶段 zip。
+   - 可选读取外部 baseline 阶段 zip。
+   - 执行 attack、CEG detection、fixed-FPR 校准、质量指标、论文结果包导出和 Drive 归档。
+
+4. `colab_end_to_end_paper_pipeline.ipynb`
+   - 单会话 convenience entrypoint。
+   - 适合 `paper_main_probe` 或小规模 pilot。
+   - 不替代大规模正式分阶段流程。
+
+Google Drive 只作为阶段输入归档、阶段输出归档、模型权重和最终结果包落盘位置; 代码始终从 GitHub 拉取到 Colab 本地 `/content/CEG` 后运行。
