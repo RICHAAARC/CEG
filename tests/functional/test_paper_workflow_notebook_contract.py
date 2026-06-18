@@ -29,6 +29,7 @@ def test_paper_workflow_notebook_contract_exists_and_declares_all_notebooks() ->
     notebooks = {item["notebook"] for item in payload["notebooks"]}
     expected = {
         "paper_workflow/colab_pilot_image_generation_outputs.ipynb",
+        "paper_workflow/baselines/colab_t2smark_baseline_outputs.ipynb",
         "paper_workflow/colab_external_baseline_outputs.ipynb",
         "paper_workflow/colab_paper_results_pipeline.ipynb",
         "paper_workflow/colab_end_to_end_paper_pipeline.ipynb",

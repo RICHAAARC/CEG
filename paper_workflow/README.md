@@ -330,3 +330,31 @@ docs/builds/paper_workflow_independent_colab_stage_contract.md
    - 不替代大规模正式分阶段流程。
 
 Google Drive 只作为阶段输入归档、阶段输出归档、模型权重和最终结果包落盘位置; 代码始终从 GitHub 拉取到 Colab 本地 `/content/CEG` 后运行。
+
+
+## T2SMark 外部 baseline 原生结果 Notebook
+
+`paper_workflow/baselines/colab_t2smark_baseline_outputs.ipynb` 用于在独立 Colab 会话中运行 T2SMark 外部 baseline 本体。该 Notebook 的职责是生成 T2SMark 原生 `results.json`, 不是生成 CEG 统一 baseline observations。
+
+运行顺序如下:
+
+1. 从 GitHub 拉取或更新 `CEG` 仓库到 `/content/CEG`。
+2. 从 GitHub 拉取或更新 T2SMark 仓库到 `/content/external_baselines/t2smark/source`。
+3. 从 CEG 仓库内置 `prompts/prompt_plans/{profile}_prompt_plan.json` 读取 prompt。
+4. 在 Colab 本地 workspace 中生成 T2SMark 可读取的 CSV, 列名为 `Our GT caption`。
+5. 调用 T2SMark 的 `run_sd35.py`, 使用 `stabilityai/stable-diffusion-3.5-medium` 生成并检测外部 baseline 水印结果。
+6. 将 T2SMark 原生 `results.json` 复制到 Google Drive:
+
+```text
+/content/drive/MyDrive/CEG/external_baseline_inputs/t2smark/results.json
+```
+
+7. 可选地把 T2SMark 原始输出目录归档到:
+
+```text
+/content/drive/MyDrive/CEG/archives/t2smark_baseline_outputs/
+```
+
+后续 `paper_workflow/colab_external_baseline_outputs.ipynb` 会读取该 `results.json`, 自动生成 T2SMark adapter plan, 并调用 `scripts/run_baseline_plan.py` 产出 CEG 统一的 `baseline_observations.json` 与 `baseline_execution_manifest.json`。
+
+该 Notebook 不调用 CEG-WM, 不实现 CEG 主方法, 不运行 CEG detection, 不生成论文 records、tables、figures 或 reports。它只承担外部 baseline 原生结果生产职责。

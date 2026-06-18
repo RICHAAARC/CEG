@@ -34,18 +34,50 @@
       "formal_claim_boundary": "该阶段只声明图像生成产物和水印图像 provenance 合规, 不单独声明最终 TPR@FPR 或论文主表结果。"
     },
     {
+      "notebook": "paper_workflow/baselines/colab_t2smark_baseline_outputs.ipynb",
+      "stage_id": "t2smark_baseline_outputs",
+      "role": "运行 T2SMark 外部 baseline 本体, 读取 CEG prompt plan 并生成 T2SMark 原生 results.json。",
+      "reads_previous_stage_archive": false,
+      "required_drive_inputs": [],
+      "repository_inputs": [
+        "prompts/prompt_plans/{profile}_prompt_plan.json"
+      ],
+      "external_repository_inputs": [
+        "https://github.com/0xD009/T2SMark.git"
+      ],
+      "local_outputs": [
+        "/content/ceg_runtime/{run_id}/inputs/t2smark_prompts.csv",
+        "/content/ceg_runtime/{run_id}/t2smark_outputs/{run_id}/results.json",
+        "/content/ceg_runtime/{run_id}/t2smark_backend_run_manifest.json",
+        "/content/ceg_runtime/{run_id}/t2smark_prompt_alignment_manifest.json",
+        "/content/ceg_runtime/{run_id}/t2smark_baseline_output_acceptance_report.json"
+      ],
+      "drive_outputs": [
+        "/content/drive/MyDrive/CEG/external_baseline_inputs/t2smark/results.json"
+      ],
+      "drive_archives": [
+        "/content/drive/MyDrive/CEG/archives/t2smark_baseline_outputs/{run_id}.zip"
+      ],
+      "downstream_consumers": [
+        "paper_workflow/colab_external_baseline_outputs.ipynb"
+      ],
+      "formal_claim_boundary": "该 Notebook 只产出 T2SMark 外部方法原生结果。正式论文 baseline 对比仍需经 T2SMark adapter、baseline execution manifest 和 paper results pipeline 验收。"
+    },
+    {
       "notebook": "paper_workflow/colab_external_baseline_outputs.ipynb",
       "stage_id": "external_baseline_outputs",
-      "role": "运行第三方或外部 baseline command plan, 产出 baseline_observations.json 和 baseline_execution_manifest.json。",
+      "role": "读取 T2SMark 原生 results.json 并运行 CEG adapter plan, 产出 baseline_observations.json 和 baseline_execution_manifest.json。",
       "reads_previous_stage_archive": true,
       "required_previous_stage_archives": [
         "image_generation_outputs"
       ],
       "required_drive_inputs": [
         "/content/drive/MyDrive/CEG/archives/image_generation_outputs/{image_generation_run_id}.zip",
-        "用户提供或仓库物化的 baseline_plan.json"
+        "/content/drive/MyDrive/CEG/external_baseline_inputs/t2smark/results.json"
       ],
       "local_outputs": [
+        "/content/ceg_runtime/{run_id}/plans/t2smark_baseline_plan.json",
+        "/content/ceg_runtime/{run_id}/external_baselines/t2smark_observations.json",
         "/content/ceg_runtime/{run_id}/external_baselines/baseline_observations.json",
         "/content/ceg_runtime/{run_id}/external_baselines/baseline_execution_manifest.json"
       ],
