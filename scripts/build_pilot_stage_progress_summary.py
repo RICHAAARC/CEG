@@ -21,6 +21,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out-json", default=None, help="JSON 汇总输出路径。默认写入工作区。")
     parser.add_argument("--out-markdown", default=None, help="Markdown 汇总输出路径。默认写入工作区。")
     parser.add_argument("--require-pass", action="store_true", help="存在未通过阶段时返回非零退出码。")
+    parser.add_argument(
+        "--stage-scope",
+        default="full_pilot",
+        choices=["full_pilot", "image_generation_outputs"],
+        help="阶段汇总范围。image_generation_outputs 只检查独立图像生成输出门禁。",
+    )
     return parser
 
 
@@ -30,11 +36,12 @@ def main() -> None:
     workspace = Path(args.workspace)
     out_json = Path(args.out_json) if args.out_json else workspace / REPORT_NAME
     out_markdown = Path(args.out_markdown) if args.out_markdown else workspace / MARKDOWN_NAME
-    summary = write_pilot_stage_progress_summary(workspace, out_json, out_markdown)
+    summary = write_pilot_stage_progress_summary(workspace, out_json, out_markdown, stage_scope=args.stage_scope)
     print(
         json.dumps(
             {
                 "artifact_name": summary["artifact_name"],
+                "stage_scope": summary.get("stage_scope"),
                 "overall_decision": summary["overall_decision"],
                 "current_stage": summary["current_stage"],
                 "recommended_next_action": summary["recommended_next_action"],

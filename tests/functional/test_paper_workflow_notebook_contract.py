@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import json
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 
@@ -95,3 +96,25 @@ def test_colab_runtime_helper_keeps_environment_logic_outside_main_method() -> N
     assert "extract_stage_archive" in helper_source
     assert "不实现 CEG 主方法" in helper_source
 
+
+
+@pytest.mark.quick
+def test_extract_stage_archive_strips_legacy_inputs_images_prefix(tmp_path) -> None:
+    """阶段恢复工具应兼容已经落盘的旧图像生成 zip 内部路径。"""
+    from paper_workflow.colab_utils.runtime import extract_stage_archive
+
+    archive_path = tmp_path / "image_generation_outputs.zip"
+    with ZipFile(archive_path, "w") as archive:
+        archive.writestr("inputs/images/image_pairs.json", "[]")
+        archive.writestr("inputs/images/clean/example.png", b"clean")
+        archive.writestr("inputs/images/watermarked/example.png", b"watermarked")
+        archive.writestr("pilot_stage_progress_summary.json", "{}")
+
+    destination = tmp_path / "workspace" / "inputs" / "images"
+    extract_stage_archive(archive_zip_path=archive_path, destination_root=destination)
+
+    assert (destination / "image_pairs.json").is_file()
+    assert (destination / "clean" / "example.png").is_file()
+    assert (destination / "watermarked" / "example.png").is_file()
+    assert not (destination / "inputs" / "images" / "image_pairs.json").exists()
+    assert not (destination / "pilot_stage_progress_summary.json").exists()

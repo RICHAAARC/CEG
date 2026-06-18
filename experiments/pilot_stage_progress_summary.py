@@ -132,6 +132,28 @@ STAGE_SPECS = (
 )
 
 
+STAGE_SCOPE_IDS = {
+    "full_pilot": None,
+    "image_generation_outputs": {"p2_image_generation_outputs"},
+}
+
+
+def _stage_specs_for_scope(stage_scope: str) -> list[StageSpec]:
+    """根据阶段范围返回需要汇总的门禁列表。
+
+    `full_pilot` 保留原有完整 pilot 门禁语义; `image_generation_outputs` 只检查
+    图像生成独立 Notebook 的输出接收门禁, 避免独立图像生成归档被缺失的 P0/P1
+    报告误判为失败。
+    """
+
+    if stage_scope not in STAGE_SCOPE_IDS:
+        raise ValueError(f"不支持的阶段范围: {stage_scope}")
+    allowed_ids = STAGE_SCOPE_IDS[stage_scope]
+    if allowed_ids is None:
+        return list(STAGE_SPECS)
+    return [spec for spec in STAGE_SPECS if spec.stage_id in allowed_ids]
+
+
 def _read_json(path: Path) -> tuple[Any | None, str | None]:
     """读取 JSON 文件, 返回 payload 与错误信息。"""
     try:
@@ -193,10 +215,11 @@ def _first_blocking_stage(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     return None
 
 
-def build_pilot_stage_progress_summary(workspace: str | Path) -> dict[str, Any]:
+def build_pilot_stage_progress_summary(workspace: str | Path, stage_scope: str = "full_pilot") -> dict[str, Any]:
     """汇总真实 pilot 工作区阶段进度。"""
     root = Path(workspace)
-    rows = [_stage_row(root, spec) for spec in STAGE_SPECS]
+    specs = _stage_specs_for_scope(stage_scope)
+    rows = [_stage_row(root, spec) for spec in specs]
     first_blocking = _first_blocking_stage(rows)
     pass_count = sum(1 for row in rows if row["status"] == "pass")
     fail_count = sum(1 for row in rows if row["status"] == "fail")
@@ -206,6 +229,7 @@ def build_pilot_stage_progress_summary(workspace: str | Path) -> dict[str, Any]:
     return {
         "artifact_name": REPORT_NAME,
         "workspace": str(root),
+        "stage_scope": stage_scope,
         "overall_decision": overall_decision,
         "current_stage": first_blocking["stage_id"] if first_blocking else "paper_writing_ready_pilot",
         "recommended_next_action": first_blocking["fail_action"] if first_blocking else "所有 pilot 门禁均通过, 可以使用结果包撰写论文。",
@@ -228,6 +252,7 @@ def render_pilot_stage_progress_markdown(summary: dict[str, Any]) -> str:
         "# CEG pilot 阶段进度汇总",
         "",
         f"- 工作区: `{summary['workspace']}`",
+        f"- 阶段范围: `{summary.get('stage_scope', 'full_pilot')}`",
         f"- 总体结论: `{summary['overall_decision']}`",
         f"- 当前阶段: `{summary['current_stage']}`",
         f"- 推荐下一步: {summary['recommended_next_action']}",
@@ -265,9 +290,14 @@ def render_pilot_stage_progress_markdown(summary: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def write_pilot_stage_progress_summary(workspace: str | Path, out_json: str | Path, out_markdown: str | Path) -> dict[str, Any]:
+def write_pilot_stage_progress_summary(
+    workspace: str | Path,
+    out_json: str | Path,
+    out_markdown: str | Path,
+    stage_scope: str = "full_pilot",
+) -> dict[str, Any]:
     """写出 JSON 与 Markdown 阶段进度汇总。"""
-    summary = build_pilot_stage_progress_summary(workspace)
+    summary = build_pilot_stage_progress_summary(workspace, stage_scope=stage_scope)
     json_path = Path(out_json)
     markdown_path = Path(out_markdown)
     json_path.parent.mkdir(parents=True, exist_ok=True)

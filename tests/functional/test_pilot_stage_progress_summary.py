@@ -97,3 +97,50 @@ def test_build_pilot_stage_progress_summary_cli_writes_outputs(tmp_path) -> None
     assert out_md.is_file()
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["overall_decision"] == "fail"
+
+
+@pytest.mark.quick
+def test_stage_progress_summary_image_generation_scope_passes_without_p0_reports(tmp_path) -> None:
+    """独立图像生成阶段只检查图像输出验收报告, 不因 P0/P1 报告缺失而失败。"""
+    _write_report(tmp_path / "pilot_image_generation_output_acceptance_report.json", "pass", "image_attack_pilot", 0)
+
+    summary = build_pilot_stage_progress_summary(tmp_path, stage_scope="image_generation_outputs")
+
+    assert summary["stage_scope"] == "image_generation_outputs"
+    assert summary["overall_decision"] == "pass"
+    assert summary["current_stage"] == "paper_writing_ready_pilot"
+    assert summary["summary"]["stage_count"] == 1
+    assert summary["summary"]["missing_count"] == 0
+
+
+@pytest.mark.quick
+def test_build_pilot_stage_progress_summary_cli_supports_image_generation_scope(tmp_path) -> None:
+    """CLI 应支持只汇总独立图像生成输出门禁。"""
+    _write_report(tmp_path / "pilot_image_generation_output_acceptance_report.json", "pass", "image_attack_pilot", 0)
+    out_json = tmp_path / "progress.json"
+    out_md = tmp_path / "progress.md"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/build_pilot_stage_progress_summary.py",
+            "--workspace",
+            str(tmp_path),
+            "--out-json",
+            str(out_json),
+            "--out-markdown",
+            str(out_md),
+            "--stage-scope",
+            "image_generation_outputs",
+            "--require-pass",
+        ],
+        cwd=".",
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 0
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["stage_scope"] == "image_generation_outputs"
+    assert payload["overall_decision"] == "pass"

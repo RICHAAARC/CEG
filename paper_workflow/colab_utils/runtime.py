@@ -302,13 +302,45 @@ def archive_directory_to_drive(
     return manifest
 
 
+def _strip_archive_prefix(name: str, prefix: str | None) -> str | None:
+    """移除阶段归档中的可选目录前缀, 返回应该写入目标目录的相对路径。
+
+    该函数用于兼容两类已经存在的阶段归档:
+    - 新归档: `image_pairs.json`, `clean/...`, `watermarked/...`
+    - 旧归档: `inputs/images/image_pairs.json`, `inputs/images/clean/...`
+
+    返回 `None` 表示该 zip 条目不属于当前恢复目标, 应跳过。
+    """
+
+    normalized = name.replace("\\", "/").lstrip("/")
+    if not normalized or normalized.endswith("/"):
+        return None
+    if prefix is None:
+        return normalized
+    normalized_prefix = prefix.replace("\\", "/").strip("/")
+    if normalized == normalized_prefix:
+        return None
+    marker = normalized_prefix + "/"
+    if normalized.startswith(marker):
+        stripped = normalized[len(marker) :]
+        return stripped or None
+    return None
+
+
 def extract_stage_archive(
     *,
     archive_zip_path: Path,
     destination_root: Path,
     reset: bool = True,
+    strip_prefix: str | None = None,
+    auto_strip_known_prefixes: bool = True,
 ) -> Path:
-    """从 Drive 阶段 zip 恢复输出到当前 Colab 本地工作区。"""
+    """从 Drive 阶段 zip 恢复输出到当前 Colab 本地工作区。
+
+    `strip_prefix` 用于把旧归档中的 `inputs/images/...` 解压为目标目录下的
+    `...`。当 `auto_strip_known_prefixes=True` 且目标目录名为 `images` 时,
+    函数会自动识别 `inputs/images/` 前缀, 以兼容已经落盘的图像生成 zip。
+    """
 
     if not archive_zip_path.is_file():
         raise FileNotFoundError(f"阶段归档 zip 不存在: {archive_zip_path}")
@@ -316,7 +348,26 @@ def extract_stage_archive(
         shutil.rmtree(destination_root)
     destination_root.mkdir(parents=True, exist_ok=True)
     with ZipFile(archive_zip_path, "r") as zip_file:
-        zip_file.extractall(destination_root)
+        names = [item.filename for item in zip_file.infolist() if not item.is_dir()]
+        effective_prefix = strip_prefix
+        if effective_prefix is None and auto_strip_known_prefixes and destination_root.name == "images":
+            if any(name.replace("\\", "/").startswith("inputs/images/") for name in names):
+                effective_prefix = "inputs/images"
+        for info in zip_file.infolist():
+            relative_name = _strip_archive_prefix(info.filename, effective_prefix)
+            if relative_name is None:
+                continue
+            target_path = destination_root / relative_name
+            resolved_target = target_path.resolve()
+            resolved_root = destination_root.resolve()
+            if resolved_root != resolved_target and resolved_root not in resolved_target.parents:
+                raise RuntimeError(f"阶段归档包含非法路径: {info.filename}")
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            if info.is_dir():
+                target_path.mkdir(parents=True, exist_ok=True)
+            else:
+                with zip_file.open(info, "r") as source, target_path.open("wb") as target:
+                    shutil.copyfileobj(source, target)
     return destination_root
 
 
