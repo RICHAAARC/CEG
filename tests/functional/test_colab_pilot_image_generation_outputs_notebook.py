@@ -41,6 +41,9 @@ def test_colab_pilot_image_generation_outputs_notebook_exists_and_calls_governed
     assert "CEG_ATTESTATION_KEY" in source
     assert "ckpt_base.pth" in source
     assert "图像生成产物是否完成只以" in source
+    assert "print_generation_failure_reports" in source
+    assert "pilot_image_generation_backend_wrapper_report.json" in source
+    assert "real_image_generation_backend_manifest.json" in source
 
 
 @pytest.mark.quick
