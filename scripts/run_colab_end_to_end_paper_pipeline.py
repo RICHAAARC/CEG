@@ -67,6 +67,14 @@ def _append_optional(command: list[str], flag: str, value: str | None) -> None:
         command.extend([flag, str(value)])
 
 
+
+
+def _append_required_option(command: list[str], flag: str, value: str) -> None:
+    """以 --flag=value 形式追加参数, 避免负数列表被 argparse 误判为新选项。"""
+
+    command.append(f"{flag}={value}")
+
+
 def _append_repeated_paths(command: list[str], flag: str, values: list[str]) -> None:
     """把重复路径参数追加到命令, 用于 baseline evidence 等场景。"""
 
@@ -300,17 +308,12 @@ def main() -> None:
         str(args.profile),
         "--semantic-mask-backend",
         str(args.semantic_mask_backend),
-        "--affine-rotation-degrees",
-        str(args.affine_rotation_degrees),
-        "--affine-scales",
-        str(args.affine_scales),
-        "--perspective-offsets",
-        str(args.perspective_offsets),
-        "--feature-homography-enabled",
-        str(args.feature_homography_enabled),
-        "--local-deformation-enabled",
-        str(args.local_deformation_enabled),
     ]
+    _append_required_option(paper_pipeline_command, "--affine-rotation-degrees", str(args.affine_rotation_degrees))
+    _append_required_option(paper_pipeline_command, "--affine-scales", str(args.affine_scales))
+    _append_required_option(paper_pipeline_command, "--perspective-offsets", str(args.perspective_offsets))
+    _append_required_option(paper_pipeline_command, "--feature-homography-enabled", str(args.feature_homography_enabled))
+    _append_required_option(paper_pipeline_command, "--local-deformation-enabled", str(args.local_deformation_enabled))
     _append_optional(paper_pipeline_command, "--attestation-key-env", args.attestation_key_env)
     _append_optional(paper_pipeline_command, "--attestation-key-id", args.attestation_key_id)
     if args.detection_formal_result_claim:

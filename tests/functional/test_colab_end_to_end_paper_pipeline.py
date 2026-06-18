@@ -136,8 +136,6 @@ def test_colab_end_to_end_paper_pipeline_uses_existing_image_generation_outputs(
                 "0.01",
                 "--allow-incomplete-package",
                 "--allow-invalid-archive",
-                "--affine-rotation-degrees",
-                "0",
                 "--affine-scales",
                 "1.0",
             ],
@@ -147,6 +145,9 @@ def test_colab_end_to_end_paper_pipeline_uses_existing_image_generation_outputs(
 
         manifest = json.loads((out / "colab_end_to_end_paper_pipeline_manifest.json").read_text(encoding="utf-8"))
         assert manifest["overall_decision"] == "pass"
+        paper_pipeline_command = manifest["paper_pipeline_result"]["command"]
+        assert "--affine-rotation-degrees=-6,-3,0,3,6" in paper_pipeline_command
+        assert "--affine-rotation-degrees" not in paper_pipeline_command
         assert manifest["run_image_generation"] is False
         assert Path(manifest["image_acceptance_report"]).is_file()
         assert Path(manifest["paper_pipeline_manifest"]).is_file()
