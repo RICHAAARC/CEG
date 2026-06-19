@@ -104,42 +104,49 @@ class InversionStableDiffusion3PipelineMixin:
     def get_image_latents(self, image: Any, *, sample: bool = False):
         """通过 VAE 编码图像得到 latent。"""
 
-        encoding_dist = self.vae.encode(image).latent_dist
-        encoding = encoding_dist.sample() if sample else encoding_dist.mode()
-        shift_factor = float(getattr(self.vae.config, "shift_factor", 0.0) or 0.0)
-        scaling_factor = float(getattr(self.vae.config, "scaling_factor", 1.0) or 1.0)
-        return (encoding - shift_factor) * scaling_factor
+        import torch
+
+        with torch.inference_mode():
+            encoding_dist = self.vae.encode(image).latent_dist
+            encoding = encoding_dist.sample() if sample else encoding_dist.mode()
+            shift_factor = float(getattr(self.vae.config, "shift_factor", 0.0) or 0.0)
+            scaling_factor = float(getattr(self.vae.config, "scaling_factor", 1.0) or 1.0)
+            return (encoding - shift_factor) * scaling_factor
 
     def naive_forward_diffusion(self, latents: Any, *, prompt: str = "", num_inference_steps: int = 5, guidance_scale: float = 1.0):
         """使用 SD3 scheduler 近似执行反向扩散的逆过程。"""
 
         import torch
 
-        self.scheduler.set_timesteps(num_inference_steps, device=self._execution_device)
-        do_classifier_free_guidance = guidance_scale > 1.0
-        prompt_embeds, _, pooled_projections, _ = self.encode_prompt(
-            prompt=prompt,
-            prompt_2=None,
-            prompt_3=None,
-            device=self._execution_device,
-            do_classifier_free_guidance=do_classifier_free_guidance,
-        )
-        timesteps = self.scheduler.timesteps
-        for index, timestep in enumerate(reversed(timesteps)):
-            latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-            timestep_tensor = timestep.expand(latent_model_input.shape[0])
-            noise_pred = self.transformer(
-                latent_model_input,
-                timestep=timestep_tensor,
-                pooled_projections=pooled_projections,
-                encoder_hidden_states=prompt_embeds,
-                return_dict=False,
-            )[0]
-            if do_classifier_free_guidance:
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-            latents = latents - (self.scheduler.sigmas[index + 1] - self.scheduler.sigmas[index]) * noise_pred
-        return latents
+        # 该函数用于检测反演, 不参与训练。必须显式关闭 autograd, 否则每个 transformer
+        # 调用都会保留计算图, 在 22GB Colab GPU 上很容易因反演步数累积而 OOM。
+        with torch.inference_mode():
+            self.scheduler.set_timesteps(num_inference_steps, device=self._execution_device)
+            do_classifier_free_guidance = guidance_scale > 1.0
+            prompt_embeds, _, pooled_projections, _ = self.encode_prompt(
+                prompt=prompt,
+                prompt_2=None,
+                prompt_3=None,
+                device=self._execution_device,
+                do_classifier_free_guidance=do_classifier_free_guidance,
+            )
+            timesteps = self.scheduler.timesteps
+            for index, timestep in enumerate(reversed(timesteps)):
+                latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                timestep_tensor = timestep.expand(latent_model_input.shape[0])
+                noise_pred = self.transformer(
+                    latent_model_input,
+                    timestep=timestep_tensor,
+                    pooled_projections=pooled_projections,
+                    encoder_hidden_states=prompt_embeds,
+                    return_dict=False,
+                )[0]
+                if do_classifier_free_guidance:
+                    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                latents = latents - (self.scheduler.sigmas[index + 1] - self.scheduler.sigmas[index]) * noise_pred
+                del noise_pred, latent_model_input, timestep_tensor
+            return latents
 
 
 def load_sd3_pipeline(*, model_id: str, device: str, torch_dtype_name: str):
@@ -160,6 +167,8 @@ def load_sd3_pipeline(*, model_id: str, device: str, torch_dtype_name: str):
     pipeline_class = type("ExternalBaselineInversionStableDiffusion3Pipeline", (InversionStableDiffusion3PipelineMixin, StableDiffusion3Pipeline), {})
     pipe = pipeline_class.from_pretrained(model_id, torch_dtype=torch_dtype)
     pipe = pipe.to(device)
+    pipe.transformer.eval()
+    pipe.vae.eval()
     pipe.set_progress_bar_config(disable=True)
     return pipe
 

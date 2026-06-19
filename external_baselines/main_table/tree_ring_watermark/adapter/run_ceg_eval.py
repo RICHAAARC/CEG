@@ -211,45 +211,52 @@ class _InversionStableDiffusion3PipelineMixin:
     def get_image_latents(self, image: Any, *, sample: bool = False):
         """通过 VAE 编码图像得到 latent。"""
 
-        encoding_dist = self.vae.encode(image).latent_dist
-        encoding = encoding_dist.sample() if sample else encoding_dist.mode()
-        # SD3 系列 VAE 通常同时声明 scaling_factor 和 shift_factor。
-        # 这里显式读取 shift_factor, 使反演 latent 与 diffusers SD3 pipeline 的
-        # 图像编码约定保持一致；旧 VAE 没有该字段时自然退化为 0。
-        shift_factor = float(getattr(self.vae.config, "shift_factor", 0.0) or 0.0)
-        scaling_factor = float(getattr(self.vae.config, "scaling_factor", 1.0) or 1.0)
-        return (encoding - shift_factor) * scaling_factor
+        import torch
+
+        with torch.inference_mode():
+            encoding_dist = self.vae.encode(image).latent_dist
+            encoding = encoding_dist.sample() if sample else encoding_dist.mode()
+            # SD3 系列 VAE 通常同时声明 scaling_factor 和 shift_factor。
+            # 这里显式读取 shift_factor, 使反演 latent 与 diffusers SD3 pipeline 的
+            # 图像编码约定保持一致；旧 VAE 没有该字段时自然退化为 0。
+            shift_factor = float(getattr(self.vae.config, "shift_factor", 0.0) or 0.0)
+            scaling_factor = float(getattr(self.vae.config, "scaling_factor", 1.0) or 1.0)
+            return (encoding - shift_factor) * scaling_factor
 
     def naive_forward_diffusion(self, latents: Any, *, prompt: str = "", num_inference_steps: int = 5, guidance_scale: float = 1.0):
         """使用 SD3 scheduler 近似执行反向扩散的逆过程。"""
 
         import torch
 
-        self.scheduler.set_timesteps(num_inference_steps, device=self._execution_device)
-        do_classifier_free_guidance = guidance_scale > 1.0
-        prompt_embeds, _, pooled_projections, _ = self.encode_prompt(
-            prompt=prompt,
-            prompt_2=None,
-            prompt_3=None,
-            device=self._execution_device,
-            do_classifier_free_guidance=do_classifier_free_guidance,
-        )
-        timesteps = self.scheduler.timesteps
-        for index, timestep in enumerate(reversed(timesteps)):
-            latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-            timestep_tensor = timestep.expand(latent_model_input.shape[0])
-            noise_pred = self.transformer(
-                latent_model_input,
-                timestep=timestep_tensor,
-                pooled_projections=pooled_projections,
-                encoder_hidden_states=prompt_embeds,
-                return_dict=False,
-            )[0]
-            if do_classifier_free_guidance:
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
-            latents = latents - (self.scheduler.sigmas[index + 1] - self.scheduler.sigmas[index]) * noise_pred
-        return latents
+        # 该函数用于 Tree-Ring 检测反演, 不参与训练。必须关闭 autograd, 否则每个
+        # transformer 调用都会保留计算图并导致 Colab GPU OOM。
+        with torch.inference_mode():
+            self.scheduler.set_timesteps(num_inference_steps, device=self._execution_device)
+            do_classifier_free_guidance = guidance_scale > 1.0
+            prompt_embeds, _, pooled_projections, _ = self.encode_prompt(
+                prompt=prompt,
+                prompt_2=None,
+                prompt_3=None,
+                device=self._execution_device,
+                do_classifier_free_guidance=do_classifier_free_guidance,
+            )
+            timesteps = self.scheduler.timesteps
+            for index, timestep in enumerate(reversed(timesteps)):
+                latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                timestep_tensor = timestep.expand(latent_model_input.shape[0])
+                noise_pred = self.transformer(
+                    latent_model_input,
+                    timestep=timestep_tensor,
+                    pooled_projections=pooled_projections,
+                    encoder_hidden_states=prompt_embeds,
+                    return_dict=False,
+                )[0]
+                if do_classifier_free_guidance:
+                    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                latents = latents - (self.scheduler.sigmas[index + 1] - self.scheduler.sigmas[index]) * noise_pred
+                del noise_pred, latent_model_input, timestep_tensor
+            return latents
 
 
 def _load_sd3_pipeline(*, model_id: str, device: str, torch_dtype_name: str):
@@ -270,6 +277,8 @@ def _load_sd3_pipeline(*, model_id: str, device: str, torch_dtype_name: str):
     PipelineClass = type("TreeRingInversionStableDiffusion3Pipeline", (_InversionStableDiffusion3PipelineMixin, StableDiffusion3Pipeline), {})
     pipe = PipelineClass.from_pretrained(model_id, torch_dtype=torch_dtype)
     pipe = pipe.to(device)
+    pipe.transformer.eval()
+    pipe.vae.eval()
     pipe.set_progress_bar_config(disable=True)
     return pipe
 
@@ -453,6 +462,8 @@ def run_tree_ring_adapter(args: argparse.Namespace) -> tuple[list[dict[str, Any]
                 image_id=image_id,
             )
         )
+        if device == "cuda":
+            torch.cuda.empty_cache()
 
     threshold, threshold_source = _derive_threshold(observations_without_threshold, args.threshold)
     observations: list[dict[str, Any]] = []
@@ -504,6 +515,8 @@ def run_tree_ring_adapter(args: argparse.Namespace) -> tuple[list[dict[str, Any]
             )
             obs["final_decision"] = bool(score >= threshold)
             observations.append(obs)
+            if device == "cuda":
+                torch.cuda.empty_cache()
 
     _write_json(artifact_root / "image_pairs_tree_ring.json", image_pairs)
     manifest = {

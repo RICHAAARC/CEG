@@ -209,6 +209,8 @@ def run_adapter(args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[st
                     image_id=image_id,
                 )
             )
+        if device == "cuda":
+            torch.cuda.empty_cache()
 
     threshold, threshold_source = derive_threshold(observations_without_threshold, args.threshold)
     observations = []
@@ -252,6 +254,8 @@ def run_adapter(args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[st
             )
             obs["final_decision"] = bool(score >= threshold)
             observations.append(obs)
+            if device == "cuda":
+                torch.cuda.empty_cache()
 
     write_json(artifact_root / "image_pairs_shallow_diffuse.json", image_pairs)
     manifest = {
