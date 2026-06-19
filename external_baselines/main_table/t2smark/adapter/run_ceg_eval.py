@@ -153,13 +153,16 @@ def _observation(
     """构造一条 CEG baseline observation row。"""
 
     image_id = _image_id(row, result_index + 1)
+    score_value = float(score)
+    threshold_value = float(threshold)
     return {
         "event_id": event_id,
         "baseline_id": BASELINE_ID,
-        "score": score,
-        "threshold": threshold,
+        "score": score_value,
+        "threshold": threshold_value,
         "score_name": DEFAULT_SCORE_NAME,
         "higher_is_positive": True,
+        "final_decision": bool(score_value >= threshold_value),
         "split": _split(row),
         "sample_role": sample_role,
         "attack_family": attack_family,
