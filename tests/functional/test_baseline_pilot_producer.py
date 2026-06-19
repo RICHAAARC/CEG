@@ -10,6 +10,7 @@ import sys
 import pytest
 
 from experiments.baseline_pilot_producer import build_baseline_pilot_observations
+from main.methods.baselines import BASELINE_REGISTRY
 from experiments.paper_fixture_factory import write_paper_dry_run_inputs
 from main.analysis.attack_images import run_attack_workflow
 from main.analysis.result_package import export_paper_results_package
@@ -41,13 +42,8 @@ def test_baseline_pilot_producer_builds_registered_baseline_rows(tmp_path) -> No
 
     rows = build_baseline_pilot_observations(events)
 
-    assert len(rows) == 8
-    assert {row["baseline_id"] for row in rows} == {
-        "tree_ring",
-        "gaussian_shading",
-        "shallow_diffuse",
-        "t2smark",
-    }
+    assert len(rows) == len(events) * len(BASELINE_REGISTRY)
+    assert {row["baseline_id"] for row in rows} == set(BASELINE_REGISTRY)
     assert all(row["formal_result_claim"] is False for row in rows)
     assert all(row["threshold"] == 0.5 for row in rows)
 
@@ -124,12 +120,7 @@ def test_baseline_pilot_outputs_feed_paper_package(tmp_path) -> None:
     baseline_manifest = json.loads((output_root / "baseline_results" / "baseline_execution_manifest.json").read_text(encoding="utf-8"))
 
     assert baseline_manifest["formal_result_claim"] is False
-    assert baseline_manifest["baseline_ids"] == [
-        "gaussian_shading",
-        "shallow_diffuse",
-        "t2smark",
-        "tree_ring",
-    ]
+    assert baseline_manifest["baseline_ids"] == sorted(BASELINE_REGISTRY)
     assert "baseline_results/baseline_execution_manifest.json" in package_manifest["copied_files"]
     assert "baseline_results/baseline_observations.json" in package_manifest["copied_files"]
     assert (package_root / "artifacts" / "baseline_comparison_table.csv").is_file()

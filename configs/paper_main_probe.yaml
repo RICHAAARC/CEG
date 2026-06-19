@@ -31,3 +31,6 @@ external_baselines:
   - "gaussian_shading"
   - "shallow_diffuse"
   - "t2smark"
+  - "rivagan_invisible_watermark"
+  - "wam"
+  - "trustmark"

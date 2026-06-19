@@ -48,7 +48,10 @@
         "tree_ring",
         "gaussian_shading",
         "shallow_diffuse",
-        "t2smark"
+        "t2smark",
+        "rivagan_invisible_watermark",
+        "wam",
+        "trustmark"
       ],
       "min_gpu_vram_gb": 16,
       "recommended_gpu_vram_gb": 24
@@ -78,7 +81,10 @@
         "tree_ring",
         "gaussian_shading",
         "shallow_diffuse",
-        "t2smark"
+        "t2smark",
+        "rivagan_invisible_watermark",
+        "wam",
+        "trustmark"
       ],
       "min_gpu_vram_gb": 24,
       "recommended_gpu_vram_gb": 40

@@ -26,16 +26,18 @@ def test_colab_external_baseline_outputs_notebook_runs_baseline_plan_only() -> N
     assert "scripts/build_t2smark_adapter_baseline_plan.py" in source
     assert "scripts/run_baseline_plan.py" in source
     assert "t2smark_baseline_plan.json" in source
-    assert "external_baseline_plans" in source
+    assert "SUPPLEMENTARY_IMAGE_WATERMARK_METHODS" in source
+    assert "scripts/build_supplementary_image_watermark_baseline_plan.py" in source
+    assert "supplementary_image_watermark_baseline_plan.json" in source
+    assert "rivagan_invisible_watermark,wam,trustmark" in source
     assert "T2SMARK_RESULTS" in source
-    assert "external_baseline_outputs_t2smark_adapter_plan_v2" in source
     assert "external_baseline_inputs" in source
     assert "baseline_observations.json" in source
     assert "baseline_execution_manifest.json" in source
     assert 'REPO_URL = "https://github.com/RICHAAARC/CEG.git"' in source
     assert "RUN_EXTERNAL_BASELINES = True" in source
-    assert "BASELINE_PLAN = WORKSPACE / \"plans\" / \"t2smark_baseline_plan.json\"" in source
-    assert "DRIVE_ROOT / \"external_baseline_plans\" / \"baseline_plan.json\"" in source
+    assert "BASELINE_PLAN = WORKSPACE / \"plans\" / \"external_baseline_plan.json\"" in source
+    assert "SUPPLEMENTARY_BASELINE_PLAN = WORKSPACE / \"plans\" / \"supplementary_image_watermark_baseline_plan.json\"" in source
     assert "RICHAAARC/CEG-WM" not in source
     assert "D:\\Code\\CEG-WM" not in source
     assert "run_pilot_real_image_generation_backend.py" not in source
