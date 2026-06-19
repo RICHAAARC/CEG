@@ -69,6 +69,31 @@ BASELINE_REGISTRY: dict[str, BaselineSpec] = {
         required_record_fields=COMMON_BASELINE_RECORD_FIELDS,
         required_artifacts=("baseline_event_records.jsonl", "baseline_metrics_summary.csv"),
     ),
+
+    "rivagan_invisible_watermark": BaselineSpec(
+        baseline_id="rivagan_invisible_watermark",
+        display_name="RivaGAN via invisible-watermark",
+        method_family="image_watermark_baseline",
+        comparison_role="external_supplementary_table",
+        required_record_fields=COMMON_BASELINE_RECORD_FIELDS,
+        required_artifacts=("baseline_event_records.jsonl", "baseline_metrics_summary.csv"),
+    ),
+    "wam": BaselineSpec(
+        baseline_id="wam",
+        display_name="WAM",
+        method_family="image_watermark_baseline",
+        comparison_role="external_supplementary_table",
+        required_record_fields=COMMON_BASELINE_RECORD_FIELDS,
+        required_artifacts=("baseline_event_records.jsonl", "baseline_metrics_summary.csv"),
+    ),
+    "trustmark": BaselineSpec(
+        baseline_id="trustmark",
+        display_name="TrustMark",
+        method_family="image_watermark_baseline",
+        comparison_role="external_supplementary_table",
+        required_record_fields=COMMON_BASELINE_RECORD_FIELDS,
+        required_artifacts=("baseline_event_records.jsonl", "baseline_metrics_summary.csv"),
+    ),
 }
 
 
@@ -80,6 +105,12 @@ BASELINE_ALIASES = {
     "t2s-mark": "t2smark",
     "t2s_mark": "t2smark",
     "t2s mark": "t2smark",
+    "rivagan": "rivagan_invisible_watermark",
+    "riva-gan": "rivagan_invisible_watermark",
+    "invisible-watermark-rivagan": "rivagan_invisible_watermark",
+    "watermark-anything": "wam",
+    "watermark_anything": "wam",
+    "trust-mark": "trustmark",
 }
 
 

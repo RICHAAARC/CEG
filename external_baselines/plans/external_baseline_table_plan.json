@@ -55,24 +55,30 @@
       "display_name": "RivaGAN via invisible-watermark",
       "source_url": "https://github.com/ShieldMnt/invisible-watermark",
       "local_source_root": "external_baselines/supplementary_table/rivagan_invisible_watermark/source",
-      "integration_status": "image_watermark_adapter_required",
-      "table_role": "supplementary_image_watermark_baseline"
+      "integration_status": "ceg_image_watermark_adapter_available_requires_runtime_dependencies",
+      "table_role": "supplementary_image_watermark_baseline",
+      "adapter_path": "external_baselines/supplementary_table/rivagan_invisible_watermark/adapter/run_ceg_eval.py",
+      "plan_builder_path": "scripts/build_supplementary_image_watermark_baseline_plan.py"
     },
     {
       "method_id": "wam",
       "display_name": "WAM",
       "source_url": "https://github.com/facebookresearch/watermark-anything",
       "local_source_root": "external_baselines/supplementary_table/watermark_anything/source",
-      "integration_status": "image_watermark_adapter_required",
-      "table_role": "supplementary_image_watermark_baseline"
+      "integration_status": "ceg_image_watermark_adapter_available_requires_wam_checkpoint",
+      "table_role": "supplementary_image_watermark_baseline",
+      "adapter_path": "external_baselines/supplementary_table/watermark_anything/adapter/run_ceg_eval.py",
+      "plan_builder_path": "scripts/build_supplementary_image_watermark_baseline_plan.py"
     },
     {
       "method_id": "trustmark",
       "display_name": "TrustMark",
       "source_url": "https://github.com/adobe/trustmark",
       "local_source_root": "external_baselines/supplementary_table/trustmark/source",
-      "integration_status": "image_watermark_adapter_required",
-      "table_role": "supplementary_image_watermark_baseline"
+      "integration_status": "ceg_image_watermark_adapter_available_downloads_trustmark_weights_on_first_use",
+      "table_role": "supplementary_image_watermark_baseline",
+      "adapter_path": "external_baselines/supplementary_table/trustmark/adapter/run_ceg_eval.py",
+      "plan_builder_path": "scripts/build_supplementary_image_watermark_baseline_plan.py"
     }
   ],
   "internal_ablation_methods": [
