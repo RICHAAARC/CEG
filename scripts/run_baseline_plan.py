@@ -67,6 +67,15 @@ def _validate_formal_evidence(*, formal_result_claim: bool, evidence_paths: list
         raise FileNotFoundError(f"formal baseline evidence paths missing: {missing_evidence}")
 
 
+def _tail_text(value: str, *, max_chars: int = 6000) -> str:
+    """截取命令输出尾部, 避免 Colab 日志被超长模型加载信息淹没。"""
+
+    text = value or ""
+    if len(text) <= max_chars:
+        return text
+    return text[-max_chars:]
+
+
 def main() -> None:
     """CLI 入口。"""
 
@@ -132,12 +141,29 @@ def main() -> None:
                 "observation_count": len(rows),
                 "formal_result_claim": execution_manifest["formal_result_claim"],
                 "failed_command_count": execution_manifest["failed_command_count"],
+                "failed_baseline_ids": [row["baseline_id"] for row in failed_results],
             },
             ensure_ascii=False,
             indent=2,
         )
     )
     if args.require_pass and failed_results:
+        print("baseline 命令失败摘要如下。完整 stdout/stderr 已写入 baseline_command_results.json。", file=sys.stderr)
+        for failed in failed_results:
+            print(
+                json.dumps(
+                    {
+                        "baseline_id": failed.get("baseline_id"),
+                        "return_code": failed.get("return_code"),
+                        "output_path": failed.get("output_path"),
+                        "stdout_tail": _tail_text(str(failed.get("stdout") or "")),
+                        "stderr_tail": _tail_text(str(failed.get("stderr") or "")),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                file=sys.stderr,
+            )
         raise SystemExit(1)
 
 
